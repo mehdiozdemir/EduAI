@@ -47,7 +47,7 @@ class LangChainIntegration:
             self.llm = ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash",
                 google_api_key=settings.GEMINI_API_KEY,
-                temperature=0.7
+                temperature=0.0
             )
         else:
             raise ValueError("GEMINI_API_KEY is not set in environment variables")
@@ -96,6 +96,9 @@ class LangChainIntegration:
         # Create Pydantic output parser for structured response
         parser = PydanticOutputParser(pydantic_object=QuestionGenerationResponse)
         format_instructions = parser.get_format_instructions()
+        
+        # Escape curly braces in format_instructions to prevent ChatPromptTemplate from treating them as variables
+        escaped_format_instructions = format_instructions.replace("{", "{{").replace("}", "}}")
         
         # Define education level descriptions and requirements
         education_levels = {
@@ -152,21 +155,21 @@ For university students (ages 18+):
         # Create the prompt manually to avoid template variable conflicts with format_instructions
         system_message = f"You are an expert {subject} tutor creating {education_description} level questions."
         
-        human_message = f"""Create {count} {difficulty} level questions about {topic} in {subject} for {education_description} students.
-
-Requirements for each question:
-1. Create thought-provoking questions that require critical thinking, not simple recall
-2. Clear, concise question text appropriate for the education level
-3. Exactly 4 multiple choice options (A, B, C, D)
-4. One clearly correct answer with distractors that are plausible but incorrect
-5. Detailed explanation of why the correct answer is right and why others are wrong
-6. Specific subtopic this question covers
-7. 3-5 key concepts tested
-{education_requirements}
-
-{format_instructions}
-
-Respond with ONLY the JSON object. No other text, no markdown, no explanations. Ensure all questions are appropriately challenging for {education_description} students."""
+        # Build human message without using f-string to avoid conflicts with format_instructions
+        human_message = (
+            f"Create {count} {difficulty} level questions about {topic} in {subject} for {education_description} students.\n\n"
+            "Requirements for each question:\n"
+            "1. Create thought-provoking questions that require critical thinking, not simple recall\n"
+            "2. Clear, concise question text appropriate for the education level\n"
+            "3. Exactly 4 multiple choice options (A, B, C, D)\n"
+            "4. One clearly correct answer with distractors that are plausible but incorrect\n"
+            "5. Detailed explanation of why the correct answer is right and why others are wrong\n"
+            "6. Specific subtopic this question covers\n"
+            "7. 3-5 key concepts tested\n"
+            f"{education_requirements}\n\n"
+            f"{escaped_format_instructions}\n\n"
+            f"Respond with ONLY the JSON object. No other text, no markdown, no explanations. Ensure all questions are appropriately challenging for {education_description} students."
+        )
 
         # Create messages manually to avoid template variable issues
         messages = [
