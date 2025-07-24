@@ -149,10 +149,10 @@ For university students (ages 18+):
         education_description = education_info["description"]
         education_requirements = education_info["requirements"]
         
-        # Enhanced prompt that works better with Gemini and creates more thoughtful questions
-        prompt_template = ChatPromptTemplate.from_messages([
-            ("system", f"You are an expert {subject} tutor creating {education_description} level questions."),
-            ("human", f"""Create {count} {difficulty} level questions about {topic} in {subject} for {education_description} students.
+        # Create the prompt manually to avoid template variable conflicts with format_instructions
+        system_message = f"You are an expert {subject} tutor creating {education_description} level questions."
+        
+        human_message = f"""Create {count} {difficulty} level questions about {topic} in {subject} for {education_description} students.
 
 Requirements for each question:
 1. Create thought-provoking questions that require critical thinking, not simple recall
@@ -166,23 +166,22 @@ Requirements for each question:
 
 {format_instructions}
 
-Respond with ONLY the JSON object. No other text, no markdown, no explanations. Ensure all questions are appropriately challenging for {education_description} students.
-""")
-        ])
+Respond with ONLY the JSON object. No other text, no markdown, no explanations. Ensure all questions are appropriately challenging for {education_description} students."""
+
+        # Create messages manually to avoid template variable issues
+        messages = [
+            ("system", system_message),
+            ("human", human_message)
+        ]
+        
+        prompt_template = ChatPromptTemplate.from_messages(messages)
         
         # Create chain with parser
         chain = prompt_template | self.llm | parser
         
         try:
-            # Generate structured response
-            result = await chain.ainvoke({
-                "subject": subject,
-                "topic": topic,
-                "difficulty": difficulty,
-                "count": count,
-                "education_description": education_description,
-                "format_instructions": format_instructions
-            })
+            # Generate structured response - no input variables needed since they're embedded in the prompt
+            result = await chain.ainvoke({})
             return result
         except Exception as e:
             # Handle parsing errors with fallback mechanism
