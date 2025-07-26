@@ -53,32 +53,32 @@ class LangChainIntegration:
             raise ValueError("GEMINI_API_KEY is not set in environment variables")
     
     def generate_questions_prompt(self, subject: str, topic: str, difficulty: str, count: int) -> str:
-        """Generate a prompt for question creation with count parameter"""
+        """Soru oluşturma için prompt oluşturur"""
         template = """
-        You are an expert {subject} tutor. Create {count} {difficulty} level questions about {topic}.
-        The questions should test understanding of key concepts and cover different aspects of the topic.
+        Sen bir {subject} uzmanısın. {topic} konusunda {count} adet {difficulty} seviye soru oluştur.
+        Sorular temel kavramları test etmeli ve konunun farklı yönlerini kapsamalı.
         
-        Format the response as follows for each question:
-        QUESTION: [The question text]
-        OPTIONS: 
-        A) [First option]
-        B) [Second option]
-        C) [Third option]
-        D) [Fourth option]
-        ANSWER: [The correct answer letter, e.g., A)
-        EXPLANATION: [Brief explanation of why this is the correct answer]
-        TOPIC: [Specific subtopic this question covers]
-        KEYWORDS: [Comma-separated key concepts tested]
+        Her soruyu aşağıdaki formatta oluştur:
+        SORU: [Soru metni]
+        SEÇENEKLER: 
+        A) [İlk seçenek]
+        B) [İkinci seçenek]
+        C) [Üçüncü seçenek]
+        D) [Dördüncü seçenek]
+        CEVAP: [Doğru cevap harfi, örneğin A)
+        AÇIKLAMA: [Doğru cevabın neden doğru olduğunu açıklayan kısa açıklama]
+        KONU: [Bu sorunun kapsadığı özel alt konu]
+        ANAHTAR KELİMELER: [Virgülle ayrılmış, test edilen temel kavramlar]
         
-        Important formatting rules:
-        - Each question must be clearly separated
-        - Each option must be on a separate line
-        - Each option must start with a capital letter followed by a closing parenthesis and a space
-        - Do not put multiple options on the same line
-        - Include all required fields for each question
-        - Number each question clearly (e.g., Question 1:, Question 2:, etc.)
+        Önemli format kuralları:
+        - Her soru açıkça ayrılmalı
+        - Her seçenek kendi satırında olmalı
+        - Her seçenek büyük harfle başlamalı ve ardından parantez ve boşluk gelmeli
+        - Birden fazla seçeneği aynı satıra koyma
+        - Tüm gerekli alanları ekleyin
+        - Soruları numaralandır (örneğin, Soru 1:, Soru 2: vb.)
         
-        Make sure the questions are clear, concise, and educational. Each question should test a different aspect of {topic}.
+        Soruların açık, net ve öğretici olmasına dikkat et. Her soru {topic} konusunun farklı bir yönünü test etmeli.
         """
         
         prompt = PromptTemplate(
@@ -102,73 +102,77 @@ class LangChainIntegration:
         
         # Define education level descriptions and requirements
         education_levels = {
-            "middle": {
-                "description": "middle school (ages 11-14)",
+            "ilkokul": {
+                "description": "ilkokul (7-11 yaş)",
                 "requirements": """
-For middle school students (ages 11-14):
-1. Focus on foundational concepts with practical applications
-2. Include word problems that connect to real-life situations
-3. Questions should require basic problem-solving skills
-4. Use clear, age-appropriate language
-5. Include visual or concrete examples when possible
-6. Avoid overly abstract or theoretical concepts
-7. Distractors should be plausible but clearly wrong to students who understand the concept
-8. Explanations should be simple and direct
+İlkokul öğrencileri için (7-11 yaş):
+1. Sadece bilgiyi değil, düşünmeyi gerektiren sorular oluştur
+2. Soru metni yaş grubuna uygun olarak açık ve net olmalı
+3. Tam olarak 4 çoktan seçmeli seçenek (A, B, C, D) olmalı
+4. Açık seçik doğru bir cevap ve yanıltıcı ama yanlış olan diğer seçenekler olmalı
+5. Doğru cevabın neden doğru olduğunu ve diğerlerinin neden yanlış olduğunu açıklayan detaylı açıklama
+6. Sorunun kapsadığı özel alt konu
+7. 3-5 adet test edilen temel kavram
+8. Gereksinimler yaş grubuna göre özelleştirildi
+9. Escaped format instructions used
+10. JSON output required
 """
             },
-            "high": {
-                "description": "high school (ages 14-18)",
+            "ortaokul": {
+                "description": "ortaokul (11-14 yaş)",
                 "requirements": """
-For high school students (ages 14-18):
-1. Include multi-step problem-solving that requires analysis
-2. Emphasize critical thinking and application of concepts
-3. Integrate multiple concepts within a single question
-4. Include questions that require interpretation of data or graphs
-5. Use more sophisticated vocabulary and complex sentence structures
-6. Distractors should be challenging and require careful consideration
-7. Explanations should include reasoning and connections between concepts
-8. Include questions that require students to identify patterns or make predictions
+Ortaokul öğrencileri için (11-14 yaş):
+1. Sadece bilgiyi değil, düşünmeyi gerektiren sorular oluştur
+2. Soru metni yaş grubuna uygun olarak açık ve net olmalı
+3. Tam olarak 4 çoktan seçmeli seçenek (A, B, C, D) olmalı
+4. Açık seçik doğru bir cevap ve yanıltıcı ama yanlış olan diğer seçenekler olmalı
+5. Doğru cevabın neden doğru olduğunu ve diğerlerinin neden yanlış olduğunu açıklayan detaylı açıklama
+6. Sorunun kapsadığı özel alt konu
+7. 3-5 adet test edilen temel kavram
+8. Gereksinimler yaş grubuna göre özelleştirildi
+9. Escaped format instructions used
+10. JSON output required
 """
             },
-            "university": {
-                "description": "university level (ages 18+)",
+            "lise": {
+                "description": "lise (14-18 yaş)",
                 "requirements": """
-For university students (ages 18+):
-1. Emphasize critical thinking, synthesis, and evaluation of complex concepts
-2. Include questions that require application of theories to novel situations
-3. Integrate advanced interdisciplinary connections
-4. Include questions that require analysis of research findings or case studies
-5. Use sophisticated academic language and terminology
-6. Distractors should be highly plausible and require deep understanding to eliminate
-7. Explanations should include theoretical foundations and real-world implications
-8. Include questions that require students to critique methodologies or propose solutions
-9. Focus on higher-order thinking skills: analysis, synthesis, and evaluation
-10. Include questions that require interpretation of complex data or mathematical models
+Lise öğrencileri için (14-18 yaş):
+1. Sadece bilgiyi değil, analiz gerektiren sorular oluştur
+2. Soru metni yaş grubuna uygun olarak açık ve net olmalı
+3. Tam olarak 4 çoktan seçmeli seçenek (A, B, C, D) olmalı
+4. Açık seçik doğru bir cevap ve yanıltıcı ama yanlış olan diğer seçenekler olmalı
+5. Doğru cevabın neden doğru olduğunu ve diğerlerinin neden yanlış olduğunu açıklayan detaylı açıklama
+6. Sorunun kapsadığı özel alt konu
+7. 3-5 adet test edilen kavram
+8. Gereksinimler yaş grubuna göre özelleştirildi
+9. Escaped format instructions used
+10. JSON output required
 """
             }
         }
         
-        education_info = education_levels.get(education_level, education_levels["high"])
+        education_info = education_levels.get(education_level, education_levels["lise"])
         education_description = education_info["description"]
         education_requirements = education_info["requirements"]
         
         # Create the prompt manually to avoid template variable conflicts with format_instructions
-        system_message = f"You are an expert {subject} tutor creating {education_description} level questions."
+        system_message = f"Sen bir {subject} uzmanısın ve {education_description} seviyesinde sorular oluşturuyorsun."
         
         # Build human message without using f-string to avoid conflicts with format_instructions
         human_message = (
-            f"Create {count} {difficulty} level questions about {topic} in {subject} for {education_description} students.\n\n"
-            "Requirements for each question:\n"
-            "1. Create thought-provoking questions that require critical thinking, not simple recall\n"
-            "2. Clear, concise question text appropriate for the education level\n"
-            "3. Exactly 4 multiple choice options (A, B, C, D)\n"
-            "4. One clearly correct answer with distractors that are plausible but incorrect\n"
-            "5. Detailed explanation of why the correct answer is right and why others are wrong\n"
-            "6. Specific subtopic this question covers\n"
-            "7. 3-5 key concepts tested\n"
+            f"{subject} alanında {topic} konusunda {count} adet {difficulty} zorlukta soru oluştur.\n\n"
+            "Her soru için gereksinimler:\n"
+            "1. Sadece bilgiyi değil, düşünmeyi gerektiren sorular oluştur\n"
+            "2. Soru metni eğitim seviyesine uygun olarak açık ve net olmalı\n"
+            "3. Tam olarak 4 çoktan seçmeli seçenek (A, B, C, D) olmalı\n"
+            "4. Açık seçik doğru bir cevap ve yanıltıcı ama yanlış olan diğer seçenekler olmalı\n"
+            "5. Doğru cevabın neden doğru olduğunu ve diğerlerinin neden yanlış olduğunu açıklayan detaylı açıklama\n"
+            "6. Sorunun kapsadığı özel alt konu\n"
+            "7. 3-5 adet test edilen temel kavram\n"
             f"{education_requirements}\n\n"
             f"{escaped_format_instructions}\n\n"
-            f"Respond with ONLY the JSON object. No other text, no markdown, no explanations. Ensure all questions are appropriately challenging for {education_description} students."
+            f"Sadece JSON nesnesiyle yanıt ver. Başka metin, markdown veya açıklama eklememe. Tüm soruların {education_description} öğrencileri için uygun zorlukta olduğundan emin ol."
         )
 
         # Create messages manually to avoid template variable issues

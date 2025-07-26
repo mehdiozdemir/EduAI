@@ -4,9 +4,9 @@ from app.database import Base
 from enum import Enum as PyEnum
 
 class DifficultyLevel(str, PyEnum):
-    EASY = "easy"
-    MEDIUM = "medium"
-    HARD = "hard"
+    EASY = "kolay"
+    MEDIUM = "orta"
+    HARD = "zor"
 
 class Question(Base):
     __tablename__ = "questions"

@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     
     # API Keys
     GEMINI_API_KEY: Optional[str] = None
+    YOUTUBE_API_KEY: Optional[str] = None
+    TAVILY_API_KEY: Optional[str] = None
     
     # CORS
     BACKEND_CORS_ORIGINS: list = ["*"]
