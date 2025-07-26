@@ -23,7 +23,7 @@ async def generate_questions(
     topic: str = Query(...),
     difficulty: str = Query(...),
     count: int = Query(5, ge=1, le=20, description="Number of questions to generate"),
-    education_level: str = Query("high", description="Education level: middle, high, or university"),
+    education_level: str = Query("lise", description="Education level: ilkokul, ortaokul, or lise"),
     db: Session = Depends(get_db)
 ):
     try:

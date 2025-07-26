@@ -4,9 +4,9 @@ from typing import Optional, List
 from enum import Enum
 
 class DifficultyLevel(str, Enum):
-    EASY = "easy"
-    MEDIUM = "medium"
-    HARD = "hard"
+    EASY = "kolay"
+    MEDIUM = "orta"
+    HARD = "zor"
 
 class QuestionBase(BaseModel):
     topic_id: int

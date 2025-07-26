@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import users, subjects, questions, performance
+from app.api import users, subjects, questions, performance, agents
 from app.database import engine, Base
 from app.core.config import settings
 
@@ -27,6 +27,7 @@ app.include_router(users.router)
 app.include_router(subjects.router)
 app.include_router(questions.router)
 app.include_router(performance.router)
+app.include_router(agents.router)
 
 @app.get("/")
 async def root():
@@ -38,4 +39,4 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
