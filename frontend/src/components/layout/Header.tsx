@@ -12,12 +12,16 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const handleLogout = async () => {
+  const handleLogout = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Header.handleLogout called');
     try {
       await onLogout();
+      console.log('Header.handleLogout completed successfully');
       setIsUserMenuOpen(false);
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error('Header.handleLogout failed:', error);
     }
   };
 
@@ -106,7 +110,10 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
                   </Link>
                   <button
                     onClick={handleLogout}
-                    className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    onMouseDown={(e) => console.log('Button mousedown:', e)}
+                    onMouseUp={(e) => console.log('Button mouseup:', e)}
+                    className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                    type="button"
                   >
                     Sign Out
                   </button>
@@ -174,7 +181,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
       {/* Overlay for user menu */}
       {isUserMenuOpen && (
         <div
-          className="fixed inset-0 z-40"
+          className="fixed inset-0 z-30"
           onClick={() => setIsUserMenuOpen(false)}
         />
       )}

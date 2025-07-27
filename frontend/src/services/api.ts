@@ -158,8 +158,15 @@ export class BaseApiService {
 
   // GET request with retry logic
   protected async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await retryRequest(() => this.client.get<T>(url, config));
-    return response.data;
+    console.log('BaseApiService.get called with URL:', url, 'config:', config);
+    try {
+      const response = await retryRequest(() => this.client.get<T>(url, config));
+      console.log('BaseApiService.get response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('BaseApiService.get error:', error);
+      throw error;
+    }
   }
 
   // POST request with retry logic

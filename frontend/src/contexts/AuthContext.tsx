@@ -202,11 +202,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Logout function
   const logout = async (): Promise<void> => {
+    console.log('AuthContext.logout called');
     try {
       await authService.logout();
+      console.log('AuthService.logout completed, calling handleLogout');
       handleLogout();
     } catch (error: unknown) {
       console.warn('Logout API call failed:', error);
+      console.log('Calling handleLogout despite error');
       handleLogout();
       throw error; // Re-throw for component error handling
     }
@@ -214,8 +217,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Handle logout (clear state)
   const handleLogout = (): void => {
+    console.log('AuthContext.handleLogout called - clearing token and state');
     TokenManager.removeToken();
     dispatch({ type: 'AUTH_LOGOUT' });
+    console.log('AuthContext logout state cleared');
+    
+    // Redirect to login page
+    setTimeout(() => {
+      window.location.href = '/login';
+    }, 100);
   };
 
   // Clear error function

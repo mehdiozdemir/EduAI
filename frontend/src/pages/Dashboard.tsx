@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { performanceService } from '../services/performanceService';
 import { useAuth } from '../hooks/useAuth';
 import { useBreakpoint } from '../hooks/useBreakpoint';
-import { useLoadingState, LoadingWrapper } from '../components/ui/LoadingStateManager';
+import { Loading } from '../components/ui/Loading';
 import { useErrorHandler, ErrorBoundarySection } from '../components/ui/ErrorBoundaryProvider';
 import { RetryHandler, RetryUI } from '../components/ui/RetryHandler';
 import { PerformanceChart } from '../components/features/PerformanceChart';
@@ -38,27 +38,40 @@ interface DashboardData {
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const { isMobile } = useBreakpoint();
-  const { setLoading, isLoading } = useLoadingState();
   const { handleError } = useErrorHandler();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const fetchDashboardData = async () => {
     if (!user?.id) return;
     
-    const data = await performanceService.getDashboardData(user.id);
-    setDashboardData(data);
+    console.log('Dashboard.fetchDashboardData called');
+    setLoading(true);
+    try {
+      const data = await performanceService.getDashboardData(user.id);
+      console.log('Dashboard received data:', data);
+      setDashboardData(data);
+    } catch (error: any) {
+      console.error('Dashboard error:', error);
+      handleError(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     if (user) {
-      setLoading('dashboard', true);
-      fetchDashboardData()
-        .catch(handleError)
-        .finally(() => setLoading('dashboard', false));
+      fetchDashboardData();
     }
   }, [user]);
 
-  const loading = isLoading('dashboard');
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loading size="lg" text="Dashboard yükleniyor..." />
+      </div>
+    );
+  }
 
   if (!dashboardData && !loading) {
     return (
@@ -79,40 +92,38 @@ export const Dashboard: React.FC = () => {
   }
 
   return (
-    <LoadingWrapper loadingKey="dashboard" skeleton="dashboard">
-      <RetryHandler
-        operation={fetchDashboardData}
-        onError={handleError}
-        maxAttempts={3}
-      >
-        {({ retry, isRetrying, lastError, canRetry }) => (
-          <ResponsiveContainer size="full" padding="none">
-            {lastError && (
-              <div className="mb-6">
-                <RetryUI
-                  error={lastError}
-                  onRetry={retry}
-                  isRetrying={isRetrying}
-                  attempt={1}
-                  maxAttempts={3}
-                  canRetry={canRetry}
-                  title="Failed to Load Dashboard"
-                  description="Unable to fetch dashboard data. Please try again."
-                />
-              </div>
-            )}
-            
-            {dashboardData && (
-              <DashboardContent 
-                dashboardData={dashboardData} 
-                user={user} 
-                isMobile={isMobile} 
+    <RetryHandler
+      operation={fetchDashboardData}
+      onError={handleError}
+      maxAttempts={3}
+    >
+      {({ retry, isRetrying, lastError, canRetry }) => (
+        <ResponsiveContainer size="full" padding="none">
+          {lastError && (
+            <div className="mb-6">
+              <RetryUI
+                error={lastError}
+                onRetry={retry}
+                isRetrying={isRetrying}
+                attempt={1}
+                maxAttempts={3}
+                canRetry={canRetry}
+                title="Failed to Load Dashboard"
+                description="Unable to fetch dashboard data. Please try again."
               />
-            )}
-          </ResponsiveContainer>
-        )}
-      </RetryHandler>
-    </LoadingWrapper>
+            </div>
+          )}
+          
+          {dashboardData && (
+            <DashboardContent 
+              dashboardData={dashboardData} 
+              user={user} 
+              isMobile={isMobile} 
+            />
+          )}
+        </ResponsiveContainer>
+      )}
+    </RetryHandler>
   );
 };
 

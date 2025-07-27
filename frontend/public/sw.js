@@ -133,6 +133,10 @@ async function handleApiRequest(request) {
 
 // Cache First strategy for images
 async function handleImageRequest(request) {
+  // Ignore non-http(s) schemes (e.g., chrome-extension)
+  if (!request.url.startsWith('http')) {
+    return fetch(request);
+  }
   const cache = await caches.open(RUNTIME_CACHE);
   const cachedResponse = await cache.match(request);
   
@@ -157,6 +161,10 @@ async function handleImageRequest(request) {
 
 // Cache First strategy for static assets
 async function handleStaticAssetRequest(request) {
+  if (!request.url.startsWith('http')) {
+    // Unsupported scheme – just perform network fetch without caching
+    return fetch(request);
+  }
   const cache = await caches.open(CACHE_NAME);
   const cachedResponse = await cache.match(request);
   

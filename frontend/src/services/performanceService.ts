@@ -130,7 +130,35 @@ export class PerformanceService extends BaseApiService {
       throw new Error('User ID is required for dashboard data');
     }
 
-    return await this.get(`/performance/dashboard/${userId}`);
+    console.log('PerformanceService.getDashboardData called with userId:', userId);
+    try {
+      const result = await this.get(`/performance/dashboard/${userId}`) as {
+        overall_stats: {
+          total_questions: number;
+          total_correct: number;
+          overall_accuracy: number;
+          total_sessions: number;
+        };
+        recent_performance: PerformanceAnalysis[];
+        subject_breakdown: Array<{
+          subject_name: string;
+          accuracy: number;
+          question_count: number;
+        }>;
+        weakness_areas: Array<{
+          topic_name: string;
+          subject_name: string;
+          weakness_level: number;
+          recommendation_count: number;
+        }>;
+        progress_chart: PerformanceData[];
+      };
+      console.log('PerformanceService.getDashboardData response:', result);
+      return result;
+    } catch (error) {
+      console.error('PerformanceService.getDashboardData error:', error);
+      throw error;
+    }
   }
 
   /**

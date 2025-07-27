@@ -52,6 +52,9 @@ const ReactQueryComprehensiveDemo = React.lazy(
       /* webpackChunkName: "demo" */ '../pages/ReactQueryComprehensiveDemo'
     )
 );
+const QuizSetupPage = React.lazy(() =>
+  import(/* webpackChunkName: "quiz" */ '../pages/QuizSetupPage.tsx').then(module => ({ default: module.default }))
+);
 const NotFoundPage = React.lazy(() =>
   import(/* webpackChunkName: "error" */ '../pages/NotFoundPage').then(
     module => ({ default: module.NotFoundPage })
@@ -176,6 +179,14 @@ export const router = createBrowserRouter([
         element: (
           <LazyWrapper>
             <ReactQueryComprehensiveDemo />
+          </LazyWrapper>
+        ),
+      },
+      {
+        path: 'quiz',
+        element: (
+          <LazyWrapper>
+            <QuizSetupPage />
           </LazyWrapper>
         ),
       },

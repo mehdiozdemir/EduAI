@@ -129,7 +129,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, className }) => {
     <aside
       className={cn(
         'bg-white border-r border-gray-200 flex flex-col',
-        'w-64 min-h-screen',
+        'w-64 h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto',
         className
       )}
     >

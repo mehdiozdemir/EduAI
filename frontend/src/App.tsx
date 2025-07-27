@@ -11,6 +11,7 @@ import { router } from './router';
 import { registerSW } from './utils/serviceWorker';
 import { performanceMonitor } from './utils/performanceMonitoring';
 //import { useRenderPerformance } from './hooks/usePerfance';
+import { ToastProvider } from './components/ui';
 
 function App() {
   // Temporarily disable performance monitoring to fix React hook errors
@@ -55,10 +56,12 @@ function App() {
       >
         <LoadingStateManager globalLoadingDelay={200}>
           <AuthProvider>
-            <RouterProvider router={router} />
-            <GlobalErrorDisplay maxVisible={3} />
-            <GlobalLoadingIndicator />
-            <PerformanceDashboard />
+            <ToastProvider>
+              <RouterProvider router={router} />
+              <GlobalErrorDisplay maxVisible={3} />
+              <GlobalLoadingIndicator />
+              <PerformanceDashboard />
+            </ToastProvider>
           </AuthProvider>
         </LoadingStateManager>
       </ErrorBoundaryProvider>

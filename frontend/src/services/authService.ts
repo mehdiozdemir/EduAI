@@ -96,17 +96,26 @@ export class AuthService extends BaseApiService {
    * Logout current user
    */
   async logout(): Promise<void> {
+    console.log('AuthService.logout called');
+    
+    // For now, since we're using mock auth, we don't need to call backend
+    // Just clear local data immediately
+    console.log('Clearing local auth data (mock auth)');
+    TokenManager.removeToken();
+    this.currentUser = null;
+    console.log('Local logout completed');
+    
+    // If you want to add backend logout later, uncomment below:
+    /*
     try {
-      // Call logout endpoint if it exists
+      console.log('Attempting to call logout API endpoint');
       await this.post('/auth/logout');
+      console.log('Logout API call successful');
     } catch (error) {
-      // Continue with logout even if API call fails
       console.warn('Logout API call failed:', error);
-    } finally {
-      // Always clear local data
-      TokenManager.removeToken();
-      this.currentUser = null;
+      // Continue with logout even if API call fails
     }
+    */
   }
 
   /**
