@@ -1,0 +1,496 @@
+/* Responsive Design Utilities */
+
+/* Touch-friendly interactions */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+/* Prevent zoom on input focus on iOS */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Improved scrolling on mobile */
+.scroll-smooth {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Better tap targets */
+.tap-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Responsive text sizing */
+.text-responsive-xs {
+  font-size: 0.75rem;
+}
+
+.text-responsive-sm {
+  font-size: 0.875rem;
+}
+
+.text-responsive-base {
+  font-size: 0.875rem;
+}
+
+.text-responsive-lg {
+  font-size: 1rem;
+}
+
+.text-responsive-xl {
+  font-size: 1.125rem;
+}
+
+.text-responsive-2xl {
+  font-size: 1.25rem;
+}
+
+.text-responsive-3xl {
+  font-size: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .text-responsive-xs {
+    font-size: 0.75rem;
+  }
+  
+  .text-responsive-sm {
+    font-size: 0.875rem;
+  }
+  
+  .text-responsive-base {
+    font-size: 1rem;
+  }
+  
+  .text-responsive-lg {
+    font-size: 1.125rem;
+  }
+  
+  .text-responsive-xl {
+    font-size: 1.25rem;
+  }
+  
+  .text-responsive-2xl {
+    font-size: 1.5rem;
+  }
+  
+  .text-responsive-3xl {
+    font-size: 1.875rem;
+  }
+}
+
+/* Mobile-first spacing utilities */
+.space-y-responsive > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1rem;
+}
+
+@media (min-width: 640px) {
+  .space-y-responsive > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 1.5rem;
+  }
+}
+
+/* Responsive grid gaps */
+.gap-responsive {
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .gap-responsive {
+    gap: 1.5rem;
+  }
+}
+
+/* Safe area insets for mobile devices */
+.safe-area-inset-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-inset-left {
+  padding-left: env(safe-area-inset-left);
+}
+
+.safe-area-inset-right {
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Responsive container max-widths */
+.container-responsive {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container-responsive {
+    max-width: 640px;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .container-responsive {
+    max-width: 768px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-responsive {
+    max-width: 1024px;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container-responsive {
+    max-width: 1280px;
+  }
+}
+
+@media (min-width: 1536px) {
+  .container-responsive {
+    max-width: 1536px;
+  }
+}
+
+/* Mobile navigation improvements */
+.mobile-nav-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  min-height: 48px;
+  touch-action: manipulation;
+  transition: background-color 0.2s ease;
+}
+
+.mobile-nav-item:active {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Responsive table improvements */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive table {
+  min-width: 600px;
+}
+
+@media (max-width: 640px) {
+  .table-responsive {
+    margin-left: -1rem;
+    margin-right: -1rem;
+  }
+  
+  .table-responsive table {
+    font-size: 0.875rem;
+  }
+  
+  .table-responsive th,
+  .table-responsive td {
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+/* Card responsive improvements */
+.card-responsive {
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 640px) {
+  .card-responsive {
+    margin-bottom: 1.5rem;
+  }
+}
+
+/* Button group responsive stacking */
+.button-group-responsive {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .button-group-responsive {
+    flex-direction: row;
+    gap: 1rem;
+  }
+}
+
+/* Responsive modal sizing */
+.modal-responsive {
+  margin: 1rem;
+  max-height: calc(100vh - 2rem);
+}
+
+@media (min-width: 640px) {
+  .modal-responsive {
+    margin: 2rem;
+    max-height: calc(100vh - 4rem);
+  }
+}
+
+@media (min-width: 768px) {
+  .modal-responsive {
+    margin: 3rem auto;
+    max-width: 32rem;
+  }
+}
+
+/* Responsive form spacing */
+.form-responsive .form-group {
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 640px) {
+  .form-responsive .form-group {
+    margin-bottom: 1.25rem;
+  }
+}
+
+/* Hide scrollbars on mobile for better UX */
+@media (max-width: 768px) {
+  .hide-scrollbar,
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar,
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Enhanced mobile optimizations */
+@media (max-width: 768px) {
+  /* Improve text readability on mobile */
+  body {
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+  }
+  
+  /* Better mobile form styling */
+  input, textarea, select {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+    border-radius: 8px;
+  }
+  
+  /* Mobile-optimized button spacing */
+  .mobile-button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+  
+  .mobile-button-group button,
+  .mobile-button-group a {
+    width: 100%;
+    min-height: 48px;
+    touch-action: manipulation;
+  }
+  
+  /* Mobile card improvements */
+  .mobile-card {
+    margin: 0 -1rem;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  
+  /* Mobile table improvements */
+  .mobile-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -1rem;
+  }
+  
+  .mobile-table {
+    min-width: 600px;
+    font-size: 14px;
+  }
+  
+  .mobile-table th,
+  .mobile-table td {
+    padding: 8px 12px;
+    white-space: nowrap;
+  }
+  
+  /* Mobile navigation improvements */
+  .mobile-nav-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 40;
+    transition: opacity 0.3s ease;
+  }
+  
+  .mobile-nav-panel {
+    position: fixed;
+    top: 64px;
+    left: 0;
+    bottom: 0;
+    width: 320px;
+    max-width: 85vw;
+    background: white;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .mobile-nav-panel.open {
+    transform: translateX(0);
+  }
+  
+  /* Mobile grid improvements */
+  .mobile-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  /* Mobile spacing utilities */
+  .mobile-px {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .mobile-py {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+  
+  .mobile-mx {
+    margin-left: 1rem;
+    margin-right: 1rem;
+  }
+  
+  .mobile-my {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
+}
+
+/* Tablet-specific optimizations */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .tablet-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+  
+  .tablet-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+  
+  .tablet-px {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  
+  .tablet-py {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+}
+
+/* Desktop optimizations */
+@media (min-width: 1024px) {
+  .desktop-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+  
+  .desktop-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+  }
+  
+  .desktop-px {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+  
+  .desktop-py {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+}
+
+/* High DPI display optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .high-dpi-border {
+    border-width: 0.5px;
+  }
+  
+  .high-dpi-shadow {
+    box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Landscape mobile optimizations */
+@media (max-height: 500px) and (orientation: landscape) {
+  .landscape-mobile-header {
+    height: 48px;
+  }
+  
+  .landscape-mobile-content {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  
+  .landscape-mobile-nav {
+    padding: 0.5rem;
+  }
+}
+
+/* Print optimizations */
+@media print {
+  .print-hidden {
+    display: none !important;
+  }
+  
+  .print-visible {
+    display: block !important;
+  }
+  
+  body {
+    font-size: 12pt;
+    line-height: 1.4;
+  }
+  
+  .print-page-break {
+    page-break-before: always;
+  }
+}
