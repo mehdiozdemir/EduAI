@@ -6,6 +6,11 @@ from langchain_tavily import TavilySearch
 
 from app.agents.base_agent import BaseAgent
 from app.models.book_recommendation import BookRecommendationList
+from app.models.book_recommendation import StockStatus, BookRecommendation
+
+import aiohttp
+from bs4 import BeautifulSoup
+import asyncio
 
 
 class BookAgent(BaseAgent):
@@ -139,10 +144,21 @@ class BookAgent(BaseAgent):
                     }
                 )
 
+                # -----------------------------
+                # 4. Perform real-time stock check and update recommendations
+                # -----------------------------
+                updated_recs = await self._update_stock_info(recommendations.recommendations)
+
+                available_recs = [r for r in updated_recs if r.stock_status == StockStatus.AVAILABLE]
+
                 return {
                     "status": "success",
                     "agent": "Book Agent",
-                    "data": recommendations.dict(),
+                    "data": {
+                        **recommendations.dict(),
+                        "recommendations": [rec.dict() for rec in available_recs],
+                        "total_found": len(available_recs),
+                    },
                 }
             except Exception:
                 # Fallback if parsing fails – return unstructured but useful info
@@ -163,3 +179,38 @@ class BookAgent(BaseAgent):
                 "agent": "Book Agent",
                 "error": str(e),
             }
+
+    # -------------------------------------------------
+    # Helper: Stock checking
+    # -------------------------------------------------
+    async def _update_stock_info(self, recs: List[BookRecommendation]) -> List[BookRecommendation]:
+        async def _check(rec: BookRecommendation) -> BookRecommendation:
+            try:
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
+                    async with session.get(str(rec.url), headers={"User-Agent": "Mozilla/5.0"}) as resp:
+                        html = await resp.text()
+                        in_stock, conf = self._parse_stock(html)
+                        rec.stock_status = StockStatus.AVAILABLE if in_stock else StockStatus.OUT_OF_STOCK
+                        rec.stock_confidence = conf
+                        rec.availability_note = (
+                            "Stokta mevcut" if in_stock else "Ürün muhtemelen tükenmiş"
+                        )
+            except Exception:
+                # On error mark as CHECK_REQUIRED
+                rec.stock_status = StockStatus.CHECK_REQUIRED
+                rec.stock_confidence = 3
+                rec.availability_note = "Stok durumu doğrulanamadı, manuel kontrol önerilir"
+            return rec
+
+        return await asyncio.gather(*[_check(r) for r in recs])
+
+    def _parse_stock(self, html: str) -> tuple[bool, int]:
+        """Basic heuristics: returns (in_stock, confidence)"""
+        soup = BeautifulSoup(html, "lxml")
+        text = soup.get_text(" ", strip=True).lower()
+        # trend words
+        if any(kw in text for kw in ["tükendi", "stokta yok", "satıcıdan temin edilemez","tükendi!","stoklar tükendi"]):
+            return False, 9
+        if "sepete ekle" in text or "sepete" in text or "satın al" in text:
+            return True, 8
+        return True, 5
