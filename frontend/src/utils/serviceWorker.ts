@@ -1,0 +1,168 @@
+// Service Worker registration and management
+
+const isLocalhost = Boolean(
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '[::1]' ||
+  window.location.hostname.match(
+    /^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/
+  )
+);
+
+interface ServiceWorkerConfig {
+  onSuccess?: (registration: ServiceWorkerRegistration) => void;
+  onUpdate?: (registration: ServiceWorkerRegistration) => void;
+  onOfflineReady?: () => void;
+}
+
+export function registerSW(config?: ServiceWorkerConfig) {
+  if ('serviceWorker' in navigator) {
+    const publicUrl = new URL(import.meta.env.BASE_URL, window.location.href);
+    if (publicUrl.origin !== window.location.origin) {
+      return;
+    }
+
+    window.addEventListener('load', () => {
+      const swUrl = `${import.meta.env.BASE_URL}sw.js`;
+
+      if (isLocalhost) {
+        checkValidServiceWorker(swUrl, config);
+        navigator.serviceWorker.ready.then(() => {
+          console.log(
+            'This web app is being served cache-first by a service worker.'
+          );
+        });
+      } else {
+        registerValidSW(swUrl, config);
+      }
+    });
+  }
+}
+
+function registerValidSW(swUrl: string, config?: ServiceWorkerConfig) {
+  navigator.serviceWorker
+    .register(swUrl)
+    .then((registration) => {
+      console.log('SW registered: ', registration);
+
+      registration.onupdatefound = () => {
+        const installingWorker = registration.installing;
+        if (installingWorker == null) {
+          return;
+        }
+
+        installingWorker.onstatechange = () => {
+          if (installingWorker.state === 'installed') {
+            if (navigator.serviceWorker.controller) {
+              console.log(
+                'New content is available and will be used when all tabs for this page are closed.'
+              );
+
+              if (config && config.onUpdate) {
+                config.onUpdate(registration);
+              }
+            } else {
+              console.log('Content is cached for offline use.');
+
+              if (config && config.onSuccess) {
+                config.onSuccess(registration);
+              }
+
+              if (config && config.onOfflineReady) {
+                config.onOfflineReady();
+              }
+            }
+          }
+        };
+      };
+    })
+    .catch((error) => {
+      console.error('Error during service worker registration:', error);
+    });
+}
+
+function checkValidServiceWorker(swUrl: string, config?: ServiceWorkerConfig) {
+  fetch(swUrl, {
+    headers: { 'Service-Worker': 'script' },
+  })
+    .then((response) => {
+      const contentType = response.headers.get('content-type');
+      if (
+        response.status === 404 ||
+        (contentType != null && contentType.indexOf('javascript') === -1)
+      ) {
+        navigator.serviceWorker.ready.then((registration) => {
+          registration.unregister().then(() => {
+            window.location.reload();
+          });
+        });
+      } else {
+        registerValidSW(swUrl, config);
+      }
+    })
+    .catch(() => {
+      console.log(
+        'No internet connection found. App is running in offline mode.'
+      );
+    });
+}
+
+export function unregister() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready
+      .then((registration) => {
+        registration.unregister();
+      })
+      .catch((error) => {
+        console.error(error.message);
+      });
+  }
+}
+
+// Utility functions for offline functionality
+export function isOnline(): boolean {
+  return navigator.onLine;
+}
+
+export function addOfflineListener(callback: (isOnline: boolean) => void) {
+  const handleOnline = () => callback(true);
+  const handleOffline = () => callback(false);
+
+  window.addEventListener('online', handleOnline);
+  window.addEventListener('offline', handleOffline);
+
+  return () => {
+    window.removeEventListener('online', handleOnline);
+    window.removeEventListener('offline', handleOffline);
+  };
+}
+
+// Queue actions for background sync when offline
+export function queueOfflineAction(url: string, options: RequestInit) {
+  if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
+    navigator.serviceWorker.ready.then((registration) => {
+      // Store the action in IndexedDB or localStorage for background sync
+      const action = {
+        url,
+        options,
+        timestamp: Date.now(),
+      };
+
+      const actions = JSON.parse(localStorage.getItem('offlineActions') || '[]');
+      actions.push(action);
+      localStorage.setItem('offlineActions', JSON.stringify(actions));
+
+      // Register for background sync
+      return registration.sync.register('background-sync');
+    });
+  }
+}
+
+// Clear completed offline actions
+export function clearOfflineActions() {
+  localStorage.removeItem('offlineActions');
+}
+
+// Get pending offline actions
+export function getPendingOfflineActions() {
+  return JSON.parse(localStorage.getItem('offlineActions') || '[]');
+}
