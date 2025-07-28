@@ -2,30 +2,35 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app import schemas, models
 from app.database import get_db
-from app.core.langchain_integration import langchain_integration
+from app.agents.master_agent import MasterAgent, AgentAction
 
 router = APIRouter(
     prefix="/performance",
     tags=["performance"]
 )
 
+# Initialize master agent for performance analysis
+master_agent = MasterAgent()
+
 @router.post("/analyze", response_model=dict)
-def analyze_performance(
+async def analyze_performance(
     subject: str,
     topic: str,
-    correct_answers: int,
-    total_questions: int
+    education_level: str = "lise",
+    performance_data: dict = None
 ):
+    """Analyze performance using the agent system"""
     try:
-        # Analyze performance using LangChain
-        analysis = langchain_integration.analyze_performance(
-            subject=subject,
-            topic=topic,
-            correct_answers=correct_answers,
-            total_questions=total_questions
-        )
+        input_data = {
+            "action": AgentAction.ANALYZE_PERFORMANCE.value,
+            "subject": subject,
+            "topic": topic,
+            "education_level": education_level,
+            "performance_data": performance_data or {}
+        }
         
-        return analysis
+        result = await master_agent.process(input_data)
+        return result
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

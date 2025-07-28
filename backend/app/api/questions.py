@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.orm import Session
 from app import schemas, models
 from app.database import get_db
-from app.core.langchain_integration import langchain_integration
+# from app.core.langchain_integration import langchain_integration  # Removed
+from app.agents.question_agent import QuestionAgent
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -17,6 +18,9 @@ router = APIRouter(
     tags=["questions"]
 )
 
+question_agent = QuestionAgent()
+
+
 @router.post("/generate", response_model=schemas.QuestionGenerationResponse)
 async def generate_questions(
     subject: str = Query(...),
@@ -27,14 +31,19 @@ async def generate_questions(
     db: Session = Depends(get_db)
 ):
     try:
-        # Generate questions using LangChain
-        question_data = await langchain_integration.generate_questions(
-            subject=subject,
-            topic=topic,
-            difficulty=difficulty,
-            count=count,
-            education_level=education_level
-        )
+        # Delegate to QuestionAgent
+        agent_response = await question_agent.process({
+            "subject": subject,
+            "topic": topic,
+            "difficulty": difficulty,
+            "count": count,
+            "education_level": education_level,
+        })
+
+        if agent_response.get("status") != "success":
+            raise ValueError(agent_response.get("error", "Unknown error"))
+
+        question_data = agent_response.get("data")
         
         return question_data
     except Exception as e:
@@ -75,18 +84,20 @@ def get_question(question_id: int, db: Session = Depends(get_db)):
     return db_question
 
 @router.post("/evaluate", response_model=dict)
-def evaluate_answer(
-    request: EvaluateRequest
+async def evaluate_answer(
+    request: EvaluateRequest,
 ):
     try:
-        # Evaluate answer using LangChain
-        evaluation = langchain_integration.evaluate_answer(
+        evaluation_response = await question_agent.evaluate_answer(
             question=request.question,
             correct_answer=request.correct_answer,
-            user_answer=request.user_answer
+            user_answer=request.user_answer,
         )
-        
-        return evaluation
+
+        if evaluation_response.get("status") != "success":
+            raise ValueError(evaluation_response.get("error", "Unknown error"))
+
+        return evaluation_response.get("data")
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import users, subjects, questions, performance, agents
+from app.api import users, subjects, performance, agents, auth
 from app.database import engine, Base
 from app.core.config import settings
 
@@ -23,9 +23,9 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(subjects.router)
-app.include_router(questions.router)
 app.include_router(performance.router)
 app.include_router(agents.router)
 
