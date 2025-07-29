@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     YOUTUBE_API_KEY: Optional[str] = None
     TAVILY_API_KEY: Optional[str] = None
     
+    # JWT Authentication
+    JWT_SECRET_KEY: str = "your-secret-key-here"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
     # CORS
     BACKEND_CORS_ORIGINS: list = ["*"]
     

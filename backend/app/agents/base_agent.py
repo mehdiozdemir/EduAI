@@ -9,7 +9,7 @@ class BaseAgent(ChatGoogleGenerativeAI):
     def __init__(self, name: str, description: str, **kwargs):
         # Initialize the parent ChatGoogleGenerativeAI class
         super().__init__(
-            model="gemini-2.5-flash",
+            model="gemini-2.0-flash",
             google_api_key=settings.GEMINI_API_KEY,
             temperature=0.0,
             **kwargs

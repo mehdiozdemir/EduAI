@@ -8,6 +8,10 @@ import aiohttp
 import asyncio
 from urllib.parse import quote
 from app.core.config import settings
+from app.services.memory_service import memory_service
+import logging
+
+logger = logging.getLogger(__name__)
 
 class YouTubeVideo(BaseModel):
     """YouTube video recommendation"""
@@ -42,8 +46,14 @@ class YouTubeAgent(BaseAgent):
         subject = input_data.get("subject", "Unknown")
         education_level = input_data.get("education_level", "lise")
         language = input_data.get("language", "Turkish")
+        user_id = str(input_data.get("user_id", ""))  # memory entegrasyonu için
         
         try:
+            # Kullanıcının geçmiş video geçmişini alarak tekrar önerileri önle
+            history_urls: List[str] = []
+            if user_id and memory_service.memory:
+                history_urls = await self._get_user_video_history(user_id, subject)
+
             # Gerçek videolar aramak için search queries oluştur
             all_videos = []
             
@@ -61,9 +71,14 @@ class YouTubeAgent(BaseAgent):
                 videos = await self.search_real_videos(search_query, max_results=5)
                 all_videos.extend(videos)
             
-            # Videoları formatlı yapıya dönüştür
-            formatted_videos = []
-            for video in all_videos[:5]:  # İlk 5 videoyu al
+            # Videoları formatlı yapıya dönüştür & geçmiş videoları çıkar
+            formatted_videos: List[Dict[str, Any]] = []
+            for video in all_videos:
+                # Daha önce önerilmiş videoları atla
+                if history_urls and video.get("video_url") in history_urls:
+                    continue
+                if len(formatted_videos) >= 5:
+                    break
                 formatted_video = {
                     "title": video.get("title", ""),
                     "channel": video.get("channel", ""),
@@ -82,6 +97,10 @@ class YouTubeAgent(BaseAgent):
                 "recommendations": formatted_videos,
                 "search_strategy": "Gerçek YouTube API/arama kullanılarak zayıf konulara özel videolar bulundu."
             }
+
+            # Önerileri hafızaya kaydet
+            if user_id and formatted_videos:
+                await self._store_recommendations_to_memory(user_id, formatted_videos, subject, education_level)
             
             return {
                 "status": "success",
@@ -296,3 +315,64 @@ Her video için:
                 "agent": str(self.name),
                 "error": str(e)
             }
+
+    # ------------------------------------------------------------------
+    # Memory integration helpers
+    # ------------------------------------------------------------------
+
+    async def _get_user_video_history(self, user_id: str, subject: str) -> List[str]:
+        """Retrieve previously recommended YouTube video URLs for the user to avoid repetition"""
+        try:
+            memories = await memory_service.get_personalized_context(
+                user_id=user_id,
+                query=f"YouTube {subject} video",
+                limit=20
+            )
+            urls: List[str] = []
+            for mem in memories:
+                text = mem.get("memory", "")
+                urls.extend(re.findall(r'https?://www\.youtube\.com/watch\?v=[\w-]+', text))
+            return urls
+        except Exception as e:
+            logger.error(f"Error fetching video history from memory: {e}")
+            return []
+
+    async def _store_recommendations_to_memory(
+        self,
+        user_id: str,
+        recommendations: List[Dict[str, Any]],
+        subject: str,
+        education_level: str
+    ) -> None:
+        """Persist recommendation session to the personalized memory service"""
+        if not memory_service.memory:
+            return
+
+        try:
+            lines = [
+                f"- {rec['title']} | {rec['video_url']} | Konular: {', '.join(rec.get('topics_covered', []))}"
+                for rec in recommendations
+            ]
+            content = (
+                f"Önerilen YouTube Videoları ({subject} - {education_level}):\n" + "\n".join(lines)
+            )
+
+            metadata = {
+                "session_type": "video_recommendation",
+                "subject": subject,
+                "education_level": education_level,
+                "video_count": len(recommendations)
+            }
+
+            # Sanitize metadata using helper if available
+            if hasattr(memory_service, "_sanitize_metadata"):
+                metadata = memory_service._sanitize_metadata(metadata)  # type: ignore
+
+            memory_service.memory.add(
+                messages=[{"role": "assistant", "content": content}],
+                user_id=user_id,
+                metadata=metadata
+            )
+        except Exception as e:
+            logger.error(f"Error storing recommendations to memory: {e}")
+            # Don't raise further

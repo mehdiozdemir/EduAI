@@ -2,7 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app import schemas, models
 from app.database import get_db
+from app.core.auth_deps import create_access_token, get_current_user
 from pydantic import BaseModel, EmailStr
+from datetime import datetime, timedelta
+
+# Token response schema
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: schemas.User
 
 # Login request schema
 class LoginRequest(BaseModel):
@@ -22,7 +30,7 @@ router = APIRouter(
     tags=["authentication"]
 )
 
-@router.post("/login", response_model=schemas.User)
+@router.post("/login", response_model=TokenResponse)
 def login(credentials: LoginRequest, db: Session = Depends(get_db)):
     """Login with email and password"""
     # Find user by email
@@ -43,9 +51,18 @@ def login(credentials: LoginRequest, db: Session = Depends(get_db)):
             detail="Invalid credentials"
         )
     
-    return db_user
+    # Create access token
+    access_token = create_access_token(
+        data={"user_id": db_user.id, "email": db_user.email}
+    )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": db_user
+    }
 
-@router.post("/register", response_model=schemas.User)
+@router.post("/register", response_model=TokenResponse)
 def register(user_data: RegisterRequest, db: Session = Depends(get_db)):
     """Register a new user"""
     # Check if user already exists
@@ -73,27 +90,31 @@ def register(user_data: RegisterRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_user)
     
-    return db_user
+    # Create access token for new user
+    access_token = create_access_token(
+        data={"user_id": db_user.id, "email": db_user.email}
+    )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": db_user
+    }
 
 @router.post("/logout")
-def logout():
-    """Logout endpoint - frontend will handle token removal"""
-    return {"message": "Successfully logged out"}
+def logout(current_user: models.User = Depends(get_current_user)):
+    """Logout endpoint - validates token and returns logout confirmation"""
+    return {
+        "message": "Successfully logged out",
+        "user": current_user.username,
+        "timestamp": datetime.now().isoformat(),
+        "instructions": "Please remove the token from client storage (localStorage, sessionStorage, etc.)"
+    }
 
 @router.get("/me", response_model=schemas.User)
-def get_current_user(user_id: int, db: Session = Depends(get_db)):
+def get_current_user_profile(current_user: models.User = Depends(get_current_user)):
     """Get current user profile"""
-    # In a real app, you would get user_id from JWT token
-    # For now, we'll accept it as a parameter
-    db_user = db.query(models.User).filter(models.User.id == user_id).first()
-    
-    if not db_user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
-    return db_user
+    return current_user
 
 @router.put("/me", response_model=schemas.User)
 def update_current_user(user_id: int, user_data: schemas.UserUpdate, db: Session = Depends(get_db)):
