@@ -55,10 +55,12 @@ class MasterAgent(BaseAgent):
     
     async def _handle_question_generation(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Handle question generation request"""
+        # Ensure user_id is passed through
         return await self._question_agent.process(input_data)
     
     async def _handle_performance_analysis(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Handle performance analysis request"""
+        # Analysis agent already handles user_id properly
         return await self._analysis_agent.process(input_data)
     
     async def _handle_youtube_recommendations(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -69,6 +71,7 @@ class MasterAgent(BaseAgent):
             if analysis_result["status"] == "success":
                 input_data["weak_topics"] = analysis_result["data"]["weak_topics"]
         
+        # Pass user_id to YouTube agent for memory integration
         return await self._youtube_agent.process(input_data)
     
     async def _handle_book_recommendations(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -79,6 +82,7 @@ class MasterAgent(BaseAgent):
             if analysis_result["status"] == "success":
                 input_data["weak_topics"] = analysis_result["data"]["weak_topics"]
         
+        # Pass user_id to book agent for memory integration
         return await self._book_agent.process(input_data)
     
     async def _handle_complete_learning_cycle(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
