@@ -24,7 +24,7 @@ const RegisterPage: React.FC = () => {
       
       // Redirect to dashboard after successful registration
       setTimeout(() => {
-        navigate('/dashboard', { replace: true });
+        navigate('/app/dashboard', { replace: true });
       }, 1500);
     } catch (err: any) {
       console.error('Registration error:', err);
@@ -113,7 +113,7 @@ const RegisterPage: React.FC = () => {
             onSuccess={() => {
               setSuccess(true);
               setTimeout(() => {
-                navigate('/dashboard', { replace: true });
+                navigate('/app/dashboard', { replace: true });
               }, 1500);
             }}
           />

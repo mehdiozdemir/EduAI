@@ -4,7 +4,7 @@ import React from 'react';
 import { render, screen, act, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { useApi, useMultipleApi, usePaginatedApi } from '../useApi';
-import { AuthProvider } from '../../contexts/AuthContext';
+import AuthProvider from '../../contexts/AuthContext';
 import { authService } from '../../services/authService';
 import { TokenManager } from '../../services/api';
 import type { ApiError } from '../../types';

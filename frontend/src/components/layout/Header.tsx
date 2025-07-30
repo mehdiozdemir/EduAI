@@ -43,19 +43,19 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             <Link
-              to="/dashboard"
+              to="/app/dashboard"
               className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
             >
               Dashboard
             </Link>
             <Link
-              to="/subjects"
+              to="/app/subjects"
               className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
             >
               Subjects
             </Link>
             <Link
-              to="/performance"
+              to="/app/performance"
               className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
             >
               Performance

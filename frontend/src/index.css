@@ -1,9 +1,12 @@
-/* Import responsive utilities */
-@import './styles/responsive.css';
-
+/* Import Tailwind directives first for better loading priority */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Import responsive utilities */
+@import './styles/responsive.css';
+/* Import micro-interactions styles */
+@import './styles/micro-interactions.css';
 
 @layer base {
   :root {

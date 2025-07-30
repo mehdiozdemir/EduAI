@@ -101,7 +101,7 @@ interface AuthProviderProps {
 }
 
 // Auth provider component
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   // Check authentication status on mount
@@ -247,6 +247,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 };
+
+// Default export for the provider component (Fast Refresh compatible)
+export default AuthProvider;
 
 // Export the context and type for use in separate hook file
 export { AuthContext };

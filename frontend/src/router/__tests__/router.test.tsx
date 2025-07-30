@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider, Outlet } from 'react-router-dom';
-import { AuthProvider } from '../../contexts/AuthContext';
+import AuthProvider from '../../contexts/AuthContext';
 import { router } from '../index';
 import { vi } from 'vitest';
 

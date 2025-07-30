@@ -1,5 +1,6 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../utils';
 import type { User } from '../../types';
 
@@ -19,7 +20,7 @@ interface NavigationItem {
 const navigationItems: NavigationItem[] = [
   {
     name: 'Dashboard',
-    href: '/dashboard',
+    href: '/app/dashboard',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -40,7 +41,7 @@ const navigationItems: NavigationItem[] = [
   },
   {
     name: 'Subjects',
-    href: '/subjects',
+    href: '/app/subjects',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -55,7 +56,7 @@ const navigationItems: NavigationItem[] = [
   },
   {
     name: 'Quiz',
-    href: '/quiz',
+    href: '/app/quiz',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -70,7 +71,7 @@ const navigationItems: NavigationItem[] = [
   },
   {
     name: 'Performance',
-    href: '/performance',
+    href: '/app/performance',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -85,7 +86,7 @@ const navigationItems: NavigationItem[] = [
   },
   {
     name: 'Recommendations',
-    href: '/recommendations',
+    href: '/app/recommendations',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -100,7 +101,7 @@ const navigationItems: NavigationItem[] = [
   },
   {
     name: 'React Query Demo',
-    href: '/react-query-demo',
+    href: '/app/react-query-demo',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -116,26 +117,61 @@ const navigationItems: NavigationItem[] = [
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ user, className }) => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const location = useLocation();
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const isActiveRoute = (href: string): boolean => {
-    if (href === '/dashboard') {
-      return location.pathname === '/' || location.pathname === '/dashboard';
+    if (href === '/app/dashboard') {
+      return location.pathname === '/app' || location.pathname === '/app/dashboard';
     }
     return location.pathname.startsWith(href);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setIsUserMenuOpen(false);
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    setIsUserMenuOpen(false);
   };
 
   return (
     <aside
       className={cn(
         'bg-white border-r border-gray-200 flex flex-col',
-        'w-64 h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto',
+        'w-64 h-screen sticky top-0 overflow-y-auto shrink-0',
         className
       )}
+      style={{ 
+        /* Prevent layout shift during initial render */
+        minHeight: '100vh',
+        maxHeight: '100vh'
+      }}
     >
       {/* Sidebar Header */}
       <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
+        <Link to="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
           <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold">EA</span>
           </div>
@@ -143,7 +179,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, className }) => {
             <h2 className="text-lg font-semibold text-gray-900">EduAI</h2>
             <p className="text-sm text-gray-500">Learning Platform</p>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Navigation */}
@@ -191,20 +227,75 @@ const Sidebar: React.FC<SidebarProps> = ({ user, className }) => {
 
       {/* User Info Section */}
       {user && (
-        <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+        <div className="p-4 border-t border-gray-200 space-y-3 relative" ref={userMenuRef}>
+          {/* User Profile Button */}
+          <button
+            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+            className="w-full flex items-center space-x-3 p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+          >
             <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
               <span className="text-primary-600 font-medium text-sm">
                 {user.username.charAt(0).toUpperCase()}
               </span>
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 text-left">
               <p className="text-sm font-medium text-gray-900 truncate">
                 {user.username}
               </p>
               <p className="text-xs text-gray-500 truncate">{user.email}</p>
             </div>
-          </div>
+            {/* Dropdown Arrow */}
+            <svg 
+              className={cn(
+                'w-4 h-4 transition-transform duration-200',
+                isUserMenuOpen ? 'rotate-180' : ''
+              )} 
+              fill="currentColor" 
+              viewBox="0 0 20 20"
+            >
+              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+          
+          {/* Dropdown Menu */}
+          {isUserMenuOpen && (
+            <div className="absolute bottom-full left-4 right-4 mb-2 bg-white rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+              {/* Menu Items */}
+              <div className="py-1">
+                <button
+                  onClick={() => handleNavigation('/app/profile')}
+                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  <svg className="w-4 h-4 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                  </svg>
+                  Profil
+                </button>
+
+                <button
+                  onClick={() => handleNavigation('/app/settings')}
+                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  <svg className="w-4 h-4 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                  </svg>
+                  Ayarlar
+                </button>
+
+                <hr className="my-1" />
+
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <svg className="w-4 h-4 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
+                  </svg>
+                  Çıkış Yap
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
