@@ -44,7 +44,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ className }) => {
               <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
               </svg>
-              AI-Powered Learning Platform
+              Yapay Zeka Destekli Öğrenme Platformu
             </div>
 
             {/* Main heading and subheading */}
@@ -53,8 +53,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ className }) => {
                 "transition-all duration-700 ease-out",
                 titleFade.fadeInClass
               )}
-              defaultTitle="Transform Your Learning Journey with AI"
-              defaultSubtitle="Experience personalized education with AI-powered question generation, real-time performance analysis, and intelligent book recommendations tailored just for you."
+              defaultTitle="Yapay Zeka ile Öğrenme Yolculuğunuzu Dönüştürün"
+              defaultSubtitle="Yapay zeka destekli soru oluşturma, gerçek zamanlı performans analizi ve size özel akıllı kitap önerileriyle kişiselleştirilmiş eğitim deneyimi yaşayın."
             />
 
             {/* Key benefits */}
@@ -101,7 +101,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ className }) => {
                         ? 'Yükleniyor...'
                         : isAuthenticated 
                           ? `Devam Et, ${user?.username || 'Kullanıcı'}`
-                          : 'Ücretsiz Başla'
+                          : 'Hadi Başlayalım'
                       }
                       {!isLoading && (
                         <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,36 +128,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ className }) => {
                 </svg>
                 Özellikleri Keşfet
               </Link>
-            </div>
-
-            {/* Trust indicators */}
-            <div className={cn(
-              "mt-8 pt-8 border-t border-gray-200 transition-all duration-700 ease-out",
-              trustFade.fadeInClass
-            )}>
-              <p className="text-sm text-gray-500 mb-4">Binlerce öğrenci tarafından güvenilir</p>
-              <div className="flex justify-center lg:justify-start items-center space-x-6">
-                <div className="flex items-center">
-                  <div className="flex -space-x-2">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full border-2 border-white flex items-center justify-center text-white text-xs font-semibold">
-                        {String.fromCharCode(64 + i)}
-                      </div>
-                    ))}
-                  </div>
-                  <span className="ml-3 text-sm font-medium text-gray-600">1000+ Aktif Öğrenci</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="flex text-yellow-400">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <svg key={i} className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
-                  </div>
-                  <span className="ml-2 text-sm font-medium text-gray-600">4.9/5 Puan</span>
-                </div>
-              </div>
             </div>
           </div>
 
