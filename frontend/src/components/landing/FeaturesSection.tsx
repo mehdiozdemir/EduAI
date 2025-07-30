@@ -7,7 +7,6 @@ import {
   BookRecommendationIcon,
   PersonalizedLearningIcon,
 } from '../icons/FeatureIcons';
-import { AuthAwareCTA } from './sections/AuthAwareCTA';
 
 const features: Feature[] = [
   {
@@ -26,8 +25,8 @@ const features: Feature[] = [
   },
   {
     id: 'book-recommendations',
-    title: 'Kitap Önerileri',
-    description: 'Performansınıza göre size en uygun kaynak kitapları önerir. Her seviyeye ve her konuya özel kitap listesi sunar.',
+    title: 'Kitap ve YouTube Video Önerileri',
+    description: 'Performansınıza göre size en uygun kaynak kitapları ve youtube videoları önerir. Her seviyeye ve her konuya özel kitap listesi ve youtube videoları sunar.',
     icon: <BookRecommendationIcon />,
     color: 'purple',
   },
@@ -87,26 +86,6 @@ const FeaturesSection: React.FC<FeaturesSectionProps> = ({ className = '' }) => 
               />
             </div>
           ))}
-        </div>
-
-        {/* Bottom CTA */}
-        <div className={`text-center mt-16 transition-all duration-700 ${
-          isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-        }`} style={{ 
-          transitionDelay: isVisible ? '800ms' : '0ms' 
-        }}>
-          <p className="text-gray-600 mb-6">
-            Daha fazla özellik keşfetmek için platforma göz atın
-          </p>
-          <AuthAwareCTA 
-            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform-gpu group"
-            redirectPath="/features"
-          >
-            Tüm Özellikleri Keşfet
-            <svg className="ml-2 -mr-1 w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-          </AuthAwareCTA>
         </div>
       </div>
     </section>

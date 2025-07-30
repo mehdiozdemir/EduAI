@@ -7,7 +7,7 @@ export interface WorkflowStep {
   title: string;
   description: string;
   icon: React.ReactNode;
-  color?: 'blue' | 'green' | 'purple' | 'orange';
+  color?: 'blue' | 'green' | 'purple' | 'orange' | 'indigo';
 }
 
 interface WorkflowStepProps {
@@ -45,6 +45,13 @@ const colorStyles = {
     iconBg: 'bg-orange-50',
     iconColor: 'text-orange-600',
     line: 'bg-orange-200',
+  },
+  indigo: {
+    numberBg: 'bg-indigo-600',
+    numberText: 'text-white',
+    iconBg: 'bg-indigo-50',
+    iconColor: 'text-indigo-600',
+    line: 'bg-indigo-200',
   },
 };
 

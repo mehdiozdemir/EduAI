@@ -114,7 +114,7 @@ export const RegisterCTA: React.FC<Omit<AuthAwareCTAProps, 'children'>> = (props
       {...props}
       onClick={handleClick}
     >
-      {isAuthenticated ? 'Panele Git' : 'Ücretsiz Başla'}
+      {isAuthenticated ? 'Panele Git' : 'Kayıt Ol'}
     </Button>
   );
 };

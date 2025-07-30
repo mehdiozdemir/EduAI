@@ -21,10 +21,9 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({ className }) => {
 
   // Navigation items for landing page
   const navigationItems = [
-    { name: 'Features', section: 'features' },
-    { name: 'How It Works', section: 'how-it-works' },
-    { name: 'Statistics', section: 'statistics' },
-    { name: 'Testimonials', section: 'testimonials' },
+    { name: 'Özellikler', section: 'features' },
+    { name: 'Nasıl Çalışır', section: 'how-it-works' },
+    { name: 'İletişim', section: 'contact' },
   ];
 
   // Handle navigation click
@@ -129,7 +128,7 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({ className }) => {
                   setIsMobileMenuOpen(!isMobileMenuOpen);
                 }}
                 className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 transition-colors"
-                aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+                aria-label={isMobileMenuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
               >
                 <svg
                   className={cn(
@@ -183,7 +182,7 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({ className }) => {
           <div className="flex flex-col h-full">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <span className="text-lg font-semibold text-gray-900">Menu</span>
+              <span className="text-lg font-semibold text-gray-900">Menü</span>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
