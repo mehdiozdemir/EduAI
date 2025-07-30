@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
-from app.api import users, subjects, performance, agents, auth
+from app.api import users, subjects, performance, agents, auth, exam, education
 from app.database import engine, Base
 from app.core.config import settings
 
@@ -33,6 +33,14 @@ app = FastAPI(
         {
             "name": "performance",
             "description": "Performance tracking operations.",
+        },
+        {
+            "name": "exams",
+            "description": "Exam and practice test operations. **Requires authentication for some endpoints.**",
+        },
+        {
+            "name": "education",
+            "description": "Education level and system management operations.",
         },
     ],
     # JWT Bearer token authentication for Swagger
@@ -93,6 +101,8 @@ app.include_router(users.router)
 app.include_router(subjects.router)
 app.include_router(performance.router)
 app.include_router(agents.router)
+app.include_router(exam.router, prefix="/api/v1", tags=["exams"])
+app.include_router(education.router, prefix="/api/v1", tags=["education"])
 
 @app.get("/")
 async def root():
