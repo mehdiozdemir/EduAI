@@ -4,8 +4,8 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { ProtectedRoute, PublicRoute, withAuth } from '../ProtectedRoute';
-import { AuthProvider } from '../../../contexts/AuthContext';
+import { ProtectedRoute, PublicRoute } from '../ProtectedRoute';
+import AuthProvider from '../../../contexts/AuthContext';
 import { authService } from '../../../services/authService';
 import { TokenManager } from '../../../services/api';
 import type { User } from '../../../types';
@@ -224,87 +224,5 @@ describe('PublicRoute', () => {
       expect(screen.queryByText('Public Content')).not.toBeInTheDocument();
       expect(screen.queryByText('Dashboard Page')).not.toBeInTheDocument();
     });
-  });
-});
-
-describe('withAuth HOC', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    Object.defineProperty(window, 'localStorage', {
-      value: {
-        getItem: vi.fn(),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-      },
-      writable: true,
-    });
-  });
-
-  it('should wrap component with authentication protection', async () => {
-    mockTokenManager.getToken.mockReturnValue('valid-token');
-    mockAuthService.getProfile.mockResolvedValue(mockUser);
-
-    const TestComponent: React.FC<{ message: string }> = ({ message }) => (
-      <div>{message}</div>
-    );
-
-    const ProtectedTestComponent = withAuth(TestComponent);
-
-    renderWithRouter(
-      <ProtectedTestComponent message="Hello World" />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('Hello World')).toBeInTheDocument();
-    });
-  });
-
-  it('should redirect when user is not authenticated', async () => {
-    mockTokenManager.getToken.mockReturnValue(null);
-
-    const TestComponent: React.FC = () => <div>Test Component</div>;
-    const ProtectedTestComponent = withAuth(TestComponent);
-
-    renderWithRouter(
-      <ProtectedTestComponent />,
-      ['/protected']
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('Login Page')).toBeInTheDocument();
-      expect(screen.queryByText('Test Component')).not.toBeInTheDocument();
-    });
-  });
-
-  it('should pass through options to ProtectedRoute', async () => {
-    mockTokenManager.getToken.mockReturnValue(null);
-
-    const TestComponent: React.FC = () => <div>Test Component</div>;
-    const ProtectedTestComponent = withAuth(TestComponent, {
-      requireAuth: false,
-    });
-
-    renderWithRouter(<ProtectedTestComponent />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Test Component')).toBeInTheDocument();
-    });
-  });
-
-  it('should set correct displayName', () => {
-    const TestComponent: React.FC = () => <div>Test</div>;
-    TestComponent.displayName = 'TestComponent';
-
-    const ProtectedTestComponent = withAuth(TestComponent);
-
-    expect(ProtectedTestComponent.displayName).toBe('withAuth(TestComponent)');
-  });
-
-  it('should handle component without displayName', () => {
-    const TestComponent: React.FC = () => <div>Test</div>;
-
-    const ProtectedTestComponent = withAuth(TestComponent);
-
-    expect(ProtectedTestComponent.displayName).toBe('withAuth(TestComponent)');
   });
 });

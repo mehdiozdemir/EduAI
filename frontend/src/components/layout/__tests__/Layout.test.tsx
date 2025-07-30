@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import Layout from '../Layout';
-import { AuthProvider } from '../../../contexts/AuthContext';
+import AuthProvider from '../../../contexts/AuthContext';
 import type { BreadcrumbItem } from '../Breadcrumb';
 
 // Mock the useAuth hook

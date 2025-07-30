@@ -51,7 +51,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // If authentication is not required but user is authenticated (e.g., login page)
   if (!requireAuth && isAuthenticated) {
     // Redirect to dashboard or intended location
-    const from = location.state?.from?.pathname || '/dashboard';
+    const from = location.state?.from?.pathname || '/app/dashboard';
     return <Navigate to={from} replace />;
   }
 
@@ -71,7 +71,7 @@ interface PublicRouteProps {
  */
 export const PublicRoute: React.FC<PublicRouteProps> = ({
   children,
-  redirectTo = '/dashboard',
+  redirectTo = '/app/dashboard',
 }) => {
   return (
     <ProtectedRoute requireAuth={false} redirectTo={redirectTo}>
@@ -109,29 +109,5 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
   );
 };
 
-// Higher-order component for wrapping components with authentication
-interface WithAuthOptions {
-  redirectTo?: string;
-  requireAuth?: boolean;
-  fallback?: ReactNode;
-}
-
-/**
- * Higher-order component that wraps a component with authentication protection
- */
-export function withAuth<P extends object>(
-  Component: React.ComponentType<P>,
-  options: WithAuthOptions = {}
-) {
-  const WrappedComponent: React.FC<P> = (props) => {
-    return (
-      <ProtectedRoute {...options}>
-        <Component {...props} />
-      </ProtectedRoute>
-    );
-  };
-
-  WrappedComponent.displayName = `withAuth(${Component.displayName || Component.name || 'Component'})`;
-
-  return WrappedComponent;
-}
+// Default export for the main component (Fast Refresh compatible)
+export default ProtectedRoute;

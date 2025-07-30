@@ -20,7 +20,7 @@ interface NavigationItem {
 const navigationItems: NavigationItem[] = [
   {
     name: 'Dashboard',
-    href: '/dashboard',
+    href: '/app/dashboard',
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -41,7 +41,7 @@ const navigationItems: NavigationItem[] = [
   },
   {
     name: 'Subjects',
-    href: '/subjects',
+    href: '/app/subjects',
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -56,7 +56,7 @@ const navigationItems: NavigationItem[] = [
   },
   {
     name: 'Quiz',
-    href: '/quiz',
+    href: '/app/quiz',
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -71,7 +71,7 @@ const navigationItems: NavigationItem[] = [
   },
   {
     name: 'Performance',
-    href: '/performance',
+    href: '/app/performance',
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -86,7 +86,7 @@ const navigationItems: NavigationItem[] = [
   },
   {
     name: 'Recommendations',
-    href: '/recommendations',
+    href: '/app/recommendations',
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path

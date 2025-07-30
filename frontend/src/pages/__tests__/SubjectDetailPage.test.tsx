@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import { SubjectDetailPage } from '../SubjectDetailPage';
 import { subjectService } from '../../services/subjectService';
-import { AuthProvider } from '../../contexts/AuthContext';
+import AuthProvider from '../../contexts/AuthContext';
 import type { Subject, Topic } from '../../types';
 
 // Mock the services

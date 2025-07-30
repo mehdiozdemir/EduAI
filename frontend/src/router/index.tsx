@@ -55,6 +55,15 @@ const ReactQueryComprehensiveDemo = React.lazy(
 const QuizSetupPage = React.lazy(() =>
   import(/* webpackChunkName: "quiz" */ '../pages/QuizSetupPage.tsx').then(module => ({ default: module.default }))
 );
+const LandingPage = React.lazy(() =>
+  import(/* webpackChunkName: "landing" */ '../pages/LandingPage').then(module => ({ default: module.default }))
+);
+const ProfilePage = React.lazy(() =>
+  import(/* webpackChunkName: "profile" */ '../pages/ProfilePage').then(module => ({ default: module.default }))
+);
+const SettingsPage = React.lazy(() =>
+  import(/* webpackChunkName: "settings" */ '../pages/SettingsPage').then(module => ({ default: module.default }))
+);
 const NotFoundPage = React.lazy(() =>
   import(/* webpackChunkName: "error" */ '../pages/NotFoundPage').then(
     module => ({ default: module.NotFoundPage })
@@ -67,6 +76,26 @@ const LazyWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 export const router = createBrowserRouter([
+  // Landing page route (root - accessible to everyone)
+  {
+    path: '/',
+    element: (
+      <LazyWrapper>
+        <LandingPage />
+      </LazyWrapper>
+    ),
+  },
+
+  // Landing page alternative route
+  {
+    path: '/landing',
+    element: (
+      <LazyWrapper>
+        <LandingPage />
+      </LazyWrapper>
+    ),
+  },
+
   // Public routes (no authentication required, redirect if authenticated)
   {
     path: '/login',
@@ -91,7 +120,7 @@ export const router = createBrowserRouter([
 
   // Protected routes (authentication required)
   {
-    path: '/',
+    path: '/app',
     element: (
       <ProtectedRoute>
         <Layout />
@@ -100,7 +129,7 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="/dashboard" replace />,
+        element: <Navigate to="/app/dashboard" replace />,
       },
       {
         path: 'dashboard',
@@ -187,6 +216,22 @@ export const router = createBrowserRouter([
         element: (
           <LazyWrapper>
             <QuizSetupPage />
+          </LazyWrapper>
+        ),
+      },
+      {
+        path: 'profile',
+        element: (
+          <LazyWrapper>
+            <ProfilePage />
+          </LazyWrapper>
+        ),
+      },
+      {
+        path: 'settings',
+        element: (
+          <LazyWrapper>
+            <SettingsPage />
           </LazyWrapper>
         ),
       },

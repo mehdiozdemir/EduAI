@@ -3,7 +3,6 @@ import { Outlet } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { cn } from '../../utils';
-import Header from './Header';
 import Sidebar from './Sidebar';
 import Breadcrumb from './Breadcrumb';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
@@ -25,7 +24,7 @@ export const Layout: React.FC<LayoutProps> = ({
   className,
   contentClassName,
 }) => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { isMobile } = useBreakpoint();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -45,22 +44,11 @@ export const Layout: React.FC<LayoutProps> = ({
     }
   }, [isMobile, isSidebarOpen]);
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
-  };
-
   return (
     <div className={cn('min-h-screen bg-gray-50', className)}>
       <OfflineNotification />
       <ErrorBoundary>
-        {/* Header */}
-        <Header user={user || undefined} onLogout={handleLogout} />
-
-        <div className="flex min-h-[calc(100vh-4rem)]">
+        <div className="flex min-h-screen">
           {/* Desktop Sidebar */}
           {showSidebar && (
             <div className="hidden md:block">
@@ -73,7 +61,7 @@ export const Layout: React.FC<LayoutProps> = ({
           {/* Main Content */}
           <main
             className={cn(
-              'flex-1 min-h-[calc(100vh-4rem)]',
+              'flex-1 min-h-screen',
               contentClassName
             )}
           >

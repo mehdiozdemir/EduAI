@@ -1,0 +1,25 @@
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://eduai.com/sitemap.xml
+
+# Specific rules for different environments
+# This file should be customized per environment
+
+# Block admin and sensitive areas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /.env*
+Disallow: /build-info.json
+Disallow: /manifest.json
+
+# Allow important pages
+Allow: /
+Allow: /features
+Allow: /about
+Allow: /contact
+Allow: /help
+
+# Crawl delay
+Crawl-delay: 1

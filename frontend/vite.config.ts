@@ -3,7 +3,20 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      // Include .jsx and .tsx in Fast Refresh
+      include: "**/*.{jsx,tsx}",
+    })
+  ],
+  server: {
+    // Force page reload on HTML changes to prevent layout issues
+    hmr: {
+      overlay: true,
+    },
+    // Ensure styles are loaded before JavaScript
+    middlewareMode: false,
+  },
   build: {
     // Enable code splitting and optimization
     rollupOptions: {
@@ -66,19 +79,27 @@ export default defineConfig({
       'react/jsx-runtime',
       'react-router-dom',
       '@tanstack/react-query',
+      'clsx',
+      'tailwind-merge',
     ],
     exclude: [
       // Exclude heavy libraries from pre-bundling to enable lazy loading
       'chart.js',
       'react-chartjs-2',
     ],
+    // Force pre-bundling of critical dependencies
+    force: true,
   },
   // Ensure React is properly resolved
   resolve: {
     dedupe: ['react', 'react-dom'],
   },
-  // Enable CSS code splitting
+  // Enable CSS code splitting and ensure proper loading order
   css: {
     devSourcemap: process.env.NODE_ENV === 'development',
+    // Ensure CSS is processed inline during development
+    modules: {
+      localsConvention: 'camelCase',
+    },
   },
 })

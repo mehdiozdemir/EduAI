@@ -12,7 +12,7 @@ const LoginPage: React.FC = () => {
   const location = useLocation();
 
   // Get the intended destination from location state, default to dashboard
-  const from = (location.state as any)?.from?.pathname || '/dashboard';
+  const from = (location.state as any)?.from?.pathname || '/app/dashboard';
 
   const handleLogin = async (credentials: LoginCredentials) => {
     try {

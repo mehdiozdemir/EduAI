@@ -2,10 +2,11 @@ import React, { useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { AuthProvider } from './contexts/AuthContext';
+import AuthProvider from './contexts/AuthContext';
 import { ErrorBoundaryProvider, GlobalErrorDisplay } from './components/ui/ErrorBoundaryProvider';
 import { LoadingStateManager, GlobalLoadingIndicator } from './components/ui/LoadingStateManager';
 import { PerformanceDashboard } from './components/features/PerformanceDashboard';
+import { StylesLoadedProvider } from './providers/StylesLoadedProvider';
 import { queryClient } from './lib/queryClient';
 import { router } from './router';
 import { registerSW } from './utils/serviceWorker';
@@ -42,31 +43,33 @@ function App() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ErrorBoundaryProvider
-        maxErrors={5}
-        autoRemoveAfter={10000}
-        onError={(error, errorInfo) => {
-          // Log errors to external service in production
-          if (process.env.NODE_ENV === 'production') {
-            console.error('Application Error:', error, errorInfo);
-            // TODO: Send to error tracking service (e.g., Sentry)
-          }
-        }}
-      >
-        <LoadingStateManager globalLoadingDelay={200}>
-          <AuthProvider>
-            <ToastProvider>
-              <RouterProvider router={router} />
-              <GlobalErrorDisplay maxVisible={3} />
-              <GlobalLoadingIndicator />
-              <PerformanceDashboard />
-            </ToastProvider>
-          </AuthProvider>
-        </LoadingStateManager>
-      </ErrorBoundaryProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
+    <StylesLoadedProvider>
+      <QueryClientProvider client={queryClient}>
+        <ErrorBoundaryProvider
+          maxErrors={5}
+          autoRemoveAfter={10000}
+          onError={(error, errorInfo) => {
+            // Log errors to external service in production
+            if (process.env.NODE_ENV === 'production') {
+              console.error('Application Error:', error, errorInfo);
+              // TODO: Send to error tracking service (e.g., Sentry)
+            }
+          }}
+        >
+          <LoadingStateManager globalLoadingDelay={200}>
+            <AuthProvider>
+              <ToastProvider>
+                <RouterProvider router={router} />
+                <GlobalErrorDisplay maxVisible={3} />
+                <GlobalLoadingIndicator />
+                <PerformanceDashboard />
+              </ToastProvider>
+            </AuthProvider>
+          </LoadingStateManager>
+        </ErrorBoundaryProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
+    </StylesLoadedProvider>
   );
 }
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
-import { AuthProvider } from '../../contexts/AuthContext';
+import AuthProvider from '../../contexts/AuthContext';
 import { router } from '../index';
 
 // Mock the auth context with authenticated user
