@@ -1,12 +1,18 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from typing import List, Optional, Dict, Any
 from app.models.exam import ExamType, ExamSection, ExamQuestion, PracticeExam, PracticeQuestionResult
 from app.schemas.exam import PracticeExamCreate, PracticeExamResult
 from app.agents.base_agent import BaseAgent
+from app.services.memory_service import memory_service
 from langchain.prompts import ChatPromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 import random
+import json
+import os
+import asyncio
+import concurrent.futures
 from datetime import datetime, timedelta
 
 # Pydantic Models for AI Question Generation
@@ -26,7 +32,66 @@ class ExamQuestionGenerationResponse(BaseModel):
     exam_type: str = Field(description="Sınav tipi")
     questions: List[AIGeneratedExamQuestion] = Field(description="Üretilen sorular")
 
+# JSON dosyalarını okuma fonksiyonları
+def load_json_data(filename: str) -> Dict:
+    """JSON dosyasından verileri yükle"""
+    try:
+        # exam_agent.py dosyasının bulunduğu klasörü bul
+        current_file = os.path.abspath(__file__)
+        current_dir = os.path.dirname(current_file)
+        # app/agents -> app -> app/data
+        app_dir = os.path.dirname(current_dir)
+        data_dir = os.path.join(app_dir, "data")
+        file_path = os.path.join(data_dir, filename)
+        
+        print(f"📁 JSON dosyası okunuyor: {file_path}")
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            print(f"✅ JSON dosyası başarıyla okundu: {filename} ({len(data)} keys)")
+            return data
+    except FileNotFoundError:
+        print(f"⚠️  JSON dosyası bulunamadı: {file_path}")
+        return {}
+    except json.JSONDecodeError as e:
+        print(f"⚠️  JSON format hatası: {filename} - {e}")
+        return {}
+    except Exception as e:
+        print(f"⚠️  JSON okuma hatası: {filename} - {e}")
+        return {}
+
+def get_exam_question_counts() -> Dict:
+    """Sabit soru sayıları konfigürasyonunu yükle"""
+    return load_json_data("exam_question_counts.json")
+
+def get_subject_question_distribution() -> Dict:
+    """Konu bazlı soru dağılımı konfigürasyonunu yükle"""
+    return load_json_data("subject_question_distribution.json")
+
+def get_ai_prompts() -> Dict:
+    """AI prompt talimatlarını yükle"""
+    return load_json_data("ai_prompts.json")
+
 class ExamAgent(BaseAgent):
+    """Sınav yönetimi ve soru üretimi için AI destekli agent"""
+    
+    def __init__(self):
+        super().__init__(
+            name="ExamAgent",
+            description="AI destekli sınav yönetimi ve soru üretimi agent"
+        )
+    
+    def get_exam_question_counts(self) -> Dict:
+        """Sabit soru sayıları konfigürasyonunu al"""
+        return get_exam_question_counts()
+    
+    def get_subject_question_distribution_data(self) -> Dict:
+        """Konu bazlı soru dağılımı konfigürasyonunu al"""
+        return get_subject_question_distribution()
+    
+    def get_ai_prompts_data(self) -> Dict:
+        """AI prompt talimatlarını al"""
+        return get_ai_prompts()
     """Sınav yönetimi ve soru üretimi için AI destekli agent"""
     
     def __init__(self):
@@ -38,39 +103,22 @@ class ExamAgent(BaseAgent):
     async def process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """BaseAgent abstract metodunu implement et"""
         return {"status": "processed", "data": input_data}
-        
-    def _generate_questions_from_templates(self, db: Session, section_name: str, exam_section_id: int, count: int = 10) -> List[ExamQuestion]:
-        """Template'lerden soru üret (AI fallback için)"""
-        question_templates = self._get_question_templates(section_name)
-        
-        generated_questions = []
-        for i in range(min(count, len(question_templates))):
-            template = question_templates[i]
-            
-            # Soru oluştur
-            question = ExamQuestion(
-                question_text=template["question"],
-                option_a=template["options"]["A"],
-                option_b=template["options"]["B"], 
-                option_c=template["options"]["C"],
-                option_d=template["options"]["D"],
-                option_e=template["options"].get("E", ""),
-                correct_answer=template["correct"],
-                explanation=template["explanation"],
-                difficulty_level=random.choice([1, 2, 3]),
-                exam_section_id=exam_section_id,
-                is_active=True,
-                created_by="TEMPLATE_FALLBACK"
-            )
-            
-            db.add(question)
-            generated_questions.append(question)
-        
-        db.commit()
-        return generated_questions
 
-    def generate_questions(self, db: Session, exam_section_id: int, count: int = 10) -> List[ExamQuestion]:
-        """Bölüm için AI destekli soru üret (sync wrapper için async metod)"""
+    def generate_questions(self, db: Session, exam_section_id: int) -> List[ExamQuestion]:
+        """Bölüm için AI destekli soru üret - Sabit soru sayısı kullanır"""
+        
+        # Önce sabit soru sayısını belirle
+        section = db.query(ExamSection).filter(ExamSection.id == exam_section_id).first()
+        if not section:
+            raise ValueError("Geçersiz sınav bölümü")
+        
+        exam_type = db.query(ExamType).filter(ExamType.id == section.exam_type_id).first()
+        exam_type_name = exam_type.name if exam_type else "Genel"
+        
+        # Sabit soru sayısını al
+        count = self.get_fixed_question_count(exam_type_name, section.name)
+        print(f"🎯 {exam_type_name} {section.name} için sabit soru sayısı: {count}")
+        
         import asyncio
         
         try:
@@ -101,53 +149,50 @@ class ExamAgent(BaseAgent):
             loop.close()
 
     async def generate_ai_questions_async(self, db: Session, exam_section_id: int, count: int = 10) -> List[ExamQuestion]:
-        """Bölüm için AI destekli soru üret"""
+        """Bölüm için AI destekli soru üret - SADECE AI, fallback yok"""
         # Bölümü bul
         section = db.query(ExamSection).filter(ExamSection.id == exam_section_id).first()
         if not section:
-            return []
+            raise ValueError("Geçersiz sınav bölümü")
 
         # Exam type'ı bul
         exam_type = db.query(ExamType).filter(ExamType.id == section.exam_type_id).first()
         exam_type_name = exam_type.name if exam_type else "Genel"
 
-        try:
-            # AI ile soru üret
-            ai_questions = await self._generate_questions_with_ai(section.name, exam_type_name, count)
+        # AI ile soru üret - Fallback YOK!
+        print(f"🤖 {count} adet AI sorusu üretiliyor... (Template fallback KAPALI)")
+        ai_questions = await self._generate_questions_with_ai(section.name, exam_type_name, count)
+        
+        if not ai_questions.questions:
+            raise ValueError(f"AI soru üretimi başarısız oldu. Bölüm: {section.name}, Tip: {exam_type_name}")
+        
+        generated_questions = []
+        for ai_q in ai_questions.questions:
+            # Database'e kaydet
+            question = ExamQuestion(
+                question_text=ai_q.question,
+                option_a=next((opt.text for opt in ai_q.options if opt.letter == "A"), ""),
+                option_b=next((opt.text for opt in ai_q.options if opt.letter == "B"), ""), 
+                option_c=next((opt.text for opt in ai_q.options if opt.letter == "C"), ""),
+                option_d=next((opt.text for opt in ai_q.options if opt.letter == "D"), ""),
+                option_e="",  # E seçeneği yok
+                correct_answer=ai_q.correct_answer,
+                explanation=ai_q.explanation,
+                difficulty_level=ai_q.difficulty,
+                exam_section_id=exam_section_id,
+                is_active=True,
+                created_by="AI_EXAM_AGENT"
+            )
             
-            generated_questions = []
-            for ai_q in ai_questions.questions:
-                # Database'e kaydet
-                question = ExamQuestion(
-                    question_text=ai_q.question,
-                    option_a=next((opt.text for opt in ai_q.options if opt.letter == "A"), ""),
-                    option_b=next((opt.text for opt in ai_q.options if opt.letter == "B"), ""), 
-                    option_c=next((opt.text for opt in ai_q.options if opt.letter == "C"), ""),
-                    option_d=next((opt.text for opt in ai_q.options if opt.letter == "D"), ""),
-                    option_e="",  # E seçeneği yok
-                    correct_answer=ai_q.correct_answer,
-                    explanation=ai_q.explanation,
-                    difficulty_level=ai_q.difficulty,
-                    exam_section_id=exam_section_id,
-                    is_active=True,
-                    created_by="AI_EXAM_AGENT"
-                )
-                
-                db.add(question)
-                generated_questions.append(question)
-            
-            db.commit()
-            return generated_questions
-            
-        except Exception as e:
-            print(f"AI soru üretimi başarısız, template'lere geri dönülüyor: {e}")
-            import traceback
-            traceback.print_exc()
-            # AI başarısız ise template'lere geri dön
-            return self._generate_questions_from_templates(db, section.name, exam_section_id, count)
+            db.add(question)
+            generated_questions.append(question)
+        
+        db.commit()
+        print(f"✅ {len(generated_questions)} adet AI sorusu başarıyla oluşturuldu!")
+        return generated_questions
 
     async def _generate_questions_with_ai(self, section_name: str, exam_type: str, count: int) -> ExamQuestionGenerationResponse:
-        """Gemini AI ile soru üret"""
+        """Gemini AI ile soru üret - Konu bazlı detaylı prompt sistemi"""
         parser = PydanticOutputParser(pydantic_object=ExamQuestionGenerationResponse)
         format_instructions = parser.get_format_instructions()
         
@@ -162,9 +207,16 @@ class ExamAgent(BaseAgent):
         }
         education_level = education_mapping.get(exam_type, "lise")
 
+        # Konu bazlı soru dağılımını al
+        topic_distribution = self.get_topic_distribution(exam_type, section_name, count)
+        
+        # Detaylı prompt oluştur
+        detailed_requirements = self.create_detailed_prompt(exam_type, section_name, topic_distribution, education_level)
+
         system_msg = (
             f"Sen bir {section_name} uzmanısın ve {education_level} seviyesinde "
-            f"{exam_type} sınav soruları oluşturuyorsun. Türkiye'deki resmi sınav formatına uygun sorular hazırla."
+            f"{exam_type} sınav soruları oluşturuyorsun. Türkiye'deki resmi sınav formatına uygun sorular hazırla.\n\n"
+            f"KONU DAĞILIMI VE GEREKSİNİMLER:\n{detailed_requirements}"
         )
 
         human_msg = (
@@ -172,12 +224,15 @@ class ExamAgent(BaseAgent):
             "Soru gereksinimleri:\n"
             f"1. Türkiye'deki resmi {exam_type} sınav formatına uygun olmalı\n"
             "2. Tam olarak 4 çoktan seçmeli seçenek (A, B, C, D) olmalı\n"
-            "3. Akademik ve düşünmeyi gerektiren sorular olmalı\n"
-            "4. Doğru cevabın açık açıklaması olmalı\n"
-            "5. Zorluk seviyesi 1 (kolay), 2 (orta), 3 (zor) olmalı\n"
-            "6. Türkçe dilbilgisi kurallarına uygun olmalı\n\n"
+            "3. Yukarıda belirtilen konu dağılımına uygun olmalı\n"
+            "4. Her konudan belirtilen sayıda soru olmalı\n"
+            "5. Akademik ve düşünmeyi gerektiren sorular olmalı\n"
+            "6. Doğru cevabın açık açıklaması olmalı\n"
+            "7. Zorluk seviyesi 1 (kolay), 2 (orta), 3 (zor) olmalı\n"
+            "8. Türkçe dilbilgisi kurallarına uygun olmalı\n"
+            "9. Gerçek sınav seviyesinde olmalı\n\n"
             f"{format_instructions}\n\n"
-            "Sadece JSON formatında cevap ver."
+            "ÖNEMLI: Sadece JSON formatında cevap ver. Yorum ya da ek açıklama ekleme."
         )
 
         prompt = ChatPromptTemplate.from_messages([
@@ -191,25 +246,92 @@ class ExamAgent(BaseAgent):
 
         chain = prompt | self.llm | parser
 
-        try:
-            result = await chain.ainvoke({})
-            self.temperature = original_temp
-            print(f"🔍 AI Ham Cevap: {result}")
-            return result
-        except Exception as e:
-            self.temperature = original_temp
-            print(f"❌ AI Chain Hatası: {e}")
-            import traceback
-            traceback.print_exc()
-            # Fallback için basit response döndür
-            return ExamQuestionGenerationResponse(
-                section_name=section_name,
-                exam_type=exam_type,
-                questions=[]
-            )
+        # 3 deneme hakkı ver
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                print(f"🔄 AI soru üretimi denemesi {attempt + 1}/{max_retries}")
+                result = await chain.ainvoke({})
+                self.temperature = original_temp
+                
+                if result.questions and len(result.questions) > 0:
+                    print(f"✅ AI başarıyla {len(result.questions)} soru üretti!")
+                    return result
+                else:
+                    print(f"⚠️  AI boş soru listesi döndürdü (deneme {attempt + 1})")
+                    
+            except Exception as e:
+                print(f"❌ AI deneme {attempt + 1} başarısız: {e}")
+                if attempt == max_retries - 1:  # Son deneme
+                    self.temperature = original_temp
+                    raise ValueError(f"AI soru üretimi {max_retries} denemede başarısız oldu: {e}")
+        
+        self.temperature = original_temp
+        raise ValueError("AI soru üretimi tüm denemelerde başarısız oldu")
+
+    def get_topic_distribution(self, exam_type: str, section_name: str, total_count: int) -> Dict:
+        """Belirtilen bölüm için konu dağılımını al"""
+        distribution_data = self.get_subject_question_distribution_data()
+        if exam_type in distribution_data and section_name in distribution_data[exam_type]:
+            distribution = distribution_data[exam_type][section_name]
+            
+            # Oransal dağılım yap
+            original_total = distribution["total_questions"]
+            ratio = total_count / original_total
+            
+            adjusted_topics = {}
+            for topic_name, topic_info in distribution["topics"].items():
+                adjusted_count = max(1, round(topic_info["question_count"] * ratio))
+                adjusted_topics[topic_name] = {
+                    "question_count": adjusted_count,
+                    "subtopics": topic_info["subtopics"]
+                }
+            
+            return {"topics": adjusted_topics, "total_questions": total_count}
+        
+        # Varsayılan dağılım
+        return {
+            "topics": {
+                "Genel Konular": {
+                    "question_count": total_count,
+                    "subtopics": [f"{section_name} genel konuları"]
+                }
+            },
+            "total_questions": total_count
+        }
+
+    def create_detailed_prompt(self, exam_type: str, section_name: str, topic_distribution: Dict, education_level: str) -> str:
+        """Konu dağılımına göre detaylı prompt oluştur"""
+        prompt_parts = []
+        
+        prompt_parts.append(f"🎯 {exam_type} {section_name} Sınav Soruları ({education_level} seviyesi):")
+        prompt_parts.append(f"Toplam Soru Sayısı: {topic_distribution['total_questions']}")
+        prompt_parts.append("")
+        
+        for topic_name, topic_info in topic_distribution["topics"].items():
+            prompt_parts.append(f"📚 {topic_name}: {topic_info['question_count']} soru")
+            
+            if topic_info["subtopics"]:
+                prompt_parts.append("   Konular:")
+                for subtopic in topic_info["subtopics"]:
+                    prompt_parts.append(f"   • {subtopic}")
+            
+            prompt_parts.append("")
+        
+        # AI prompt talimatlarını JSON'dan al
+        ai_prompts = self.get_ai_prompts_data()
+        if exam_type in ai_prompts and section_name in ai_prompts[exam_type]:
+            prompt_parts.extend([
+                "🔍 ÖZEL TALİMATLAR:",
+                f"• {ai_prompts[exam_type][section_name]}",
+                ""
+            ])
+        
+        return "\n".join(prompt_parts)
     
-    def create_practice_exam(self, db: Session, exam_data: PracticeExamCreate, user_id: int) -> PracticeExam:
-        """Deneme sınavı oluştur"""
+    def create_practice_exam(self, db: Session, exam_data: PracticeExamCreate, user_id: int, 
+                           use_existing: bool = True, force_new: bool = False) -> PracticeExam:
+        """Deneme sınavı oluştur - Mevcut examlardan rastgele seç veya yeni üret"""
         # Exam section'ı bul
         exam_section = db.query(ExamSection).filter(ExamSection.id == exam_data.exam_section_id).first()
         if not exam_section:
@@ -220,12 +342,21 @@ class ExamAgent(BaseAgent):
         if not exam_type:
             raise ValueError("Geçersiz sınav tipi")
         
-        # AI soruları öncelik ver - tüm ihtiyacı AI ile karşılamaya çalış
-        print(f"🔄 {exam_data.question_count} AI sorusu üretiliyor...")
-        print("🤖 Yeni AI soruları üretiliyor...")
+        # Sabit soru sayısını belirle
+        question_count = self.get_fixed_question_count(exam_type.name, exam_section.name)
         
-        # Tüm soruları AI ile üret
-        questions = self.generate_questions(db, exam_data.exam_section_id, exam_data.question_count)
+        # Eğer force_new değilse ve use_existing True ise, mevcut examlardan rastgele seç
+        if not force_new and use_existing:
+            existing_exam = self.get_random_existing_exam(db, exam_data.exam_section_id, user_id)
+            if existing_exam:
+                print(f"🎲 Mevcut examlardan rastgele seçildi: {existing_exam.name}")
+                return existing_exam
+        
+        # Yeni exam üret
+        print("🤖 Yeni AI soruları üretiliyor (sabit soru sayısı kullanılıyor)...")
+        
+        # Sabit sayıda soru üret - artık count parametresi gerekmez
+        questions = self.generate_questions(db, exam_data.exam_section_id)
         
         # Practice exam oluştur
         practice_exam = PracticeExam(
@@ -244,6 +375,66 @@ class ExamAgent(BaseAgent):
         db.refresh(practice_exam)
         
         return practice_exam
+
+    def get_fixed_question_count(self, exam_type_name: str, section_name: str) -> int:
+        """Exam türü ve bölüme göre sabit soru sayısını döndür"""
+        question_counts = self.get_exam_question_counts()
+        if exam_type_name in question_counts:
+            section_counts = question_counts[exam_type_name]
+            # Tam eşleşme ara
+            if section_name in section_counts:
+                return section_counts[section_name]
+            
+            # Kısmi eşleşme ara (örn: "Matematik" için "TYT Matematik" de kabul et)
+            for key, count in section_counts.items():
+                if section_name.lower() in key.lower() or key.lower() in section_name.lower():
+                    return count
+        
+        # Varsayılan soru sayısı
+        return 20
+
+    def get_random_existing_exam(self, db: Session, exam_section_id: int, user_id: int) -> Optional[PracticeExam]:
+        """Belirtilen bölümden rastgele mevcut bir exam döndür"""
+        # User'ın bu bölümde daha önce çözdüğü examları bul
+        existing_exams = db.query(PracticeExam).filter(
+            PracticeExam.exam_section_id == exam_section_id,
+            PracticeExam.user_id == user_id,
+            PracticeExam.status == "completed"  # Sadece tamamlanmış examlardan seç
+        ).all()
+        
+        if not existing_exams:
+            # Bu kullanıcının tamamlanmış exami yoksa, diğer kullanıcıların examlarından seç
+            existing_exams = db.query(PracticeExam).filter(
+                PracticeExam.exam_section_id == exam_section_id,
+                PracticeExam.status == "completed"
+            ).limit(50).all()  # Performans için limit koy
+        
+        if existing_exams:
+            # Rastgele bir exam seç ve kopyala
+            original_exam = random.choice(existing_exams)
+            return self.clone_exam_for_user(db, original_exam, user_id)
+        
+        return None
+
+    def clone_exam_for_user(self, db: Session, original_exam: PracticeExam, new_user_id: int) -> PracticeExam:
+        """Mevcut bir exami yeni kullanıcı için klonla"""
+        # Yeni exam oluştur
+        cloned_exam = PracticeExam(
+            name=f"{original_exam.name} (Rastgele)",
+            exam_type_id=original_exam.exam_type_id,
+            exam_section_id=original_exam.exam_section_id,
+            user_id=new_user_id,
+            total_questions=original_exam.total_questions,
+            duration_minutes=original_exam.duration_minutes,
+            status="not_started",
+            start_time=datetime.utcnow()
+        )
+        
+        db.add(cloned_exam)
+        db.commit()
+        db.refresh(cloned_exam)
+        
+        return cloned_exam
     
     def submit_practice_exam(self, db: Session, exam_id: int, user_id: int, answers: dict) -> Dict:
         """Deneme sınavı sonuçlarını değerlendir"""
@@ -255,6 +446,17 @@ class ExamAgent(BaseAgent):
         
         if not practice_exam:
             raise ValueError("Deneme sınavı bulunamadı")
+
+        # Exam section bilgilerini al
+        exam_section = db.query(ExamSection).filter(
+            ExamSection.id == practice_exam.exam_section_id
+        ).first()
+        
+        exam_type = None
+        if exam_section:
+            exam_type = db.query(ExamType).filter(
+                ExamType.id == exam_section.exam_type_id
+            ).first()
         
         # Soruları al
         questions = db.query(ExamQuestion).filter(
@@ -271,6 +473,8 @@ class ExamAgent(BaseAgent):
         # Cevapları değerlendir ve sonuçları kaydet
         correct_count = 0
         total_questions = len(questions)
+        wrong_topics = []
+        difficult_topics = []
         
         for question in questions:
             user_answer = answers.get(str(question.id))
@@ -278,6 +482,21 @@ class ExamAgent(BaseAgent):
             
             if is_correct:
                 correct_count += 1
+            else:
+                # Yanlış cevaplanan soruların topic'lerini topla
+                if hasattr(question, 'topic') and question.topic:
+                    wrong_topics.append(question.topic)
+                elif hasattr(question, 'content') and question.content:
+                    # Content'ten topic çıkarmaya çalış
+                    content_lower = question.content.lower()
+                    if any(word in content_lower for word in ['polinom', 'faktör']):
+                        wrong_topics.append('polinom')
+                    elif any(word in content_lower for word in ['geometri', 'alan', 'çevre']):
+                        wrong_topics.append('geometri')
+                    elif any(word in content_lower for word in ['trigonometri', 'sinüs', 'kosinüs']):
+                        wrong_topics.append('trigonometri')
+                    else:
+                        wrong_topics.append('genel')
             
             # Her soru için sonuç kaydet
             question_result = PracticeQuestionResult(
@@ -299,6 +518,26 @@ class ExamAgent(BaseAgent):
         
         db.commit()
         
+        # 🧠 Memory'e sınav sonucunu kaydet
+        try:
+            asyncio.create_task(self._store_exam_memory(
+                user_id=str(user_id),
+                exam_data={
+                    "exam_id": exam_id,
+                    "exam_type": exam_type.name if exam_type else "Bilinmiyor",
+                    "exam_section": exam_section.name if exam_section else "Bilinmiyor", 
+                    "score": score_percentage,
+                    "correct_answers": correct_count,
+                    "total_questions": total_questions,
+                    "wrong_topics": list(set(wrong_topics)),  # Unique topics
+                    "accuracy": score_percentage,
+                    "timestamp": practice_exam.end_time.isoformat() if practice_exam.end_time else datetime.utcnow().isoformat()
+                }
+            ))
+        except Exception as e:
+            print(f"⚠️ Memory kaydı sırasında hata: {e}")
+            # Memory hatası sınav sonucunu etkilemesin
+        
         # Sonuç döndür
         return {
             "exam_id": exam_id,
@@ -306,7 +545,10 @@ class ExamAgent(BaseAgent):
             "correct_answers": correct_count,
             "total_questions": total_questions,
             "time_spent": 0,  # Şimdilik 0
-            "percentage": score_percentage
+            "percentage": score_percentage,
+            "wrong_topics": list(set(wrong_topics)),  # Unique topics
+            "exam_type": exam_type.name if exam_type else "Bilinmiyor",
+            "exam_section": exam_section.name if exam_section else "Bilinmiyor"
         }
     
     def get_exam_types(self, db: Session) -> List[Dict]:
@@ -332,9 +574,11 @@ class ExamAgent(BaseAgent):
             {
                 "id": s.id,
                 "name": s.name,
-                "description": s.description,
                 "question_count": s.question_count,
-                "duration_minutes": s.duration_minutes
+                "sort_order": s.sort_order,
+                "color": s.color,
+                "icon": s.icon,
+                "is_active": s.is_active
             }
             for s in sections
         ]
@@ -359,36 +603,58 @@ class ExamAgent(BaseAgent):
             for q in questions
         ]
     
-    def start_practice_exam(self, db: Session, user_id: int, exam_data: PracticeExamCreate) -> Dict:
-        """Deneme sınavı başlat"""
-        practice_exam = self.create_practice_exam(db, exam_data, user_id)
+    def start_practice_exam(self, db: Session, user_id: int, exam_data: PracticeExamCreate, 
+                          use_existing: bool = True, force_new: bool = False) -> Dict:
+        """Deneme sınavı başlat - Mevcut examlardan rastgele seç veya yeni üret"""
+        practice_exam = self.create_practice_exam(db, exam_data, user_id, use_existing, force_new)
         
-        # Yeni oluşturulan practice exam için en son eklenen AI sorularını getir
-        # Son eklenen soruları al (yeni üretilen sorular en son ID'lere sahip olacak)
-        questions = db.query(ExamQuestion).filter(
-            ExamQuestion.exam_section_id == exam_data.exam_section_id,  
-            ExamQuestion.is_active == True,
-            ExamQuestion.created_by == "AI_EXAM_AGENT"
-        ).order_by(ExamQuestion.id.desc()).limit(exam_data.question_count).all()
+        # Sabit soru sayısını belirle
+        exam_section = db.query(ExamSection).filter(ExamSection.id == exam_data.exam_section_id).first()
+        exam_type = db.query(ExamType).filter(ExamType.id == exam_section.exam_type_id).first()
+        question_count = self.get_fixed_question_count(exam_type.name, exam_section.name)
         
-        # Eğer yeterli AI sorusu yoksa, tümünü al
-        if len(questions) < exam_data.question_count:
+        # Soruları getir
+        if not force_new and use_existing:
+            # Mevcut examlardan geliyorsa, rastgele sorular al
+            questions = db.query(ExamQuestion).filter(
+                ExamQuestion.exam_section_id == exam_data.exam_section_id,  
+                ExamQuestion.is_active == True
+            ).order_by(text("RANDOM()")).limit(question_count).all()
+        else:
+            # Yeni oluşturulan exam için en son eklenen AI sorularını getir
+            questions = db.query(ExamQuestion).filter(
+                ExamQuestion.exam_section_id == exam_data.exam_section_id,  
+                ExamQuestion.is_active == True,
+                ExamQuestion.created_by == "AI_EXAM_AGENT"
+            ).order_by(ExamQuestion.id.desc()).limit(question_count).all()
+        
+        # Eğer yeterli soru yoksa, tümünü al
+        if len(questions) < question_count:
             questions = db.query(ExamQuestion).filter(
                 ExamQuestion.exam_section_id == exam_data.exam_section_id,
                 ExamQuestion.is_active == True
-            ).order_by(ExamQuestion.id.desc()).limit(exam_data.question_count).all()
+            ).limit(question_count).all()
         
         question_data = []
-        for q in questions:
+        for i, q in enumerate(questions):
             question_data.append({
+                "question_number": i + 1,
                 "id": q.id,
                 "question_text": q.question_text,
                 "option_a": q.option_a,
                 "option_b": q.option_b,
                 "option_c": q.option_c,
                 "option_d": q.option_d,
-                "option_e": q.option_e,
-                "difficulty_level": q.difficulty_level
+                "option_e": q.option_e if q.option_e else "",
+                "difficulty_level": q.difficulty_level,
+                "created_by": q.created_by,
+                "options_formatted": {
+                    "A": q.option_a,
+                    "B": q.option_b,
+                    "C": q.option_c,
+                    "D": q.option_d,
+                    "E": q.option_e if q.option_e else ""
+                }
             })
         
         # Sınav durumunu başlatıldı olarak güncelle
@@ -449,131 +715,371 @@ class ExamAgent(BaseAgent):
             }
             
             result.append(exam_data)
+        return result
+    
+    # ========== EXAM MANAGEMENT METHODS ==========
+    
+    def get_all_practice_exams(self, db: Session, user_id: int = None, status: str = None) -> List[Dict]:
+        """Tüm deneme sınavlarını listele (admin için) veya kullanıcıya özel"""
+        query = db.query(PracticeExam)
+        
+        if user_id:
+            query = query.filter(PracticeExam.user_id == user_id)
+        
+        if status:
+            query = query.filter(PracticeExam.status == status)
+        
+        exams = query.order_by(PracticeExam.created_at.desc()).all()
+        
+        result = []
+        for exam in exams:
+            # Exam type ve section bilgilerini al
+            exam_type = db.query(ExamType).filter(ExamType.id == exam.exam_type_id).first()
+            exam_section = db.query(ExamSection).filter(ExamSection.id == exam.exam_section_id).first()
+            
+            exam_data = {
+                "id": exam.id,
+                "name": exam.name,
+                "exam_type": exam_type.name if exam_type else "Bilinmeyen",
+                "exam_section": exam_section.name if exam_section else "Bilinmeyen",
+                "user_id": exam.user_id,
+                "total_questions": exam.total_questions,
+                "duration_minutes": exam.duration_minutes,
+                "status": exam.status,
+                "score": exam.score or 0,
+                "correct_answers": exam.correct_answers or 0,
+                "wrong_answers": exam.wrong_answers or 0,
+                "created_at": exam.created_at.isoformat(),
+                "start_time": exam.start_time.isoformat() if exam.start_time else None,
+                "end_time": exam.end_time.isoformat() if exam.end_time else None
+            }
+            result.append(exam_data)
+        
+        return result
+    
+    def get_practice_exam_details(self, db: Session, exam_id: int, user_id: int = None) -> Dict:
+        """Detaylı sınav bilgisi al"""
+        query = db.query(PracticeExam).filter(PracticeExam.id == exam_id)
+        
+        if user_id:
+            query = query.filter(PracticeExam.user_id == user_id)
+        
+        exam = query.first()
+        if not exam:
+            raise ValueError("Sınav bulunamadı veya erişim izniniz yok")
+        
+        # Exam type ve section bilgilerini al
+        exam_type = db.query(ExamType).filter(ExamType.id == exam.exam_type_id).first()
+        exam_section = db.query(ExamSection).filter(ExamSection.id == exam.exam_section_id).first()
+        
+        # Sınav sorularını al
+        questions = db.query(ExamQuestion).filter(
+            ExamQuestion.exam_section_id == exam.exam_section_id,
+            ExamQuestion.is_active == True
+        ).limit(exam.total_questions).all()
+        
+        # Cevapları al (eğer tamamlanmışsa)
+        answers = []
+        if exam.status == "completed":
+            question_results = db.query(PracticeQuestionResult).filter(
+                PracticeQuestionResult.practice_exam_id == exam_id
+            ).all()
+            
+            for result in question_results:
+                question = next((q for q in questions if q.id == result.question_id), None)
+                if question:
+                    answers.append({
+                        "question_id": result.question_id,
+                        "question_text": question.question_text,
+                        "user_answer": result.user_answer,
+                        "correct_answer": question.correct_answer,
+                        "is_correct": result.is_correct,
+                        "explanation": question.explanation
+                    })
+        
+        return {
+            "id": exam.id,
+            "name": exam.name,
+            "exam_type": exam_type.name if exam_type else "Bilinmeyen",
+            "exam_section": exam_section.name if exam_section else "Bilinmeyen",
+            "user_id": exam.user_id,
+            "total_questions": exam.total_questions,
+            "duration_minutes": exam.duration_minutes,
+            "status": exam.status,
+            "score": exam.score or 0,
+            "correct_answers": exam.correct_answers or 0,
+            "wrong_answers": exam.wrong_answers or 0,
+            "created_at": exam.created_at.isoformat(),
+            "start_time": exam.start_time.isoformat() if exam.start_time else None,
+            "end_time": exam.end_time.isoformat() if exam.end_time else None,
+            "questions_count": len(questions),
+            "answers": answers
+        }
+    
+    def delete_practice_exam(self, db: Session, exam_id: int, user_id: int = None) -> bool:
+        """Deneme sınavını sil"""
+        query = db.query(PracticeExam).filter(PracticeExam.id == exam_id)
+        
+        if user_id:
+            query = query.filter(PracticeExam.user_id == user_id)
+        
+        exam = query.first()
+        if not exam:
+            raise ValueError("Sınav bulunamadı veya erişim izniniz yok")
+        
+        # İlgili soru sonuçlarını da sil
+        db.query(PracticeQuestionResult).filter(
+            PracticeQuestionResult.practice_exam_id == exam_id
+        ).delete()
+        
+        # Sınavı sil
+        db.delete(exam)
+        db.commit()
+        
+        return True
+    
+    def update_practice_exam_status(self, db: Session, exam_id: int, new_status: str, user_id: int = None) -> Dict:
+        """Sınav durumunu güncelle"""
+        valid_statuses = ["not_started", "in_progress", "completed", "cancelled"]
+        if new_status not in valid_statuses:
+            raise ValueError(f"Geçersiz durum. Geçerli durumlar: {valid_statuses}")
+        
+        query = db.query(PracticeExam).filter(PracticeExam.id == exam_id)
+        
+        if user_id:
+            query = query.filter(PracticeExam.user_id == user_id)
+        
+        exam = query.first()
+        if not exam:
+            raise ValueError("Sınav bulunamadı veya erişim izniniz yok")
+        
+        exam.status = new_status
+        
+        # Durum güncellemelerine göre zaman damgaları
+        if new_status == "in_progress" and not exam.start_time:
+            exam.start_time = datetime.utcnow()
+        elif new_status == "completed" and not exam.end_time:
+            exam.end_time = datetime.utcnow()
+        elif new_status == "cancelled":
+            exam.end_time = datetime.utcnow()
+        
+        db.commit()
+        db.refresh(exam)
+        
+        return {
+            "id": exam.id,
+            "status": exam.status,
+            "start_time": exam.start_time.isoformat() if exam.start_time else None,
+            "end_time": exam.end_time.isoformat() if exam.end_time else None
+        }
+    
+    def get_exam_statistics(self, db: Session, user_id: int = None) -> Dict:
+        """Sınav istatistiklerini al"""
+        query = db.query(PracticeExam)
+        
+        if user_id:
+            query = query.filter(PracticeExam.user_id == user_id)
+        
+        exams = query.all()
+        
+        total_exams = len(exams)
+        completed_exams = len([e for e in exams if e.status == "completed"])
+        in_progress_exams = len([e for e in exams if e.status == "in_progress"])
+        cancelled_exams = len([e for e in exams if e.status == "cancelled"])
+        
+        # Ortalama skor hesapla
+        completed_scores = [e.score for e in exams if e.status == "completed" and e.score is not None]
+        avg_score = sum(completed_scores) / len(completed_scores) if completed_scores else 0
+        
+        # En yüksek skor
+        max_score = max(completed_scores) if completed_scores else 0
+        
+        # Sınav türü bazında istatistikler
+        type_stats = {}
+        for exam in exams:
+            exam_type = db.query(ExamType).filter(ExamType.id == exam.exam_type_id).first()
+            type_name = exam_type.name if exam_type else "Bilinmeyen"
+            
+            if type_name not in type_stats:
+                type_stats[type_name] = {
+                    "total": 0,
+                    "completed": 0,
+                    "avg_score": 0,
+                    "scores": []
+                }
+            
+            type_stats[type_name]["total"] += 1
+            if exam.status == "completed":
+                type_stats[type_name]["completed"] += 1
+                if exam.score is not None:
+                    type_stats[type_name]["scores"].append(exam.score)
+        
+        # Her tip için ortalama hesapla
+        for type_name in type_stats:
+            scores = type_stats[type_name]["scores"]
+            type_stats[type_name]["avg_score"] = sum(scores) / len(scores) if scores else 0
+            del type_stats[type_name]["scores"]  # Scores listesini kaldır
+        
+        return {
+            "total_exams": total_exams,
+            "completed_exams": completed_exams,
+            "in_progress_exams": in_progress_exams,
+            "cancelled_exams": cancelled_exams,
+            "completion_rate": (completed_exams / total_exams * 100) if total_exams > 0 else 0,
+            "average_score": round(avg_score, 2),
+            "max_score": max_score,
+            "exam_type_statistics": type_stats
+        }
+    
+    def get_questions_by_criteria(self, db: Session, exam_type_id: int = None, section_id: int = None, 
+                                 difficulty_level: int = None, created_by: str = None, limit: int = 50) -> List[Dict]:
+        """Kriterlere göre soruları getir"""
+        query = db.query(ExamQuestion).filter(ExamQuestion.is_active == True)
+        
+        if section_id:
+            query = query.filter(ExamQuestion.exam_section_id == section_id)
+        elif exam_type_id:
+            # Section üzerinden exam_type'a ulaş
+            sections = db.query(ExamSection).filter(ExamSection.exam_type_id == exam_type_id).all()
+            section_ids = [s.id for s in sections]
+            query = query.filter(ExamQuestion.exam_section_id.in_(section_ids))
+        
+        if difficulty_level:
+            query = query.filter(ExamQuestion.difficulty_level == difficulty_level)
+        
+        if created_by:
+            query = query.filter(ExamQuestion.created_by == created_by)
+        
+        questions = query.limit(limit).all()
+        
+        result = []
+        for q in questions:
+            # Section ve exam type bilgilerini al
+            section = db.query(ExamSection).filter(ExamSection.id == q.exam_section_id).first()
+            exam_type = db.query(ExamType).filter(ExamType.id == section.exam_type_id).first() if section else None
+            
+            result.append({
+                "id": q.id,
+                "question_text": q.question_text,
+                "option_a": q.option_a,
+                "option_b": q.option_b,
+                "option_c": q.option_c,
+                "option_d": q.option_d,
+                "option_e": q.option_e,
+                "correct_answer": q.correct_answer,
+                "explanation": q.explanation,
+                "difficulty_level": q.difficulty_level,
+                "created_by": q.created_by,
+                "exam_section": section.name if section else "Bilinmeyen",
+                "exam_type": exam_type.name if exam_type else "Bilinmeyen",
+                "created_at": q.created_at.isoformat() if hasattr(q, 'created_at') else None
+            })
+        
+        return result
+    
+    def get_practice_exam_questions(self, db: Session, exam_id: int, user_id: int = None, include_answers: bool = False) -> List[Dict]:
+        """Belirli bir sınavın sorularını getir"""
+        query = db.query(PracticeExam).filter(PracticeExam.id == exam_id)
+        
+        if user_id:
+            query = query.filter(PracticeExam.user_id == user_id)
+        
+        exam = query.first()
+        if not exam:
+            raise ValueError("Sınav bulunamadı veya erişim izniniz yok")
+        
+        # Sınavda kullanılan soruları al
+        # Önce AI soruları, sonra diğerleri
+        questions = db.query(ExamQuestion).filter(
+            ExamQuestion.exam_section_id == exam.exam_section_id,
+            ExamQuestion.is_active == True
+        ).order_by(
+            ExamQuestion.created_by.desc(),  # AI_EXAM_AGENT önce gelsin
+            ExamQuestion.id.desc()
+        ).limit(exam.total_questions).all()
+        
+        result = []
+        for i, q in enumerate(questions):
+            question_data = {
+                "question_number": i + 1,
+                "id": q.id,
+                "question_text": q.question_text,
+                "option_a": q.option_a,
+                "option_b": q.option_b,
+                "option_c": q.option_c,
+                "option_d": q.option_d,
+                "option_e": q.option_e if q.option_e else "",
+                "difficulty_level": q.difficulty_level,
+                "created_by": q.created_by
+            }
+            
+            # Eğer cevapları da dahil et denirse (sınav tamamlandıysa)
+            if include_answers and exam.status == "completed":
+                question_data.update({
+                    "correct_answer": q.correct_answer,
+                    "explanation": q.explanation
+                })
+                
+                # Kullanıcının verdiği cevabı bul
+                user_result = db.query(PracticeQuestionResult).filter(
+                    PracticeQuestionResult.practice_exam_id == exam_id,
+                    PracticeQuestionResult.question_id == q.id
+                ).first()
+                
+                if user_result:
+                    question_data.update({
+                        "user_answer": user_result.user_answer,
+                        "is_correct": user_result.is_correct,
+                        "time_spent_seconds": user_result.time_spent_seconds
+                    })
+            
+            result.append(question_data)
         
         return result
 
-    def _get_question_templates(self, section_name: str) -> List[Dict]:
-        """Bölüm için soru şablonları (AI fallback için)"""
-        templates = {
-            "Türkçe": [
-                {
-                    "question": "Aşağıdaki cümlelerin hangisinde yazım yanlışı vardır?",
-                    "options": {
-                        "A": "Kitabı okumaya başladı.",
-                        "B": "Yarınki toplantıya katılacak.",
-                        "C": "Bugünkü gazetede haberi gördüm.",
-                        "D": "Geçenki konuşmayı hatırlıyor."
-                    },
-                    "correct": "B",
-                    "explanation": "Yarınki değil 'yarınki' doğru yazımı 'yarın' + '-ki' eki ile 'yarınki' olmalıdır."
-                },
-                {
-                    "question": "Aşağıdaki cümlelerin hangisinde noktalama hatası vardır?",
-                    "options": {
-                        "A": "Ali, Veli ve Ayşe geldi.",
-                        "B": "Ne zaman; geleceksin?",
-                        "C": "Kitap okudum, ders çalıştım.",
-                        "D": "Merhaba! Nasılsın?"
-                    },
-                    "correct": "B",
-                    "explanation": "Soru cümlesinde noktalı virgül kullanılmaz, sadece virgül kullanılır: 'Ne zaman geleceksin?'"
-                },
-                {
-                    "question": "Hangi seçenekte eş anlamlı kelimeler verilmiştir?",
-                    "options": {
-                        "A": "Büyük - Küçük",
-                        "B": "Güzel - Çirkin", 
-                        "C": "Hızlı - Süratli",
-                        "D": "Sıcak - Soğuk"
-                    },
-                    "correct": "C",
-                    "explanation": "Hızlı ve süratli aynı anlamda kullanılan eş anlamlı kelimelerdir."
-                },
-                {
-                    "question": "Aşağıdaki cümlelerin hangisinde mecaz anlamlı bir söz vardır?",
-                    "options": {
-                        "A": "Kedisi çok sevimli.",
-                        "B": "Kalbi taş gibi sert.",
-                        "C": "Masanın üzerinde kitap var.",
-                        "D": "Bugün hava çok güzel."
-                    },
-                    "correct": "B",
-                    "explanation": "'Kalbi taş gibi sert' ifadesi mecazi anlamda kullanılmış, duygusuz anlamında kullanılmıştır."
-                },
-                {
-                    "question": "Hangi seçenekte ünlü düşmesi olayı görülür?",
-                    "options": {
-                        "A": "kitap + ı = kitabı",
-                        "B": "kalem + i = kalemi",
-                        "C": "masa + ya = masaya", 
-                        "D": "ev + e = eve"
-                    },
-                    "correct": "A",
-                    "explanation": "Kitap kelimesinin sonundaki 'p' harfinden önce bulunan 'a' ünlüsü, ek alırken düşer: kitabı."
-                }
-            ],
-            "Matematik": [
-                {
-                    "question": "2x + 5 = 11 denkleminin çözümü nedir?",
-                    "options": {
-                        "A": "x = 2",
-                        "B": "x = 3", 
-                        "C": "x = 4",
-                        "D": "x = 5"
-                    },
-                    "correct": "B",
-                    "explanation": "2x + 5 = 11 → 2x = 6 → x = 3"
-                },
-                {
-                    "question": "√16 + √9 işleminin sonucu kaçtır?",
-                    "options": {
-                        "A": "5",
-                        "B": "6",
-                        "C": "7", 
-                        "D": "8"
-                    },
-                    "correct": "C",
-                    "explanation": "√16 = 4, √9 = 3 olduğu için 4 + 3 = 7"
-                }
-            ],
-            "Fen": [
-                {
-                    "question": "Suyun kaynama noktası kaç santigrat derecedir?",
-                    "options": {
-                        "A": "90°C",
-                        "B": "95°C",
-                        "C": "100°C",
-                        "D": "105°C"
-                    },
-                    "correct": "C",
-                    "explanation": "Su deniz seviyesinde 100°C'de kaynar."
-                }
-            ],
-            "Sosyal": [
-                {
-                    "question": "Türkiye Cumhuriyeti hangi yılda kurulmuştur?",
-                    "options": {
-                        "A": "1920",
-                        "B": "1921",
-                        "C": "1922",
-                        "D": "1923"
-                    },
-                    "correct": "D", 
-                    "explanation": "Türkiye Cumhuriyeti 29 Ekim 1923'te ilan edilmiştir."
-                }
-            ]
-        }
-        
-        return templates.get(section_name, [
-            {
-                "question": f"{section_name} alanında örnek soru",
-                "options": {
-                    "A": "Seçenek A",
-                    "B": "Seçenek B", 
-                    "C": "Seçenek C",
-                    "D": "Seçenek D"
-                },
-                "correct": "A",
-                "explanation": "Bu örnek bir açıklamadır."
+    async def _store_exam_memory(self, user_id: str, exam_data: Dict[str, Any]) -> None:
+        """
+        Sınav sonucunu kullanıcı memory'sine kaydet
+        """
+        try:
+            # Sınav session verilerini hazırla
+            session_data = {
+                "subject": exam_data.get("exam_type", "Genel"),
+                "topic": exam_data.get("exam_section", "Deneme Sınavı"), 
+                "education_level": "lise",  # Default olarak lise
+                "total_questions": exam_data.get("total_questions", 0),
+                "correct_answers": exam_data.get("correct_answers", 0),
+                "accuracy": exam_data.get("accuracy", 0),
+                "wrong_answers": exam_data.get("wrong_topics", []),
+                "difficult_topics": exam_data.get("wrong_topics", []),
+                "timestamp": exam_data.get("timestamp"),
+                "session_type": "exam_completion",
+                "exam_id": exam_data.get("exam_id")
             }
-        ])
+            
+            # Memory service'e kaydet
+            await memory_service.store_learning_session(user_id, session_data)
+            
+            # Eğer performans düşükse zayıflık analizi de kaydet
+            if exam_data.get("accuracy", 0) < 60:
+                analysis_data = {
+                    "subject": exam_data.get("exam_type", "Genel"),
+                    "topic": exam_data.get("exam_section", "Deneme Sınavı"),
+                    "weakness_level": max(1, 10 - int(exam_data.get("accuracy", 0) / 10)),
+                    "weak_topics": exam_data.get("wrong_topics", []),
+                    "strong_topics": [],  # Güçlü konular analizi gelecekte eklenebilir
+                    "recommendations": [
+                        f"{topic} konusunu tekrar çalış" for topic in exam_data.get("wrong_topics", [])
+                    ],
+                    "detailed_analysis": f"Deneme sınavında %{exam_data.get('accuracy', 0):.1f} başarı elde edildi. Geliştirilmesi gereken alanlar var.",
+                    "timestamp": exam_data.get("timestamp")
+                }
+                await memory_service.store_weakness_analysis(user_id, analysis_data)
+            
+            print(f"✅ Sınav sonucu memory'e kaydedildi - User: {user_id}, Score: {exam_data.get('accuracy', 0)}%")
+            
+        except Exception as e:
+            print(f"❌ Memory kaydetme hatası: {e}")
+            # Memory hatası ana işlemi etkilemesin
+
+    # Template sistemi tamamen kaldırıldı - Sadece AI üretimi!

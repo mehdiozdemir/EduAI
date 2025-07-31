@@ -1,0 +1,751 @@
+{
+  "LGS": {
+    "Türkçe": {
+      "total_questions": 20,
+      "topics": {
+        "Okuma ve Anlama": {
+          "question_count": 8,
+          "subtopics": [
+            "Hikaye, roman, şiir anlama",
+            "Ana fikir ve yan fikir",
+            "Çıkarım yapma",
+            "Metinler arası ilişki"
+          ]
+        },
+        "Dil Bilgisi": {
+          "question_count": 7,
+          "subtopics": [
+            "Kelime türleri ve işlevleri",
+            "Cümle ögeleri",
+            "Fiil çekimi ve kipleri",
+            "Yazım ve noktalama kuralları"
+          ]
+        },
+        "Sözcük ve Anlam": {
+          "question_count": 5,
+          "subtopics": [
+            "Eş anlam, zıt anlam, yakın anlam",
+            "Gerçek ve mecaz anlam",
+            "Deyim ve atasözleri",
+            "Kelime anlamı çıkarma"
+          ]
+        }
+      }
+    },
+    "Matematik": {
+      "total_questions": 20,
+      "topics": {
+        "Sayılar ve İşlemler": {
+          "question_count": 6,
+          "subtopics": [
+            "Doğal sayılar, tam sayılar",
+            "Rasyonel sayılar",
+            "Üslü ifadeler",
+            "Kök kavramı"
+          ]
+        },
+        "Cebir": {
+          "question_count": 6,
+          "subtopics": [
+            "Cebirsel ifadeler",
+            "Denklem kurma ve çözme",
+            "Eşitsizlikler",
+            "Fonksiyonlar"
+          ]
+        },
+        "Geometri": {
+          "question_count": 5,
+          "subtopics": [
+            "Üçgenler ve dörtgenler",
+            "Çember ve daire",
+            "Prizmalar ve piramitler",
+            "Alan ve hacim hesapları"
+          ]
+        },
+        "Veri ve Olasılık": {
+          "question_count": 3,
+          "subtopics": [
+            "Merkezi eğilim ölçüleri",
+            "Grafik yorumlama",
+            "Basit olasılık"
+          ]
+        }
+      }
+    },
+    "Fen Bilimleri": {
+      "total_questions": 20,
+      "topics": {
+        "Fizik": {
+          "question_count": 7,
+          "subtopics": [
+            "Kuvvet ve hareket",
+            "Enerji dönüşümleri",
+            "Işık ve ses",
+            "Elektrik yükleri"
+          ]
+        },
+        "Kimya": {
+          "question_count": 6,
+          "subtopics": [
+            "Maddenin yapısı ve özellikleri",
+            "Karışımlar",
+            "Asit ve bazlar",
+            "Kimyasal tepkimeler"
+          ]
+        },
+        "Biyoloji": {
+          "question_count": 7,
+          "subtopics": [
+            "Hücre ve canlılık",
+            "Sistem ve sağlık",
+            "Üreme ve gelişim",
+            "Kalıtım ve çevre"
+          ]
+        }
+      }
+    },
+    "T.C. İnkılap Tarihi ve Atatürkçülük": {
+      "total_questions": 10,
+      "topics": {
+        "Millî Mücadele": {
+          "question_count": 4,
+          "subtopics": [
+            "Mondros Ateşkesi ve işgaller",
+            "Millî direniş ve kongreler",
+            "TBMM'nin açılması",
+            "Kurtuluş Savaşı cepheleri"
+          ]
+        },
+        "Atatürk İlkeleri ve İnkılaplar": {
+          "question_count": 4,
+          "subtopics": [
+            "Siyasi inkılaplar",
+            "Hukuk inkılapları",
+            "Sosyal ve kültürel inkılaplar",
+            "Ekonomik inkılaplar"
+          ]
+        },
+        "Atatürk Dönemi Türk Dış Politikası": {
+          "question_count": 2,
+          "subtopics": [
+            "Yurtta barış, dünyada barış",
+            "Uluslararası antlaşmalar"
+          ]
+        }
+      }
+    },
+    "Din Kültürü ve Ahlak Bilgisi": {
+      "total_questions": 10,
+      "topics": {
+        "İnanç": {
+          "question_count": 3,
+          "subtopics": [
+            "Allah inancı",
+            "Peygamber inancı",
+            "Ahiret inancı"
+          ]
+        },
+        "İbadet": {
+          "question_count": 3,
+          "subtopics": [
+            "Namaz ve önemi",
+            "Oruç ve hac",
+            "Zekat ve sadaka"
+          ]
+        },
+        "Ahlak": {
+          "question_count": 4,
+          "subtopics": [
+            "Güzel ahlak",
+            "Adalet ve dürüstlük",
+            "Saygı ve sevgi",
+            "Sorumluluk bilinci"
+          ]
+        }
+      }
+    },
+    "İngilizce": {
+      "total_questions": 10,
+      "topics": {
+        "Vocabulary": {
+          "question_count": 4,
+          "subtopics": [
+            "Daily routines and activities",
+            "Family and friends",
+            "School and subjects",
+            "Food and drinks"
+          ]
+        },
+        "Grammar": {
+          "question_count": 4,
+          "subtopics": [
+            "Present tenses",
+            "Past tenses",
+            "Modal verbs",
+            "Question forms"
+          ]
+        },
+        "Reading Comprehension": {
+          "question_count": 2,
+          "subtopics": [
+            "Short passages",
+            "Information texts"
+          ]
+        }
+      }
+    }
+  },
+  "TYT": {
+    "Türkçe": {
+      "total_questions": 40,
+      "topics": {
+        "Dil Bilgisi ve Anlatım": {
+          "question_count": 12,
+          "subtopics": [
+            "Yazım kuralları (kı-ki, da-de, ki bağlacı)",
+            "Noktalama işaretleri kullanımı",
+            "Anlatım bozuklukları ve düzeltilmesi",
+            "Cümle türleri ve ögeleri",
+            "Fiil çekimi ve kipleri"
+          ]
+        },
+        "Anlam Bilgisi": {
+          "question_count": 8,
+          "subtopics": [
+            "Eş anlam, zıt anlam, yakın anlam",
+            "Gerçek anlam, mecaz anlam",
+            "Kelime türetme yolları",
+            "Deyim ve atasözleri"
+          ]
+        },
+        "Paragraf ve Okuduğunu Anlama": {
+          "question_count": 15,
+          "subtopics": [
+            "Ana fikir ve yan fikir",
+            "Sebep-sonuç ilişkisi",
+            "Paragraf türleri",
+            "Çıkarım yapma",
+            "Metinler arası ilişki"
+          ]
+        },
+        "Şiir ve Edebi Sanatlar": {
+          "question_count": 5,
+          "subtopics": [
+            "Şiir türleri ve özellikleri",
+            "Edebi sanatlar (mecaz, benzetme vb.)",
+            "Nazım türleri",
+            "Vezin ve kafiye"
+          ]
+        }
+      }
+    },
+    "Matematik": {
+      "total_questions": 40,
+      "topics": {
+        "Temel Kavramlar": {
+          "question_count": 8,
+          "subtopics": [
+            "Sayı kümeleri ve işlemler",
+            "Üslü sayılar",
+            "Köklü sayılar",
+            "Logaritma"
+          ]
+        },
+        "Denklemler ve Eşitsizlikler": {
+          "question_count": 8,
+          "subtopics": [
+            "Birinci derece denklemler",
+            "İkinci derece denklemler",
+            "Eşitsizlik sistemleri",
+            "Mutlak değer"
+          ]
+        },
+        "Fonksiyonlar": {
+          "question_count": 8,
+          "subtopics": [
+            "Fonksiyon kavramı",
+            "Fonksiyon türleri",
+            "Fonksiyon işlemleri",
+            "Ters fonksiyon"
+          ]
+        },
+        "Geometri": {
+          "question_count": 10,
+          "subtopics": [
+            "Üçgenler",
+            "Dörtgenler",
+            "Çember ve daire",
+            "Alan hesaplamaları"
+          ]
+        },
+        "Trigonometri": {
+          "question_count": 6,
+          "subtopics": [
+            "Trigonometrik oranlar",
+            "Trigonometrik özdeşlikler",
+            "Trigonometrik denklemler"
+          ]
+        }
+      }
+    },
+    "Sosyal Bilimler": {
+      "total_questions": 20,
+      "topics": {
+        "Tarih": {
+          "question_count": 5,
+          "subtopics": [
+            "Osmanlı Devleti'nde reform hareketleri",
+            "Millî Mücadele dönemi",
+            "Atatürk ilkeleri ve inkılapları"
+          ]
+        },
+        "Coğrafya": {
+          "question_count": 8,
+          "subtopics": [
+            "Türkiye'nin fiziki coğrafyası",
+            "İklim ve bitki örtüsü",
+            "Nüfus ve yerleşme",
+            "Ekonomik faaliyetler"
+          ]
+        },
+        "Felsefe": {
+          "question_count": 4,
+          "subtopics": [
+            "Felsefenin doğası",
+            "Bilgi felsefesi",
+            "Ahlak felsefesi"
+          ]
+        },
+        "Psikoloji": {
+          "question_count": 3,
+          "subtopics": [
+            "Algı ve dikkat",
+            "Öğrenme ve bellek",
+            "Güdülenme ve duygu"
+          ]
+        }
+      }
+    },
+    "Fen Bilimleri": {
+      "total_questions": 20,
+      "topics": {
+        "Fizik": {
+          "question_count": 7,
+          "subtopics": [
+            "Hareket ve kuvvet",
+            "Enerji ve momentum",
+            "Basit makineler",
+            "Elektrik ve manyetizma"
+          ]
+        },
+        "Kimya": {
+          "question_count": 7,
+          "subtopics": [
+            "Atomun yapısı",
+            "Periyodik sistem",
+            "Kimyasal bağlar",
+            "Asit-baz dengesi"
+          ]
+        },
+        "Biyoloji": {
+          "question_count": 6,
+          "subtopics": [
+            "Hücre yapısı ve işlevleri",
+            "Solunum ve dolaşım",
+            "Sindirim ve boşaltım",
+            "Kalıtım"
+          ]
+        }
+      }
+    }
+  },
+  "AYT": {
+    "Matematik": {
+      "total_questions": 40,
+      "topics": {
+        "Fonksiyonlar": {
+          "question_count": 8,
+          "subtopics": [
+            "Fonksiyon kavramı ve özellikleri",
+            "Bileşke fonksiyon",
+            "Ters fonksiyon",
+            "Üstel ve logaritmik fonksiyonlar"
+          ]
+        },
+        "Polinomlar": {
+          "question_count": 6,
+          "subtopics": [
+            "Polinom kavramı ve işlemleri",
+            "Çarpanlara ayırma",
+            "Polinomların bölünmesi",
+            "Rasyonel fonksiyonlar"
+          ]
+        },
+        "Trigonometri": {
+          "question_count": 8,
+          "subtopics": [
+            "Trigonometrik fonksiyonlar",
+            "Trigonometrik özdeşlikler",
+            "Trigonometrik denklemler",
+            "Toplam-fark formülleri"
+          ]
+        },
+        "Analitik Geometri": {
+          "question_count": 8,
+          "subtopics": [
+            "Doğru denklemi",
+            "Çember denklemi",
+            "Parabol, elips, hiperbol",
+            "Dönüşümler"
+          ]
+        },
+        "Türev": {
+          "question_count": 6,
+          "subtopics": [
+            "Türev tanımı ve kuralları",
+            "Türevin uygulamaları",
+            "Fonksiyonların incelenmesi",
+            "Ekstremum problemleri"
+          ]
+        },
+        "İntegral": {
+          "question_count": 4,
+          "subtopics": [
+            "Belirsiz integral",
+            "Belirli integral",
+            "Alan hesabı",
+            "Fiziksel uygulamalar"
+          ]
+        }
+      }
+    },
+    "Türk Dili ve Edebiyatı": {
+      "total_questions": 24,
+      "topics": {
+        "Dil Bilgisi": {
+          "question_count": 6,
+          "subtopics": [
+            "Ses bilgisi ve ses olayları",
+            "Kelime türleri ve işlevleri",
+            "Cümle bilgisi",
+            "Anlatım bozuklukları"
+          ]
+        },
+        "Edebiyat Bilgisi": {
+          "question_count": 8,
+          "subtopics": [
+            "Edebi türler (epik, lirik, dramatik)",
+            "Edebi sanatlar ve söz sanatları",
+            "Nazım türleri ve ölçüleri",
+            "Modern Türk edebiyatı"
+          ]
+        },
+        "Metin İnceleme": {
+          "question_count": 6,
+          "subtopics": [
+            "Şiir incelemesi",
+            "Hikaye ve roman incelemesi",
+            "Tiyatro eseri incelemesi",
+            "Deneme incelemesi"
+          ]
+        },
+        "Anlam Bilgisi": {
+          "question_count": 4,
+          "subtopics": [
+            "Kelime anlamı ve çağrışımı",
+            "Mecaz ve gerçek anlam",
+            "Terim anlamı",
+            "Anlam değişmeleri"
+          ]
+        }
+      }
+    },
+    "Tarih": {
+      "total_questions": 10,
+      "topics": {
+        "Osmanlı Tarihi": {
+          "question_count": 4,
+          "subtopics": [
+            "Osmanlı'nın kuruluşu ve gelişimi",
+            "Klasik dönem kurumları",
+            "Osmanlı'da toplum ve kültür",
+            "19. yüzyıl reform hareketleri"
+          ]
+        },
+        "Türkiye Cumhuriyeti Tarihi": {
+          "question_count": 4,
+          "subtopics": [
+            "Millî Mücadele dönemi",
+            "Atatürk dönemi inkılapları",
+            "Çok partili hayata geçiş",
+            "1960 sonrası Türkiye"
+          ]
+        },
+        "Dünya Tarihi": {
+          "question_count": 2,
+          "subtopics": [
+            "20. yüzyıl dünya savaşları",
+            "Soğuk Savaş dönemi",
+            "Küreselleşme süreci",
+            "Çağdaş dünya meseleleri"
+          ]
+        }
+      }
+    },
+    "Coğrafya": {
+      "total_questions": 6,
+      "topics": {
+        "Fiziki Coğrafya": {
+          "question_count": 3,
+          "subtopics": [
+            "Türkiye'nin jeolojik yapısı",
+            "İklim özellikleri",
+            "Hidrografya",
+            "Doğal bitki örtüsü"
+          ]
+        },
+        "Beşeri Coğrafya": {
+          "question_count": 2,
+          "subtopics": [
+            "Nüfus ve yerleşme",
+            "Ekonomik faaliyetler",
+            "Ulaşım ve haberleşme",
+            "Çevre sorunları"
+          ]
+        },
+        "Bölgesel Coğrafya": {
+          "question_count": 1,
+          "subtopics": [
+            "Türkiye'nin coğrafi bölgeleri",
+            "Dünya'da önemli ülkeler",
+            "Küresel coğrafya",
+            "Doğal afetler"
+          ]
+        }
+      }
+    },
+    "Felsefe": {
+      "total_questions": 12,
+      "topics": {
+        "Felsefe Tarihi": {
+          "question_count": 4,
+          "subtopics": [
+            "Antik dönem felsefesi",
+            "Ortaçağ felsefesi",
+            "Yeniçağ felsefesi",
+            "Çağdaş felsefe"
+          ]
+        },
+        "Bilgi Felsefesi": {
+          "question_count": 3,
+          "subtopics": [
+            "Bilginin kaynakları",
+            "Bilginin değeri",
+            "Bilimsel yöntem",
+            "Doğruluk kuramları"
+          ]
+        },
+        "Varlık Felsefesi": {
+          "question_count": 2,
+          "subtopics": [
+            "Varlık ve yokluk",
+            "Töz ve tözsellik",
+            "Nedensellik",
+            "Determinizm ve özgürlük"
+          ]
+        },
+        "Ahlak Felsefesi": {
+          "question_count": 3,
+          "subtopics": [
+            "Ahlaki değerler",
+            "Ahlaki eylem",
+            "Sorumluluk ve özgürlük",
+            "Ahlak kuramları"
+          ]
+        }
+      }
+    },
+    "Din": {
+      "total_questions": 6,
+      "topics": {
+        "İslam Tarihi": {
+          "question_count": 2,
+          "subtopics": [
+            "Hz. Muhammed'in hayatı",
+            "Hulefa-i Raşidin dönemi",
+            "İslam'ın yayılması",
+            "İslam medeniyeti"
+          ]
+        },
+        "İslam Hukuku": {
+          "question_count": 2,
+          "subtopics": [
+            "Fıkıh ilminin kaynakları",
+            "İbadetler hukuku",
+            "Muamelat hukuku",
+            "İçtihat ve fetvalar"
+          ]
+        },
+        "İslam Düşüncesi": {
+          "question_count": 2,
+          "subtopics": [
+            "Kelam ilmi",
+            "Tasavvuf",
+            "İslam felsefesi",
+            "Çağdaş İslam düşüncesi"
+          ]
+        }
+      }
+    },
+    "Fizik": {
+      "total_questions": 14,
+      "topics": {
+        "Mekanik": {
+          "question_count": 4,
+          "subtopics": [
+            "Hareket türleri",
+            "Newton kanunları",
+            "İş, güç, enerji",
+            "Momentum ve çarpışmalar"
+          ]
+        },
+        "Isı ve Sıcaklık": {
+          "question_count": 2,
+          "subtopics": [
+            "Isı ve sıcaklık kavramları",
+            "Hal değişimleri",
+            "Gazların özellikleri",
+            "Termodinamik kanunları"
+          ]
+        },
+        "Dalgalar": {
+          "question_count": 2,
+          "subtopics": [
+            "Dalga özellikleri",
+            "Ses dalgaları",
+            "Işık dalgaları",
+            "Dalga olayları"
+          ]
+        },
+        "Elektrik ve Manyetizma": {
+          "question_count": 4,
+          "subtopics": [
+            "Elektrostatik",
+            "Elektrik akımı",
+            "Manyetizma",
+            "Elektromanyetik indüksiyon"
+          ]
+        },
+        "Modern Fizik": {
+          "question_count": 2,
+          "subtopics": [
+            "Atom modelleri",
+            "Kuantum fiziği",
+            "Özel görelilik",
+            "Nükleer fizik"
+          ]
+        }
+      }
+    },
+    "Kimya": {
+      "total_questions": 13,
+      "topics": {
+        "Atom ve Periyodik Sistem": {
+          "question_count": 3,
+          "subtopics": [
+            "Atomun yapısı",
+            "Periyodik sistem",
+            "Periyodik özellikler",
+            "Elektron dizilimi"
+          ]
+        },
+        "Kimyasal Bağlar": {
+          "question_count": 2,
+          "subtopics": [
+            "İyonik bağ",
+            "Kovalent bağ",
+            "Metalik bağ",
+            "Moleküller arası kuvvetler"
+          ]
+        },
+        "Tepkime Türleri": {
+          "question_count": 3,
+          "subtopics": [
+            "Asit-baz tepkimeleri",
+            "Yükseltgenme-indirgenme",
+            "Çökelme tepkimeleri",
+            "Tepkime hızı"
+          ]
+        },
+        "Çözeltiler": {
+          "question_count": 2,
+          "subtopics": [
+            "Çözünürlük",
+            "Derişim birimleri",
+            "Çözelti özellikleri",
+            "Kolligatif özellikler"
+          ]
+        },
+        "Organik Kimya": {
+          "question_count": 3,
+          "subtopics": [
+            "Hidrokarbon bileşikleri",
+            "Fonksiyonel gruplar",
+            "İzomerlik",
+            "Organik tepkimeler"
+          ]
+        }
+      }
+    },
+    "Biyoloji": {
+      "total_questions": 13,
+      "topics": {
+        "Hücre Biyolojisi": {
+          "question_count": 3,
+          "subtopics": [
+            "Hücre yapısı ve organelleri",
+            "Hücre zarı ve taşınım",
+            "Hücre bölünmesi",
+            "Hücresel solunum"
+          ]
+        },
+        "Genetik": {
+          "question_count": 4,
+          "subtopics": [
+            "DNA yapısı ve işlevi",
+            "Protein sentezi",
+            "Mendel genetiği",
+            "Genetik mühendisliği"
+          ]
+        },
+        "Ekoloji": {
+          "question_count": 2,
+          "subtopics": [
+            "Ekosistem kavramı",
+            "Besin zinciri ve enerji akışı",
+            "Çevre kirliliği",
+            "Biyoçeşitlilik"
+          ]
+        },
+        "Sistem Biyolojisi": {
+          "question_count": 2,
+          "subtopics": [
+            "Sinir sistemi",
+            "Dolaşım sistemi",
+            "Solunum sistemi",
+            "Boşaltım sistemi"
+          ]
+        },
+        "Evrim": {
+          "question_count": 2,
+          "subtopics": [
+            "Evrim teorisi",
+            "Doğal seçilim",
+            "Türlerin oluşumu",
+            "Fosil kayıtları"
+          ]
+        }
+      }
+    }
+  }
+}

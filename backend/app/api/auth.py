@@ -110,29 +110,3 @@ def logout(current_user: models.User = Depends(get_current_user)):
         "timestamp": datetime.now().isoformat(),
         "instructions": "Please remove the token from client storage (localStorage, sessionStorage, etc.)"
     }
-
-@router.get("/me", response_model=schemas.User)
-def get_current_user_profile(current_user: models.User = Depends(get_current_user)):
-    """Get current user profile"""
-    return current_user
-
-@router.put("/me", response_model=schemas.User)
-def update_current_user(user_id: int, user_data: schemas.UserUpdate, db: Session = Depends(get_db)):
-    """Update current user profile"""
-    # In a real app, you would get user_id from JWT token
-    db_user = db.query(models.User).filter(models.User.id == user_id).first()
-    
-    if not db_user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
-    # Update user fields
-    for key, value in user_data.dict(exclude_unset=True).items():
-        setattr(db_user, key, value)
-    
-    db.commit()
-    db.refresh(db_user)
-    
-    return db_user

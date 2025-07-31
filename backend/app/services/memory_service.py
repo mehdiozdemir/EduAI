@@ -77,6 +77,16 @@ class PersonalizedMemoryService:
             logger.error(f"Failed to initialize Mem0 Memory: {e}")
             self.memory = None
     
+    def health_check(self) -> Dict[str, Any]:
+        """Memory servis durumunu kontrol et"""
+        return {
+            "mem0_available": MEM0_AVAILABLE,
+            "service_available": self.memory is not None,
+            "memory_initialized": self.memory is not None,
+            "provider": self.config.get("llm", {}).get("provider", "none") if hasattr(self, 'config') else "none",
+            "model": self.config.get("llm", {}).get("config", {}).get("model", "none") if hasattr(self, 'config') else "none"
+        }
+    
     async def store_learning_session(
         self, 
         user_id: str, 

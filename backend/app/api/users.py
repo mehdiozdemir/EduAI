@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app import schemas, models
+from app.schemas.user import PasswordChange
 from app.database import get_db
+from app.core.auth_deps import get_current_user
+from app.models.user import User
 from typing import List
 
 router = APIRouter(
@@ -9,55 +12,73 @@ router = APIRouter(
     tags=["users"]
 )
 
-@router.get("/", response_model=List[schemas.User])
-def list_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """List all users (admin functionality)"""
-    users = db.query(models.User).offset(skip).limit(limit).all()
-    return users
+@router.get("/me", response_model=schemas.User)
+def get_current_user_profile(current_user: User = Depends(get_current_user)):
+    """Kullanıcının kendi profil bilgilerini getir"""
+    return current_user
 
-@router.get("/{user_id}", response_model=schemas.User)
-def get_user(user_id: int, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+@router.put("/me", response_model=schemas.User)
+def update_current_user_profile(
+    user_update: schemas.UserUpdate, 
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Kullanıcının kendi profil bilgilerini güncelle"""
+    # Sadece belirli alanların güncellenmesine izin ver
+    update_data = user_update.model_dump(exclude_unset=True)
     
-    if not db_user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+    # Güvenlik: kritik alanları güncellemeye izin verme
+    forbidden_fields = ['id', 'is_admin', 'created_at']
+    for field in forbidden_fields:
+        if field in update_data:
+            del update_data[field]
     
-    return db_user
-
-@router.put("/{user_id}", response_model=schemas.User)
-def update_user(user_id: int, user: schemas.UserUpdate, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(models.User.id == user_id).first()
-    
-    if not db_user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
-    # Update user fields
-    for key, value in user.dict().items():
-        setattr(db_user, key, value)
+    # Kullanıcı bilgilerini güncelle
+    for key, value in update_data.items():
+        if hasattr(current_user, key) and value is not None:
+            setattr(current_user, key, value)
     
     db.commit()
-    db.refresh(db_user)
+    db.refresh(current_user)
     
-    return db_user
+    return current_user
 
-@router.delete("/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db)):
-    """Delete a user (admin functionality)"""
-    db_user = db.query(models.User).filter(models.User.id == user_id).first()
-    
-    if not db_user:
+@router.delete("/me")
+def delete_current_user_account(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Kullanıcının kendi hesabını sil"""
+    # Kullanıcının kendi hesabını silmesine izin ver
+    # Ancak admin hesabı kendini silemez
+    if current_user.is_admin:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin hesabı silinemez"
         )
     
-    db.delete(db_user)
+    # Hesabı pasif yap (hard delete yerine soft delete)
+    current_user.is_active = False
     db.commit()
     
-    return {"message": "User deleted successfully"}
+    return {"message": "Hesabınız başarıyla devre dışı bırakıldı"}
+
+@router.post("/me/change-password")
+def change_password(
+    password_data: PasswordChange,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Kullanıcının şifresini değiştir"""
+    # Mevcut şifreyi doğrula
+    if not current_user.verify_password(password_data.current_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mevcut şifre yanlış"
+        )
+    
+    # Yeni şifreyi set et
+    current_user.set_password(password_data.new_password)
+    db.commit()
+    
+    return {"message": "Şifre başarıyla değiştirildi"}

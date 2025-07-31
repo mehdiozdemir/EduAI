@@ -12,6 +12,8 @@ class EducationLevel(Base):
     description = Column(Text)
     sort_order = Column(Integer, index=True)  # Sıralama için (1: İlkokul, 2: Ortaokul, 3: Lise)
     grade_range = Column(String(20))  # Örnek: "1-4", "5-8", "9-12"
+    min_age = Column(Integer)  # Minimum yaş
+    max_age = Column(Integer)  # Maksimum yaş
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

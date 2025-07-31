@@ -116,7 +116,7 @@ class PracticeExamBase(BaseModel):
     exam_type_id: int = Field(..., description="Sınav türü ID")
     exam_section_id: int = Field(..., description="Sınav bölümü ID")
     user_id: int = Field(..., description="Kullanıcı ID")
-    total_questions: Optional[int] = Field(40, ge=1, le=100, description="Toplam soru sayısı")
+    # total_questions kaldırıldı - sabit soru sayıları kullanılıyor
 
 class PracticeExamCreate(PracticeExamBase):
     pass
@@ -207,7 +207,7 @@ class PracticeExamResults(BaseModel):
 # Basit Practice Exam Schemas
 class PracticeExamCreate(BaseModel):
     exam_section_id: int = Field(..., description="Sınav bölümü ID")
-    question_count: int = Field(10, ge=1, le=50, description="Soru sayısı")
+    # question_count parametresi tamamen kaldırıldı - sabit soru sayıları kullanılıyor
 
 class PracticeExamResult(BaseModel):
     exam_id: int
