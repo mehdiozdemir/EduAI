@@ -10,112 +10,86 @@ export class AuthService extends BaseApiService {
    * Login user with credentials
    */
   async login(credentials: LoginCredentials): Promise<User> {
-    // Mock login for development - remove when backend is ready
-    if (credentials.username === 'test_user' && credentials.password === 'test123') {
-      const mockUser: User = {
-        id: 1,
-        username: 'test_user',
-        email: 'test@example.com',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+    try {
+      // Backend login implementation
+      const loginData = {
+        email: credentials.email,
+        password: credentials.password
       };
 
-      // Store mock token
-      TokenManager.setToken('mock_token_12345');
+      const response = await this.post<{
+        access_token: string;
+        token_type: string;
+        user: User;
+      }>('/auth/login', loginData);
+
+      // Store tokens
+      TokenManager.setToken(response.access_token);
       
       // Store user data
-      this.currentUser = mockUser;
+      this.currentUser = response.user;
       
-      return mockUser;
-    } else {
-      throw new Error('Geçersiz kullanıcı adı veya şifre');
+      return response.user;
+    } catch (error: any) {
+      // Handle specific error messages from backend
+      if (error.message === 'Invalid credentials') {
+        throw new Error('Geçersiz e-posta veya şifre');
+      }
+      throw new Error(error.message || 'Giriş yapılırken bir hata oluştu');
     }
-
-    // Real implementation (commented out until backend is ready)
-    /*
-    const formData = new FormData();
-    formData.append('username', credentials.username);
-    formData.append('password', credentials.password);
-
-    const response = await this.post<AuthResponse>('/auth/login', formData, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
-
-    // Store tokens
-    TokenManager.setToken(response.access_token);
-    
-    // Store user data
-    this.currentUser = response.user;
-    
-    return response.user;
-    */
   }
 
   /**
    * Register new user
    */
   async register(userData: RegisterData): Promise<User> {
-    // Mock register for development - remove when backend is ready
-    if (userData.username && userData.email && userData.password) {
-      const mockUser: User = {
-        id: 2,
+    try {
+      // Backend register implementation
+      const registerData = {
         username: userData.username,
         email: userData.email,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        first_name: userData.firstName || '',
+        last_name: userData.lastName || '',
+        password: userData.password
       };
 
-      // Store mock token
-      TokenManager.setToken('mock_token_register_67890');
+      const response = await this.post<{
+        access_token: string;
+        token_type: string;
+        user: User;
+      }>('/auth/register', registerData);
+
+      // Store tokens
+      TokenManager.setToken(response.access_token);
       
       // Store user data
-      this.currentUser = mockUser;
+      this.currentUser = response.user;
       
-      return mockUser;
-    } else {
-      throw new Error('Tüm alanlar gereklidir');
+      return response.user;
+    } catch (error: any) {
+      // Handle specific error messages from backend
+      if (error.message === 'Username or email already registered') {
+        throw new Error('Bu kullanıcı adı veya e-posta zaten kayıtlı');
+      }
+      throw new Error(error.message || 'Kayıt olurken bir hata oluştu');
     }
-
-    // Real implementation (commented out until backend is ready)
-    /*
-    const response = await this.post<AuthResponse>('/auth/register', userData);
-
-    // Store tokens
-    TokenManager.setToken(response.access_token);
-    
-    // Store user data
-    this.currentUser = response.user;
-    
-    return response.user;
-    */
   }
 
   /**
    * Logout current user
    */
   async logout(): Promise<void> {
-    console.log('AuthService.logout called');
-    
-    // For now, since we're using mock auth, we don't need to call backend
-    // Just clear local data immediately
-    console.log('Clearing local auth data (mock auth)');
-    TokenManager.removeToken();
-    this.currentUser = null;
-    console.log('Local logout completed');
-    
-    // If you want to add backend logout later, uncomment below:
-    /*
     try {
-      console.log('Attempting to call logout API endpoint');
+      // Call backend logout endpoint
       await this.post('/auth/logout');
-      console.log('Logout API call successful');
     } catch (error) {
       console.warn('Logout API call failed:', error);
       // Continue with logout even if API call fails
+    } finally {
+      // Always clear local data
+      TokenManager.removeToken();
+      this.currentUser = null;
     }
-    */
   }
 
   /**
@@ -137,33 +111,16 @@ export class AuthService extends BaseApiService {
    * Get current user profile from API
    */
   async getProfile(): Promise<User> {
-    // Mock profile for development - remove when backend is ready
-    if (this.currentUser) {
-      return this.currentUser;
+    try {
+      const user = await this.get<User>('/auth/me');
+      this.currentUser = user;
+      return user;
+    } catch (error: any) {
+      // If token is invalid, clear it
+      TokenManager.removeToken();
+      this.currentUser = null;
+      throw new Error('Kullanıcı oturumu bulunamadı');
     }
-    
-    // If we have a token but no current user, create a mock user
-    const token = TokenManager.getToken();
-    if (token) {
-      const mockUser: User = {
-        id: 1,
-        username: 'test_user',
-        email: 'test@example.com',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      this.currentUser = mockUser;
-      return mockUser;
-    }
-    
-    throw new Error('Kullanıcı oturumu bulunamadı');
-
-    // Real implementation (commented out until backend is ready)
-    /*
-    const user = await this.get<User>('/auth/me');
-    this.currentUser = user;
-    return user;
-    */
   }
 
   /**

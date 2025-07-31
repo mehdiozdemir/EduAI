@@ -40,18 +40,6 @@ const RecommendationsDemo = React.lazy(
 const ResponsiveDemo = React.lazy(
   () => import(/* webpackChunkName: "demo" */ '../pages/ResponsiveDemo')
 );
-const ReactQueryDemo = React.lazy(
-  () => import(/* webpackChunkName: "demo" */ '../pages/ReactQueryDemo')
-);
-const SimpleQueryDemo = React.lazy(
-  () => import(/* webpackChunkName: "demo" */ '../pages/SimpleQueryDemo')
-);
-const ReactQueryComprehensiveDemo = React.lazy(
-  () =>
-    import(
-      /* webpackChunkName: "demo" */ '../pages/ReactQueryComprehensiveDemo'
-    )
-);
 const QuizSetupPage = React.lazy(() =>
   import(/* webpackChunkName: "quiz" */ '../pages/QuizSetupPage.tsx').then(module => ({ default: module.default }))
 );
@@ -184,30 +172,6 @@ export const router = createBrowserRouter([
         element: (
           <LazyWrapper>
             <ResponsiveDemo />
-          </LazyWrapper>
-        ),
-      },
-      {
-        path: 'react-query-demo',
-        element: (
-          <LazyWrapper>
-            <ReactQueryDemo />
-          </LazyWrapper>
-        ),
-      },
-      {
-        path: 'simple-query-demo',
-        element: (
-          <LazyWrapper>
-            <SimpleQueryDemo />
-          </LazyWrapper>
-        ),
-      },
-      {
-        path: 'react-query-comprehensive',
-        element: (
-          <LazyWrapper>
-            <ReactQueryComprehensiveDemo />
           </LazyWrapper>
         ),
       },

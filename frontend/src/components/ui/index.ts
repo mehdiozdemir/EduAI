@@ -28,3 +28,6 @@ export type { ResponsiveGridProps } from './ResponsiveGrid';
 
 export { ResponsiveTable, ResponsiveTableHeader, ResponsiveTableBody, ResponsiveTableRow, ResponsiveTableCell } from './ResponsiveTable';
 export type { ResponsiveTableProps, ResponsiveTableHeaderProps, ResponsiveTableBodyProps, ResponsiveTableRowProps, ResponsiveTableCellProps } from './ResponsiveTable';
+
+export { default as AnimatedBackground } from './AnimatedBackground';
+export { default as FloatingParticles } from './FloatingParticles';

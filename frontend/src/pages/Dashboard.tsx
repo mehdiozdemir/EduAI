@@ -44,7 +44,7 @@ export const Dashboard: React.FC = () => {
 
   const fetchDashboardData = async () => {
     if (!user?.id) return;
-    
+
     console.log('Dashboard.fetchDashboardData called');
     setLoading(true);
     try {
@@ -113,12 +113,12 @@ export const Dashboard: React.FC = () => {
               />
             </div>
           )}
-          
+
           {dashboardData && (
-            <DashboardContent 
-              dashboardData={dashboardData} 
-              user={user} 
-              isMobile={isMobile} 
+            <DashboardContent
+              dashboardData={dashboardData}
+              user={user}
+              isMobile={isMobile}
             />
           )}
         </ResponsiveContainer>
@@ -139,21 +139,21 @@ const DashboardContent: React.FC<{
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-1">Welcome back, {user?.username}!</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Ana Sayfa</h1>
+          <p className="text-gray-600 mt-1">Hoşgeldin, {user?.username}!</p>
         </div>
         <Link
           to="/performance"
           className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center sm:py-2 touch-manipulation min-h-[48px] flex items-center justify-center"
         >
-          View Detailed Analysis
+          Detaylı Analizleri Gör
         </Link>
       </div>
 
       {/* Overall Stats */}
       <ErrorBoundarySection>
-        <ResponsiveGrid 
-          cols={{ default: 1, sm: 2, lg: 4 }} 
+        <ResponsiveGrid
+          cols={{ default: 1, sm: 2, lg: 4 }}
           gap="md"
         >
           <Card className="p-4 sm:p-6 touch-manipulation">
@@ -162,7 +162,7 @@ const DashboardContent: React.FC<{
                 <div className="text-blue-600 text-xl">📝</div>
               </div>
               <div className="ml-4 min-w-0">
-                <p className="text-sm font-medium text-gray-600">Total Questions</p>
+                <p className="text-sm font-medium text-gray-600">Toplam Soru</p>
                 <p className="text-2xl sm:text-3xl font-bold text-gray-900">{overall_stats.total_questions}</p>
               </div>
             </div>
@@ -174,7 +174,7 @@ const DashboardContent: React.FC<{
                 <div className="text-green-600 text-xl">✅</div>
               </div>
               <div className="ml-4 min-w-0">
-                <p className="text-sm font-medium text-gray-600">Correct Answers</p>
+                <p className="text-sm font-medium text-gray-600">Doğru Cevaplar</p>
                 <p className="text-2xl sm:text-3xl font-bold text-gray-900">{overall_stats.total_correct}</p>
               </div>
             </div>
@@ -186,7 +186,7 @@ const DashboardContent: React.FC<{
                 <div className="text-yellow-600 text-xl">🎯</div>
               </div>
               <div className="ml-4 min-w-0">
-                <p className="text-sm font-medium text-gray-600">Overall Accuracy</p>
+                <p className="text-sm font-medium text-gray-600">Doğruluk Oranı</p>
                 <p className="text-2xl sm:text-3xl font-bold text-gray-900">{overall_stats.overall_accuracy.toFixed(1)}%</p>
               </div>
             </div>
@@ -198,7 +198,7 @@ const DashboardContent: React.FC<{
                 <div className="text-purple-600 text-xl">📚</div>
               </div>
               <div className="ml-4 min-w-0">
-                <p className="text-sm font-medium text-gray-600">Total Sessions</p>
+                <p className="text-sm font-medium text-gray-600">Toplam Oturum</p>
                 <p className="text-2xl sm:text-3xl font-bold text-gray-900">{overall_stats.total_sessions}</p>
               </div>
             </div>
@@ -208,13 +208,13 @@ const DashboardContent: React.FC<{
 
       {/* Charts Row */}
       <ErrorBoundarySection>
-        <ResponsiveGrid 
-          cols={{ default: 1, lg: 2 }} 
+        <ResponsiveGrid
+          cols={{ default: 1, lg: 2 }}
           gap="md"
         >
           {/* Progress Chart */}
           <Card className="p-4 sm:p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Trend</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performans</h3>
             <div className="overflow-x-auto">
               <PerformanceChart
                 data={progress_chart}
@@ -227,7 +227,7 @@ const DashboardContent: React.FC<{
 
           {/* Subject Breakdown */}
           <Card className="p-4 sm:p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Subject Performance</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Ders Performansı</h3>
             <div className="overflow-x-auto">
               <PerformanceChart
                 data={progress_chart}
@@ -243,14 +243,14 @@ const DashboardContent: React.FC<{
       {/* Subject Breakdown Table */}
       <ErrorBoundarySection>
         <Card className="p-4 sm:p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Subject Breakdown</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Ders Dağılımı</h3>
           <ResponsiveTable>
             <ResponsiveTableHeader>
               <ResponsiveTableRow>
-                <ResponsiveTableCell header>Subject</ResponsiveTableCell>
-                <ResponsiveTableCell header>Accuracy</ResponsiveTableCell>
-                <ResponsiveTableCell header hideOnMobile>Questions</ResponsiveTableCell>
-                <ResponsiveTableCell header>Status</ResponsiveTableCell>
+                <ResponsiveTableCell header>Konu</ResponsiveTableCell>
+                <ResponsiveTableCell header>Doğrular</ResponsiveTableCell>
+                <ResponsiveTableCell header hideOnMobile>Sorular</ResponsiveTableCell>
+                <ResponsiveTableCell header>Durum</ResponsiveTableCell>
               </ResponsiveTableRow>
             </ResponsiveTableHeader>
             <ResponsiveTableBody>
@@ -265,13 +265,12 @@ const DashboardContent: React.FC<{
                     <div className="flex items-center">
                       <div className="flex-1 bg-gray-200 rounded-full h-2 mr-2 min-w-[40px] sm:mr-3">
                         <div
-                          className={`h-2 rounded-full ${
-                            subject.accuracy >= 80
+                          className={`h-2 rounded-full ${subject.accuracy >= 80
                               ? 'bg-green-500'
                               : subject.accuracy >= 60
-                              ? 'bg-yellow-500'
-                              : 'bg-red-500'
-                          }`}
+                                ? 'bg-yellow-500'
+                                : 'bg-red-500'
+                            }`}
                           style={{ width: `${subject.accuracy}%` }}
                         ></div>
                       </div>
@@ -283,13 +282,12 @@ const DashboardContent: React.FC<{
                   </ResponsiveTableCell>
                   <ResponsiveTableCell mobileLabel="Status">
                     <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        subject.accuracy >= 80
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${subject.accuracy >= 80
                           ? 'bg-green-100 text-green-800'
                           : subject.accuracy >= 60
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
                     >
                       {subject.accuracy >= 80 ? 'Excellent' : subject.accuracy >= 60 ? 'Good' : 'Needs Work'}
                     </span>
@@ -306,8 +304,8 @@ const DashboardContent: React.FC<{
         <ErrorBoundarySection>
           <Card className="p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Areas for Improvement</h3>
-            <ResponsiveGrid 
-              cols={{ default: 1, sm: 2, lg: 3 }} 
+            <ResponsiveGrid
+              cols={{ default: 1, sm: 2, lg: 3 }}
               gap="sm"
             >
               {weakness_areas.slice(0, 6).map((area, index) => (

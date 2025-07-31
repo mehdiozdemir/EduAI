@@ -8,6 +8,7 @@ interface SidebarProps {
   currentPath: string;
   user?: User;
   className?: string;
+  onClose?: () => void;
 }
 
 interface NavigationItem {
@@ -19,7 +20,7 @@ interface NavigationItem {
 
 const navigationItems: NavigationItem[] = [
   {
-    name: 'Dashboard',
+    name: 'Ana Sayfa',
     href: '/app/dashboard',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -37,10 +38,10 @@ const navigationItems: NavigationItem[] = [
         />
       </svg>
     ),
-    description: 'Overview and quick access',
+    description: 'Genel Bakış ve Hızlı Erişim',
   },
   {
-    name: 'Subjects',
+    name: 'Soru Çözümü',
     href: '/app/subjects',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,10 +53,10 @@ const navigationItems: NavigationItem[] = [
         />
       </svg>
     ),
-    description: 'Browse available subjects and topics',
+    description: 'Seviyeni ve Dersini Seç ve Soru Çözümüne Başla',
   },
   {
-    name: 'Quiz',
+    name: 'Deneme Sınavı',
     href: '/app/quiz',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,10 +68,10 @@ const navigationItems: NavigationItem[] = [
         />
       </svg>
     ),
-    description: 'Take AI-generated quizzes',
+    description: 'Yapay zeka tarafından oluşturulan sınavlara katıl',
   },
   {
-    name: 'Performance',
+    name: 'Performans Takibi',
     href: '/app/performance',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -82,10 +83,10 @@ const navigationItems: NavigationItem[] = [
         />
       </svg>
     ),
-    description: 'View your learning analytics',
+    description: 'Öğrenme analizlerini görüntüle',
   },
   {
-    name: 'Recommendations',
+    name: 'Öneriler',
     href: '/app/recommendations',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,26 +98,11 @@ const navigationItems: NavigationItem[] = [
         />
       </svg>
     ),
-    description: 'Personalized learning resources',
-  },
-  {
-    name: 'React Query Demo',
-    href: '/app/react-query-demo',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-        />
-      </svg>
-    ),
-    description: 'React Query integration showcase',
+    description: 'Kişiselleştirilmiş öğrenme kaynakları',
   },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ user, className }) => {
+const Sidebar: React.FC<SidebarProps> = ({ user, className, onClose }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -154,6 +140,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, className }) => {
   const handleNavigation = (path: string) => {
     navigate(path);
     setIsUserMenuOpen(false);
+    onClose?.(); // Close mobile sidebar when navigating
   };
 
   return (
@@ -161,6 +148,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, className }) => {
       className={cn(
         'bg-white border-r border-gray-200 flex flex-col',
         'w-64 h-screen sticky top-0 overflow-y-auto shrink-0',
+        onClose && 'shadow-xl', // Add shadow for mobile overlay
         className
       )}
       style={{ 
@@ -171,15 +159,34 @@ const Sidebar: React.FC<SidebarProps> = ({ user, className }) => {
     >
       {/* Sidebar Header */}
       <div className="p-6 border-b border-gray-200">
-        <Link to="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-          <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold">EA</span>
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">EduAI</h2>
-            <p className="text-sm text-gray-500">Learning Platform</p>
-          </div>
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link 
+            to="/" 
+            className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+            onClick={() => onClose?.()}
+          >
+            <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold">EA</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">EduAI</h2>
+              <p className="text-sm text-gray-500">Learning Platform</p>
+            </div>
+          </Link>
+          
+          {/* Mobile Close Button */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="md:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              aria-label="Menüyü kapat"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Navigation */}
@@ -191,6 +198,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, className }) => {
             <Link
               key={item.name}
               to={item.href}
+              onClick={() => onClose?.()}
               className={cn(
                 'flex items-center space-x-3 px-3 py-4 rounded-lg text-sm font-medium transition-all duration-200 touch-manipulation min-h-[48px]',
                 'hover:bg-gray-50 active:bg-gray-100 group sm:py-3',
