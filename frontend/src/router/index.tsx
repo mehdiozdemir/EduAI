@@ -52,6 +52,9 @@ const ProfilePage = React.lazy(() =>
 const SettingsPage = React.lazy(() =>
   import(/* webpackChunkName: "settings" */ '../pages/SettingsPage').then(module => ({ default: module.default }))
 );
+const AdminPanel = React.lazy(() =>
+  import(/* webpackChunkName: "admin" */ '../pages/AdminPanelNew').then(module => ({ default: module.default }))
+);
 const NotFoundPage = React.lazy(() =>
   import(/* webpackChunkName: "error" */ '../pages/NotFoundPage').then(
     module => ({ default: module.NotFoundPage })
@@ -196,6 +199,14 @@ export const router = createBrowserRouter([
         element: (
           <LazyWrapper>
             <SettingsPage />
+          </LazyWrapper>
+        ),
+      },
+      {
+        path: 'admin',
+        element: (
+          <LazyWrapper>
+            <AdminPanel />
           </LazyWrapper>
         ),
       },
