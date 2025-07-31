@@ -204,11 +204,12 @@ class CourseTopicService:
     def create(db: Session, topic_data: CourseTopicCreate) -> CourseTopic:
         """Yeni konu oluştur"""
         # Otomatik sıra numarası ata
-        if not topic_data.sort_order:
+        data_dict = topic_data.model_dump()
+        if topic_data.sort_order is None:
             max_order = db.query(CourseTopic).filter(CourseTopic.course_id == topic_data.course_id).count()
-            topic_data.sort_order = max_order + 1
+            data_dict['sort_order'] = max_order + 1
         
-        db_topic = CourseTopic(**topic_data.model_dump())
+        db_topic = CourseTopic(**data_dict)
         db.add(db_topic)
         db.commit()
         db.refresh(db_topic)

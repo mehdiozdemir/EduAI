@@ -104,10 +104,10 @@ class ExamAgent(BaseAgent):
         """BaseAgent abstract metodunu implement et"""
         return {"status": "processed", "data": input_data}
 
-    def generate_questions(self, db: Session, exam_section_id: int) -> List[ExamQuestion]:
-        """Bölüm için AI destekli soru üret - Sabit soru sayısı kullanır"""
+    def generate_questions(self, db: Session, exam_section_id: int, count: int = None, difficulty_level: int = None) -> List[ExamQuestion]:
+        """Bölüm için AI destekli soru üret - Sabit soru sayısı kullanır veya count parametresi kullanır"""
         
-        # Önce sabit soru sayısını belirle
+        # Önce section bilgilerini al
         section = db.query(ExamSection).filter(ExamSection.id == exam_section_id).first()
         if not section:
             raise ValueError("Geçersiz sınav bölümü")
@@ -115,9 +115,13 @@ class ExamAgent(BaseAgent):
         exam_type = db.query(ExamType).filter(ExamType.id == section.exam_type_id).first()
         exam_type_name = exam_type.name if exam_type else "Genel"
         
-        # Sabit soru sayısını al
-        count = self.get_fixed_question_count(exam_type_name, section.name)
-        print(f"🎯 {exam_type_name} {section.name} için sabit soru sayısı: {count}")
+        # Soru sayısını belirle
+        if count is None:
+            # Sabit soru sayısını al - Veritabanından
+            count = self.get_fixed_question_count(exam_type_name, section.name, db)
+            print(f"🎯 {exam_type_name} {section.name} için sabit soru sayısı: {count}")
+        else:
+            print(f"🎯 {exam_type_name} {section.name} için belirtilen soru sayısı: {count}")
         
         import asyncio
         
@@ -343,7 +347,7 @@ class ExamAgent(BaseAgent):
             raise ValueError("Geçersiz sınav tipi")
         
         # Sabit soru sayısını belirle
-        question_count = self.get_fixed_question_count(exam_type.name, exam_section.name)
+        question_count = self.get_fixed_question_count(exam_type.name, exam_section.name, db)
         
         # Eğer force_new değilse ve use_existing True ise, mevcut examlardan rastgele seç
         if not force_new and use_existing:
@@ -376,22 +380,61 @@ class ExamAgent(BaseAgent):
         
         return practice_exam
 
-    def get_fixed_question_count(self, exam_type_name: str, section_name: str) -> int:
-        """Exam türü ve bölüme göre sabit soru sayısını döndür"""
-        question_counts = self.get_exam_question_counts()
-        if exam_type_name in question_counts:
-            section_counts = question_counts[exam_type_name]
-            # Tam eşleşme ara
-            if section_name in section_counts:
-                return section_counts[section_name]
-            
-            # Kısmi eşleşme ara (örn: "Matematik" için "TYT Matematik" de kabul et)
-            for key, count in section_counts.items():
-                if section_name.lower() in key.lower() or key.lower() in section_name.lower():
-                    return count
+    def get_fixed_question_count(self, exam_type_name: str, section_name: str, db: Session = None) -> int:
+        """Exam türü ve bölüme göre sabit soru sayısını döndür - Veritabanından"""
+        if db is None:
+            # Fallback: JSON'dan al
+            question_counts = self.get_exam_question_counts()
+            if exam_type_name in question_counts:
+                section_counts = question_counts[exam_type_name]
+                # Tam eşleşme ara
+                if section_name in section_counts:
+                    return section_counts[section_name]
+                
+                # Kısmi eşleşme ara
+                for key, count in section_counts.items():
+                    if section_name.lower() in key.lower() or key.lower() in section_name.lower():
+                        return count
+            return 20  # Varsayılan soru sayısı
         
-        # Varsayılan soru sayısı
-        return 20
+        # Veritabanından al
+        try:
+            # Önce exam type'ı bul
+            exam_type = db.query(ExamType).filter(ExamType.name == exam_type_name).first()
+            if not exam_type:
+                print(f"⚠️  Exam type bulunamadı: {exam_type_name}")
+                return 20
+            
+            # Exam section'ı bul
+            exam_section = db.query(ExamSection).filter(
+                ExamSection.exam_type_id == exam_type.id,
+                ExamSection.name == section_name,
+                ExamSection.is_active == True
+            ).first()
+            
+            if exam_section and exam_section.question_count:
+                print(f"✅ Veritabanından soru sayısı alındı: {exam_type_name} {section_name} = {exam_section.question_count}")
+                return exam_section.question_count
+            
+            # Kısmi eşleşme denemeye
+            exam_sections = db.query(ExamSection).filter(
+                ExamSection.exam_type_id == exam_type.id,
+                ExamSection.is_active == True
+            ).all()
+            
+            for section in exam_sections:
+                if (section_name.lower() in section.name.lower() or 
+                    section.name.lower() in section_name.lower()):
+                    if section.question_count:
+                        print(f"✅ Kısmi eşleşme ile soru sayısı alındı: {section.name} = {section.question_count}")
+                        return section.question_count
+            
+            print(f"⚠️  Veritabanında section bulunamadı: {exam_type_name} {section_name}")
+            return 20  # Varsayılan soru sayısı
+            
+        except Exception as e:
+            print(f"⚠️  Veritabanı sorgusu hatası: {e}")
+            return 20
 
     def get_random_existing_exam(self, db: Session, exam_section_id: int, user_id: int) -> Optional[PracticeExam]:
         """Belirtilen bölümden rastgele mevcut bir exam döndür"""
@@ -611,7 +654,7 @@ class ExamAgent(BaseAgent):
         # Sabit soru sayısını belirle
         exam_section = db.query(ExamSection).filter(ExamSection.id == exam_data.exam_section_id).first()
         exam_type = db.query(ExamType).filter(ExamType.id == exam_section.exam_type_id).first()
-        question_count = self.get_fixed_question_count(exam_type.name, exam_section.name)
+        question_count = self.get_fixed_question_count(exam_type.name, exam_section.name, db)
         
         # Soruları getir
         if not force_new and use_existing:
@@ -1037,6 +1080,44 @@ class ExamAgent(BaseAgent):
         
         return result
 
+    def get_practice_exam_questions_with_answers(self, db: Session, exam_id: int) -> List[Dict]:
+        """Admin için sınav sorularını doğru cevaplarla birlikte getir"""
+        exam = db.query(PracticeExam).filter(PracticeExam.id == exam_id).first()
+        if not exam:
+            raise ValueError("Sınav bulunamadı")
+        
+        # Sınavda kullanılan soruları al
+        questions = db.query(ExamQuestion).filter(
+            ExamQuestion.exam_section_id == exam.exam_section_id,
+            ExamQuestion.is_active == True
+        ).order_by(
+            ExamQuestion.created_by.desc(),  # AI_EXAM_AGENT önce gelsin
+            ExamQuestion.id.desc()
+        ).limit(exam.total_questions).all()
+        
+        result = []
+        for i, q in enumerate(questions):
+            question_data = {
+                "question_number": i + 1,
+                "id": q.id,
+                "question_text": q.question_text,
+                "option_a": q.option_a,
+                "option_b": q.option_b,
+                "option_c": q.option_c,
+                "option_d": q.option_d,
+                "option_e": q.option_e if q.option_e else "",
+                "difficulty_level": q.difficulty_level,
+                "created_by": q.created_by,
+                "correct_answer": q.correct_answer,  # Admin için her zaman dahil et
+                "explanation": q.explanation if hasattr(q, 'explanation') else None,
+                "topic_name": q.topic_name if hasattr(q, 'topic_name') else None,
+                "subject_name": q.subject_name if hasattr(q, 'subject_name') else None
+            }
+            
+            result.append(question_data)
+        
+        return result
+
     async def _store_exam_memory(self, user_id: str, exam_data: Dict[str, Any]) -> None:
         """
         Sınav sonucunu kullanıcı memory'sine kaydet
@@ -1081,5 +1162,147 @@ class ExamAgent(BaseAgent):
         except Exception as e:
             print(f"❌ Memory kaydetme hatası: {e}")
             # Memory hatası ana işlemi etkilemesin
+
+    def generate_exam_structure(self, db: Session, education_level: str) -> Dict[str, Any]:
+        """Eğitim seviyesine göre sınav yapısını oluştur"""
+        
+        if education_level.lower() == "ortaokul":
+            return {
+                "exam_type": {
+                    "name": "LGS",
+                    "description": "Liselere Geçiş Sınavı",
+                    "duration_minutes": 165,
+                    "total_questions": 90
+                },
+                "sections": [
+                    {
+                        "name": "Türkçe",
+                        "question_count": 20,
+                        "color": "#E53E3E",
+                        "icon": "📝"
+                    },
+                    {
+                        "name": "Matematik",
+                        "question_count": 20,
+                        "color": "#3182CE",
+                        "icon": "🔢"
+                    },
+                    {
+                        "name": "Fen Bilimleri",
+                        "question_count": 20,
+                        "color": "#38A169",
+                        "icon": "🔬"
+                    },
+                    {
+                        "name": "T.C. İnkılap Tarihi ve Atatürkçülük",
+                        "question_count": 10,
+                        "color": "#D69E2E",
+                        "icon": "🏛️"
+                    },
+                    {
+                        "name": "Din Kültürü ve Ahlak Bilgisi",
+                        "question_count": 10,
+                        "color": "#805AD5",
+                        "icon": "📿"
+                    },
+                    {
+                        "name": "İngilizce",
+                        "question_count": 10,
+                        "color": "#319795",
+                        "icon": "🌍"
+                    }
+                ]
+            }
+        
+        elif education_level.lower() == "lise":
+            return {
+                "tyt": {
+                    "exam_type": {
+                        "name": "TYT",
+                        "description": "Temel Yeterlilik Testi",
+                        "duration_minutes": 165,
+                        "total_questions": 120
+                    },
+                    "sections": [
+                        {
+                            "name": "Türkçe",
+                            "question_count": 40,
+                            "color": "#E53E3E",
+                            "icon": "📝"
+                        },
+                        {
+                            "name": "Matematik",
+                            "question_count": 40,
+                            "color": "#3182CE",
+                            "icon": "🔢"
+                        },
+                        {
+                            "name": "Fen Bilimleri",
+                            "question_count": 20,
+                            "color": "#38A169",
+                            "icon": "🔬"
+                        },
+                        {
+                            "name": "Sosyal Bilimler",
+                            "question_count": 20,
+                            "color": "#D69E2E",
+                            "icon": "🏛️"
+                        }
+                    ]
+                },
+                "ayt": {
+                    "exam_type": {
+                        "name": "AYT",
+                        "description": "Alan Yeterlilik Testi",
+                        "duration_minutes": 180,
+                        "total_questions": 80
+                    },
+                    "sections": [
+                        {
+                            "name": "Matematik",
+                            "question_count": 40,
+                            "color": "#3182CE",
+                            "icon": "🔢"
+                        },
+                        {
+                            "name": "Fizik",
+                            "question_count": 14,
+                            "color": "#9F7AEA",
+                            "icon": "⚡"
+                        },
+                        {
+                            "name": "Kimya",
+                            "question_count": 13,
+                            "color": "#48BB78",
+                            "icon": "🧪"
+                        },
+                        {
+                            "name": "Biyoloji",
+                            "question_count": 13,
+                            "color": "#4FD1C7",
+                            "icon": "🧬"
+                        }
+                    ]
+                }
+            }
+        
+        else:
+            # Varsayılan yapı
+            return {
+                "exam_type": {
+                    "name": "Genel Sınav",
+                    "description": "Genel sınav yapısı",
+                    "duration_minutes": 120,
+                    "total_questions": 50
+                },
+                "sections": [
+                    {
+                        "name": "Genel Sorular",
+                        "question_count": 50,
+                        "color": "#4F46E5",
+                        "icon": "📚"
+                    }
+                ]
+            }
 
     # Template sistemi tamamen kaldırıldı - Sadece AI üretimi!

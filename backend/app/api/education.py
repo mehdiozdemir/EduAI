@@ -90,16 +90,18 @@ async def get_courses_by_education_level(level_id: int, db: Session = Depends(ge
     return CourseService.get_by_education_level(db, level_id)
 
 # ========== COURSE TOPICS ==========
+# Topics endpoint moved to admin routes for proper management
+
 @router.get("/topics", response_model=TopicListResponse)
 async def get_topics(
     skip: int = Query(0, ge=0, description="Atlanacak kayıt sayısı"),
     limit: int = Query(100, ge=1, le=1000, description="Getirilecek kayıt sayısı"),
     course_id: Optional[int] = Query(None, description="Ders filtresi"),
-    difficulty_level: Optional[int] = Query(None, ge=1, le=3, description="Zorluk seviyesi filtresi"),
     search: Optional[str] = Query(None, description="Arama terimi"),
+    difficulty_level: Optional[int] = Query(None, ge=1, le=3, description="Zorluk seviyesi (1-3)"),
     db: Session = Depends(get_db)
 ):
-    """Konuları getir"""
+    """Tüm konuları getir (Public access)"""
     if search:
         topics = CourseTopicService.search_topics(db, search, course_id)
     elif difficulty_level:

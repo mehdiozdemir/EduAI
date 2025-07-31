@@ -15,6 +15,7 @@ from app.schemas.admin import (
     Course, CourseCreate, CourseUpdate,
     CourseTopic, CourseTopicCreate, CourseTopicUpdate
 )
+from app.schemas.exam import ExamSectionCreate, ExamSectionUpdate
 from app.core.auth import get_current_user, require_admin_access
 from app.agents.exam_agent import ExamAgent
 from datetime import datetime, timedelta
@@ -138,6 +139,78 @@ async def get_practice_exams(
         )
         for exam in exams
     ]
+
+@router.post("/practice-exams", response_model=dict, status_code=201)
+async def create_practice_exam_admin(
+    exam_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_access)
+):
+    """Admin için deneme sınavı oluştur"""
+    from app.schemas.exam import PracticeExamCreate
+    from app.agents.exam_agent import ExamAgent
+    
+    # Gerekli alanları kontrol et
+    required_fields = ['exam_section_id', 'user_id', 'name']
+    for field in required_fields:
+        if field not in exam_data:
+            raise HTTPException(status_code=400, detail=f"'{field}' field is required")
+    
+    # Exam section'ı kontrol et ve exam_type_id'yi al
+    exam_section = db.query(ExamSection).filter(ExamSection.id == exam_data['exam_section_id']).first()
+    if not exam_section:
+        raise HTTPException(status_code=400, detail="Invalid exam_section_id")
+    
+    # PracticeExamCreate schema'sını oluştur - sadece exam_section_id gerekli
+    practice_exam_create = PracticeExamCreate(
+        exam_section_id=exam_data['exam_section_id']
+    )
+    
+    # ExamAgent kullanarak sınav oluştur
+    exam_agent = ExamAgent()
+    try:
+        practice_exam = exam_agent.create_practice_exam(
+            db=db,
+            exam_data=practice_exam_create,
+            user_id=exam_data['user_id'],
+            use_existing=True,
+            force_new=False
+        )
+        
+        # Özel isim varsa güncelle
+        if exam_data.get('name') and exam_data['name'] != practice_exam.name:
+            practice_exam.name = exam_data['name']
+            db.commit()
+            db.refresh(practice_exam)
+        
+        return {
+            "message": "Practice exam created successfully",
+            "exam_id": practice_exam.id,
+            "exam_name": practice_exam.name,
+            "exam_type_id": exam_section.exam_type_id,
+            "exam_section_id": practice_exam.exam_section_id,
+            "total_questions": practice_exam.total_questions
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/practice-exams/{exam_id}/questions", response_model=List[dict])
+async def get_practice_exam_questions_admin(
+    exam_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_access)
+):
+    """Admin için sınav sorularını getir (doğru cevaplarla birlikte)"""
+    from app.agents.exam_agent import ExamAgent
+    
+    exam_agent = ExamAgent()
+    
+    try:
+        # Admin için doğru cevapları da dahil et
+        questions = exam_agent.get_practice_exam_questions_with_answers(db, exam_id)
+        return questions
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 @router.delete("/questions/{question_id}")
 async def delete_question(
@@ -474,8 +547,7 @@ async def delete_subject(
 @router.get("/topics", response_model=List[TopicAdmin])
 async def get_topics(
     subject_id: Optional[int] = Query(None),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin_access)
+    db: Session = Depends(get_db)
 ):
     """Konu listesi"""
     query = db.query(Topic)
@@ -589,6 +661,10 @@ async def create_exam_type(
     current_user: User = Depends(require_admin_access)
 ):
     """Yeni sınav türü oluştur"""
+    # Eğitim seviyesi kontrolü
+    if not EducationLevelService.get_by_id(db, exam_type_data.education_level_id):
+        raise HTTPException(status_code=400, detail="Invalid education level ID")
+    
     # Sınav türü adı kontrolü
     if db.query(ExamType).filter(ExamType.name == exam_type_data.name).first():
         raise HTTPException(status_code=400, detail="Exam type name already exists")
@@ -596,6 +672,7 @@ async def create_exam_type(
     db_exam_type = ExamType(
         name=exam_type_data.name,
         description=exam_type_data.description,
+        education_level_id=exam_type_data.education_level_id,
         duration_minutes=exam_type_data.duration_minutes
     )
     
@@ -669,6 +746,14 @@ async def delete_exam_type(
 
 # ============ EDUCATION LEVEL MANAGEMENT ENDPOINTS ============
 
+@router.get("/education-levels", response_model=List[EducationLevel])
+async def get_education_levels_admin(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_access)
+):
+    """Eğitim seviyelerini listele (Admin)"""
+    return EducationLevelService.get_all(db)
+
 @router.post("/education-levels", response_model=EducationLevel, status_code=201)
 async def create_education_level_admin(
     level_data: EducationLevelCreate, 
@@ -708,6 +793,14 @@ async def delete_education_level_admin(
         raise HTTPException(status_code=404, detail="Eğitim seviyesi bulunamadı")
 
 # ============ COURSE MANAGEMENT ENDPOINTS ============
+
+@router.get("/courses", response_model=List[Course])
+async def get_courses_admin(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_access)
+):
+    """Dersleri listele (Admin)"""
+    return CourseService.get_all(db)
 
 @router.post("/courses", response_model=Course, status_code=201)
 async def create_course_admin(
@@ -812,6 +905,210 @@ async def reorder_course_topics_admin(
     
     return {"message": "Konular başarıyla sıralandı"}
 
+# ============ EXAM TYPES AND SECTIONS ENDPOINTS ============
+
+@router.post("/exam-sections", response_model=ExamSectionAdmin)
+async def create_exam_section_admin(
+    section_data: ExamSectionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_access)
+):
+    """Yeni sınav bölümü oluştur (Admin)"""
+
+    # Exam type kontrolü
+    exam_type = db.query(ExamType).filter(ExamType.id == section_data.exam_type_id).first()
+    if not exam_type:
+        raise HTTPException(status_code=400, detail="Invalid exam_type_id")
+
+    # Course kontrolü
+    from app.services.education_service import CourseService
+    course = CourseService.get_by_id(db, section_data.course_id)
+    if not course:
+        raise HTTPException(status_code=400, detail="Invalid course_id")
+
+    # Yeni Sınav Bölümü oluştur
+    exam_section = ExamSection(
+        name=section_data.name,
+        exam_type_id=section_data.exam_type_id,
+        course_id=section_data.course_id,
+        question_count=section_data.question_count or 10,  # Varsayılan soru sayısı
+        sort_order=section_data.sort_order,
+        color=section_data.color,
+        icon=section_data.icon,
+        is_active=True
+    )
+
+    db.add(exam_section)
+    db.commit()
+    db.refresh(exam_section)
+
+    return ExamSectionAdmin(
+        id=exam_section.id,
+        name=exam_section.name,
+        exam_type_id=exam_section.exam_type_id,
+        exam_type_name=exam_type.name,
+        question_count=exam_section.question_count,
+        is_active=exam_section.is_active,
+        questions_count=0  # Yeni bölüm olduğundan
+    )
+
+@router.get("/exam-types", response_model=List[ExamTypeAdmin])
+async def get_exam_types_admin(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_access)
+):
+    """Sınav türlerini listele (Admin)"""
+    exam_types = db.query(ExamType).filter(ExamType.is_active == True).all()
+    
+    return [
+        ExamTypeAdmin(
+            id=exam_type.id,
+            name=exam_type.name,
+            description=exam_type.description,
+            duration_minutes=exam_type.duration_minutes,
+            is_active=exam_type.is_active,
+            sections_count=db.query(ExamSection).filter(
+                ExamSection.exam_type_id == exam_type.id,
+                ExamSection.is_active == True
+            ).count()
+        )
+        for exam_type in exam_types
+    ]
+
+@router.get("/exam-types/{exam_type_id}/sections", response_model=List[ExamSectionAdmin])
+async def get_exam_sections_admin(
+    exam_type_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_access)
+):
+    """Sınav türüne ait bölümleri getir (Admin)"""
+    exam_sections = db.query(ExamSection).filter(
+        ExamSection.exam_type_id == exam_type_id,
+        ExamSection.is_active == True
+    ).all()
+    
+    return [
+        ExamSectionAdmin(
+            id=section.id,
+            name=section.name,
+            exam_type_id=section.exam_type_id,
+            exam_type_name=section.exam_type.name if section.exam_type else "Unknown",
+            question_count=section.question_count,
+            is_active=section.is_active,
+            questions_count=db.query(ExamQuestion).filter(
+                ExamQuestion.exam_section_id == section.id,
+                ExamQuestion.is_active == True
+            ).count()
+        )
+        for section in exam_sections
+    ]
+
+@router.get("/exam-sections", response_model=List[ExamSectionAdmin])
+async def get_all_exam_sections_admin(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_access)
+):
+    """Tüm sınav bölümlerini listele (Admin)"""
+    exam_sections = db.query(ExamSection).filter(ExamSection.is_active == True).all()
+    
+    return [
+        ExamSectionAdmin(
+            id=section.id,
+            name=section.name,
+            exam_type_id=section.exam_type_id,
+            exam_type_name=section.exam_type.name if section.exam_type else "Unknown",
+            question_count=section.question_count,
+            is_active=section.is_active,
+            questions_count=db.query(ExamQuestion).filter(
+                ExamQuestion.exam_section_id == section.id,
+                ExamQuestion.is_active == True
+            ).count()
+        )
+        for section in exam_sections
+    ]
+
+@router.put("/exam-sections/{section_id}", response_model=ExamSectionAdmin)
+async def update_exam_section_admin(
+    section_id: int,
+    section_data: ExamSectionUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_access)
+):
+    """Sınav bölümünü güncelle (Admin)"""
+    
+    # Exam section'ı bul
+    exam_section = db.query(ExamSection).filter(ExamSection.id == section_id).first()
+    if not exam_section:
+        raise HTTPException(status_code=404, detail="Exam section not found")
+    
+    # Exam type değişecekse kontrol et
+    if section_data.exam_type_id and section_data.exam_type_id != exam_section.exam_type_id:
+        exam_type = db.query(ExamType).filter(ExamType.id == section_data.exam_type_id).first()
+        if not exam_type:
+            raise HTTPException(status_code=400, detail="Invalid exam_type_id")
+    
+    # Course değişecekse kontrol et
+    if section_data.course_id and section_data.course_id != exam_section.course_id:
+        from app.services.education_service import CourseService
+        course = CourseService.get_by_id(db, section_data.course_id)
+        if not course:
+            raise HTTPException(status_code=400, detail="Invalid course_id")
+    
+    # Güncelleme
+    update_data = section_data.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(exam_section, field, value)
+    
+    db.commit()
+    db.refresh(exam_section)
+    
+    return ExamSectionAdmin(
+        id=exam_section.id,
+        name=exam_section.name,
+        exam_type_id=exam_section.exam_type_id,
+        exam_type_name=exam_section.exam_type.name if exam_section.exam_type else "Unknown",
+        question_count=exam_section.question_count,
+        is_active=exam_section.is_active,
+        questions_count=db.query(ExamQuestion).filter(
+            ExamQuestion.exam_section_id == exam_section.id,
+            ExamQuestion.is_active == True
+        ).count()
+    )
+
+@router.delete("/exam-sections/{section_id}")
+async def delete_exam_section_admin(
+    section_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_access)
+):
+    """Sınav bölümünü sil (Admin)"""
+    
+    # Exam section'ı bul
+    exam_section = db.query(ExamSection).filter(ExamSection.id == section_id).first()
+    if not exam_section:
+        raise HTTPException(status_code=404, detail="Exam section not found")
+    
+    # İlgili soruları soft delete yap
+    db.query(ExamQuestion).filter(
+        ExamQuestion.exam_section_id == section_id
+    ).update({"is_active": False})
+    
+    # İlgili practice examları kontrol et
+    practice_exams_count = db.query(PracticeExam).filter(
+        PracticeExam.exam_section_id == section_id
+    ).count()
+    
+    if practice_exams_count > 0:
+        # Eğer practice exam varsa soft delete yap
+        exam_section.is_active = False
+        db.commit()
+        return {"message": f"Exam section deactivated successfully. {practice_exams_count} practice exams were using this section."}
+    else:
+        # Practice exam yoksa tamamen sil
+        db.delete(exam_section)
+        db.commit()
+        return {"message": "Exam section deleted successfully"}
+
 # ============ EXAM MANAGEMENT ENDPOINTS ============
 
 @router.delete("/practice-exams/{exam_id}", status_code=204)
@@ -856,3 +1153,38 @@ async def get_admin_exam_statistics(
     from app.agents.exam_agent import ExamAgent
     exam_agent = ExamAgent()
     return exam_agent.get_exam_statistics(db, user_id=None)
+
+@router.get("/exam-system-config")
+async def get_exam_system_config(
+    current_user: User = Depends(require_admin_access)
+):
+    """Exam system konfigürasyonunu al (JSON'dan)"""
+    from app.agents.exam_agent import ExamAgent
+    exam_agent = ExamAgent()
+    
+    # JSON konfigürasyonlarını al
+    question_counts = exam_agent.get_exam_question_counts()
+    distribution_data = exam_agent.get_subject_question_distribution_data()
+    
+    # Exam sections listesi oluştur
+    exam_sections = []
+    section_id = 1
+    
+    for exam_type, subjects in question_counts.items():
+        for subject, count in subjects.items():
+            exam_sections.append({
+                "id": section_id,
+                "name": f"{exam_type} {subject}",
+                "exam_type": exam_type,
+                "subject": subject,
+                "question_count": count,
+                "is_active": True
+            })
+            section_id += 1
+    
+    return {
+        "exam_types": list(question_counts.keys()),
+        "exam_sections": exam_sections,
+        "question_counts": question_counts,
+        "subject_distributions": distribution_data
+    }
