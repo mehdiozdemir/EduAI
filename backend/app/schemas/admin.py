@@ -92,6 +92,7 @@ class ExamTypeCreate(BaseModel):
     name: str
     description: Optional[str] = None
     duration_minutes: Optional[int] = None
+    education_level_id: int
 
 class ExamTypeUpdate(BaseModel):
     name: Optional[str] = None
@@ -192,7 +193,9 @@ class CourseTopicBase(BaseModel):
     name: str
     description: Optional[str] = None
     course_id: int
-    order_index: Optional[int] = None
+    sort_order: Optional[int] = None
+    difficulty_level: Optional[int] = 1
+    estimated_duration: Optional[int] = None
 
 class CourseTopicCreate(CourseTopicBase):
     pass
@@ -201,7 +204,9 @@ class CourseTopicUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     course_id: Optional[int] = None
-    order_index: Optional[int] = None
+    sort_order: Optional[int] = None
+    difficulty_level: Optional[int] = None
+    estimated_duration: Optional[int] = None
 
 class CourseTopic(CourseTopicBase):
     id: int
