@@ -29,7 +29,7 @@ class EducationLevelService:
     @staticmethod
     def create(db: Session, level_data: EducationLevelCreate) -> EducationLevel:
         """Yeni eğitim seviyesi oluştur"""
-        db_level = EducationLevel(**level_data.dict())
+        db_level = EducationLevel(**level_data.model_dump())
         db.add(db_level)
         db.commit()
         db.refresh(db_level)
@@ -42,7 +42,7 @@ class EducationLevelService:
         if not db_level:
             return None
         
-        update_data = level_data.dict(exclude_unset=True)
+        update_data = level_data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_level, field, value)
         
@@ -118,7 +118,7 @@ class CourseService:
                 course_abbr = course_data.name[:3].upper()  # İlk 3 harf
                 course_data.code = f"{course_abbr}_{level_abbr}"
         
-        db_course = Course(**course_data.dict())
+        db_course = Course(**course_data.model_dump())
         db.add(db_course)
         db.commit()
         db.refresh(db_course)
@@ -131,7 +131,7 @@ class CourseService:
         if not db_course:
             return None
         
-        update_data = course_data.dict(exclude_unset=True)
+        update_data = course_data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_course, field, value)
         
@@ -208,7 +208,7 @@ class CourseTopicService:
             max_order = db.query(CourseTopic).filter(CourseTopic.course_id == topic_data.course_id).count()
             topic_data.sort_order = max_order + 1
         
-        db_topic = CourseTopic(**topic_data.dict())
+        db_topic = CourseTopic(**topic_data.model_dump())
         db.add(db_topic)
         db.commit()
         db.refresh(db_topic)
@@ -221,7 +221,7 @@ class CourseTopicService:
         if not db_topic:
             return None
         
-        update_data = topic_data.dict(exclude_unset=True)
+        update_data = topic_data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_topic, field, value)
         
