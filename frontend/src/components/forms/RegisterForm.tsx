@@ -16,11 +16,11 @@ interface RegisterFormData extends RegisterData {
   confirmPassword: string;
 }
 
-const RegisterForm: React.FC<RegisterFormProps> = ({ 
-  onSubmit, 
-  loading = false, 
+const RegisterForm: React.FC<RegisterFormProps> = ({
+  onSubmit,
+  loading = false,
   error,
-  onSuccess 
+  onSuccess
 }) => {
   const {
     register,
@@ -34,6 +34,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
     defaultValues: {
       username: '',
       email: '',
+      firstName: '',
+      lastName: '',
       password: '',
       confirmPassword: '',
     },
@@ -66,6 +68,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       const registerData: RegisterData = {
         username: data.username,
         email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
         password: data.password,
       };
       await onSubmit(registerData);
@@ -103,6 +107,30 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         required
         {...register('email', validationSchemas.register.email)}
       />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Input
+          label="Ad"
+          type="text"
+          placeholder="Adınızı girin"
+          error={errors.firstName?.message}
+          state={errors.firstName ? 'error' : touchedFields.firstName && !errors.firstName ? 'success' : 'default'}
+          showValidationIcon={true}
+          realTimeValidation={true}
+          {...register('firstName', { required: false })}
+        />
+
+        <Input
+          label="Soyad"
+          type="text"
+          placeholder="Soyadınızı girin"
+          error={errors.lastName?.message}
+          state={errors.lastName ? 'error' : touchedFields.lastName && !errors.lastName ? 'success' : 'default'}
+          showValidationIcon={true}
+          realTimeValidation={true}
+          {...register('lastName', { required: false })}
+        />
+      </div>
 
       <Input
         label="Şifre"

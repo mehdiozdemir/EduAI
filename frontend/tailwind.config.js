@@ -55,6 +55,37 @@ export default {
         'safe-left': 'env(safe-area-inset-left)',
         'safe-right': 'env(safe-area-inset-right)',
       },
+      animation: {
+        'float': 'float 6s ease-in-out infinite',
+        'spin-slow': 'spin 20s linear infinite',
+        'wave': 'wave 8s ease-in-out infinite',
+        'pulse-slow': 'pulse 4s ease-in-out infinite',
+        'fade-in': 'fadeIn 1s ease-out',
+        'slide-in-left': 'slideInLeft 0.3s ease-out',
+        'slide-out-left': 'slideOutLeft 0.3s ease-in',
+      },
+      keyframes: {
+        float: {
+          '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+          '50%': { transform: 'translateY(-20px) rotate(5deg)' },
+        },
+        wave: {
+          '0%, 100%': { transform: 'translateX(0%)' },
+          '50%': { transform: 'translateX(-25%)' },
+        },
+        fadeIn: {
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        slideInLeft: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(0)' },
+        },
+        slideOutLeft: {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-100%)' },
+        },
+      },
     },
   },
   plugins: [],

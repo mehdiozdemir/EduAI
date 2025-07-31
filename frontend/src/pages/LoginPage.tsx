@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LoginForm } from '../components/forms';
+import { AnimatedBackground } from '../components/ui';
 import { useAuth } from '../hooks';
 import type { LoginCredentials } from '../types';
 
@@ -44,24 +45,25 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
+      <AnimatedBackground variant="login" />
+      <div className="max-w-md w-full space-y-8 relative z-10">
+        <div className="text-center animate-fade-in">
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             EduAI'ya Giriş Yap
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-sm text-gray-600">
             Hesabınız yok mu?{' '}
             <Link
               to="/register"
-              className="font-medium text-primary-600 hover:text-primary-500"
+              className="font-medium text-primary-600 hover:text-primary-500 transition-colors duration-200"
             >
               Kayıt olun
             </Link>
           </p>
         </div>
 
-        <div className="bg-white py-8 px-6 shadow rounded-lg">
+        <div className="bg-white/90 backdrop-blur-sm py-8 px-6 shadow-xl rounded-xl border border-white/20 animate-fade-in" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
           <LoginForm
             onSubmit={handleLogin}
             loading={loading}

@@ -58,8 +58,7 @@ const colorStyles = {
 const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({ 
   step, 
   isLast = false,
-  className,
-  animationDelay = 0 
+  className
 }) => {
   const colorStyle = colorStyles[step.color || 'blue'];
 

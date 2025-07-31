@@ -9,7 +9,6 @@ import {
 import { useOptimisticPerformanceAnalysis } from '../hooks/queries/useOptimisticUpdates';
 import { cacheStrategies } from '../lib/cacheStrategies';
 import { invalidationStrategies } from '../lib/queryInvalidation';
-import { queryKeys } from '../lib/queryClient';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { Loading } from '../components/ui/Loading';
@@ -29,7 +28,7 @@ const ReactQueryDemo: React.FC = () => {
   } = useSubjects();
   const { data: topics, isLoading: topicsLoading } = useTopics(
     selectedSubjectId || 0,
-    !!selectedSubjectId
+    !!selectedSubjectId   
   );
   const { data: performance, isLoading: performanceLoading } =
     useUserPerformance(userId);
@@ -132,11 +131,10 @@ const ReactQueryDemo: React.FC = () => {
               {subjects.map(subject => (
                 <div
                   key={subject.id}
-                  className={`p-3 border rounded cursor-pointer transition-colors ${
-                    selectedSubjectId === subject.id
-                      ? 'bg-blue-50 border-blue-300'
-                      : 'hover:bg-gray-50'
-                  }`}
+                  className={`p-3 border rounded cursor-pointer transition-colors ${selectedSubjectId === subject.id
+                    ? 'bg-blue-50 border-blue-300'
+                    : 'hover:bg-gray-50'
+                    }`}
                   onClick={() => setSelectedSubjectId(subject.id)}
                   onMouseEnter={() => handlePrefetchTopics(subject.id)}
                 >

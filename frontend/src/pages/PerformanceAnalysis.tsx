@@ -125,7 +125,7 @@ export const PerformanceAnalysisPage: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center">
         <Card className="p-8 text-center">
           <div className="text-red-500 text-lg mb-4">⚠️</div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Data</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Veri Yüklenemedi</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <Button onClick={() => window.location.reload()}>
             Retry
@@ -140,8 +140,8 @@ export const PerformanceAnalysisPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Performance Analysis</h1>
-          <p className="text-gray-600 mt-1">Detailed insights into your learning progress</p>
+          <h1 className="text-3xl font-bold text-gray-900">Performans Analizi</h1>
+          <p className="text-gray-600 mt-1">Öğrenme ilerlemenize dair ayrıntılı analizler          </p>
         </div>
         <div className="flex space-x-2">
           <Button
@@ -163,18 +163,18 @@ export const PerformanceAnalysisPage: React.FC = () => {
 
       {/* Filters */}
       <Card className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters & Options</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Filtreleme & Seçenekler</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Subject
+              Dersler
             </label>
             <select
               value={filters.subject_id || ''}
               onChange={(e) => handleFilterChange('subject_id', e.target.value ? parseInt(e.target.value) : undefined)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">All Subjects</option>
+              <option value="">Tüm Dersler</option>
               {subjects.map((subject) => (
                 <option key={subject.id} value={subject.id}>
                   {subject.name}
@@ -185,7 +185,7 @@ export const PerformanceAnalysisPage: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              From Date
+              Başlangıç Tarihi
             </label>
             <Input
               type="date"
@@ -196,7 +196,7 @@ export const PerformanceAnalysisPage: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              To Date
+              Bitiş Tarihi
             </label>
             <Input
               type="date"
@@ -207,17 +207,17 @@ export const PerformanceAnalysisPage: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Time Period
+              Zaman Periyodu
             </label>
             <select
               value={timePeriod}
               onChange={(e) => setTimePeriod(e.target.value as 'week' | 'month' | 'quarter' | 'year')}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="week">Last Week</option>
-              <option value="month">Last Month</option>
-              <option value="quarter">Last Quarter</option>
-              <option value="year">Last Year</option>
+              <option value="week">Son 1 Hafta</option>
+              <option value="month">Son 1 Ay</option>
+              <option value="quarter">Son 3 Ay</option>
+              <option value="year">Son 1 Yıl</option>
             </select>
           </div>
         </div>
@@ -229,32 +229,32 @@ export const PerformanceAnalysisPage: React.FC = () => {
               size="sm"
               onClick={() => setChartType('line')}
             >
-              Line Chart
+              Çizgi Grafiği
             </Button>
             <Button
               variant={chartType === 'bar' ? 'primary' : 'outline'}
               size="sm"
               onClick={() => setChartType('bar')}
             >
-              Bar Chart
+              Çubuk Grafiği
             </Button>
             <Button
               variant={chartType === 'doughnut' ? 'primary' : 'outline'}
               size="sm"
               onClick={() => setChartType('doughnut')}
             >
-              Doughnut Chart
+              Donut Tablosu
             </Button>
           </div>
           <Button variant="ghost" size="sm" onClick={clearFilters}>
-            Clear Filters
+            Filtreleri Temizle
           </Button>
         </div>
       </Card>
 
       {/* Performance Trends Chart */}
       <Card className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Trends</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Performans</h3>
         <PerformanceChart
           data={trendsData}
           type={chartType}
@@ -267,10 +267,10 @@ export const PerformanceAnalysisPage: React.FC = () => {
       {/* Performance History Table */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Performance History</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Performans Geçmişi</h3>
           <div className="flex items-center space-x-2">
             <span className="text-sm text-gray-600">
-              Showing {performanceData.length} results
+              {performanceData.length} tane sonuç göstermektedir.
             </span>
           </div>
         </div>
@@ -283,7 +283,7 @@ export const PerformanceAnalysisPage: React.FC = () => {
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSortChange('created_at')}
                 >
-                  Date
+                  Tarih
                   {sortParams.sort_by === 'created_at' && (
                     <span className="ml-1">
                       {sortParams.sort_order === 'asc' ? '↑' : '↓'}
@@ -291,16 +291,16 @@ export const PerformanceAnalysisPage: React.FC = () => {
                   )}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Subject
+                  Ders
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Topic
+                  Konu
                 </th>
                 <th
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSortChange('total_questions')}
                 >
-                  Questions
+                  Sorular
                   {sortParams.sort_by === 'total_questions' && (
                     <span className="ml-1">
                       {sortParams.sort_order === 'asc' ? '↑' : '↓'}
@@ -311,7 +311,7 @@ export const PerformanceAnalysisPage: React.FC = () => {
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSortChange('correct_answers')}
                 >
-                  Correct
+                  Doğru
                   {sortParams.sort_by === 'correct_answers' && (
                     <span className="ml-1">
                       {sortParams.sort_order === 'asc' ? '↑' : '↓'}
@@ -322,7 +322,7 @@ export const PerformanceAnalysisPage: React.FC = () => {
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSortChange('accuracy')}
                 >
-                  Accuracy
+                  Doğruluk
                   {sortParams.sort_by === 'accuracy' && (
                     <span className="ml-1">
                       {sortParams.sort_order === 'asc' ? '↑' : '↓'}
@@ -333,7 +333,7 @@ export const PerformanceAnalysisPage: React.FC = () => {
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSortChange('weakness_level')}
                 >
-                  Weakness Level
+                  Zayıflık Seviye
                   {sortParams.sort_by === 'weakness_level' && (
                     <span className="ml-1">
                       {sortParams.sort_order === 'asc' ? '↑' : '↓'}
@@ -349,10 +349,10 @@ export const PerformanceAnalysisPage: React.FC = () => {
                     {new Date(performance.created_at).toLocaleDateString('tr-TR')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    Subject {performance.subject_id}
+                    Ders {performance.subject_id}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    Topic {performance.topic_id}
+                    Konu {performance.topic_id}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {performance.total_questions}
@@ -399,9 +399,9 @@ export const PerformanceAnalysisPage: React.FC = () => {
         {performanceData.length === 0 && (
           <div className="text-center py-8">
             <div className="text-gray-400 text-lg mb-2">📊</div>
-            <p className="text-gray-500">No performance data found for the selected filters.</p>
+            <p className="text-gray-500">Seçilen filtreler için performans verisi bulunamadı.</p>
             <Button variant="outline" className="mt-4" onClick={clearFilters}>
-              Clear Filters
+              Filtreleri Temizle
             </Button>
           </div>
         )}
@@ -410,7 +410,7 @@ export const PerformanceAnalysisPage: React.FC = () => {
         {performanceData.length > 0 && (
           <div className="flex items-center justify-between mt-6">
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600">Show</span>
+              <span className="text-sm text-gray-600">Göster</span>
               <select
                 value={pagination.per_page}
                 onChange={(e) => setPagination(prev => ({ ...prev, per_page: parseInt(e.target.value), page: 1 }))}

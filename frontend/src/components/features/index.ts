@@ -4,6 +4,10 @@
 export { default as SubjectCard } from './SubjectCard';
 export { default as TopicList } from './TopicList';
 
+// Education Level components
+export { default as EducationLevelCard } from './EducationLevelCard';
+export { default as EducationLevelSelector } from './EducationLevelSelector';
+
 // Question and Quiz components
 export { default as QuestionGenerator } from './QuestionGenerator';
 export { default as QuestionCard } from './QuestionCard';

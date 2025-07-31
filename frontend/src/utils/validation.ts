@@ -125,7 +125,7 @@ export const createValidationRules = {
 // Form validation schemas
 export const validationSchemas = {
   login: {
-    username: createValidationRules.username(),
+    email: createValidationRules.email(),
     password: {
       required: validationMessages.required,
       minLength: {

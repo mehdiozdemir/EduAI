@@ -6,6 +6,9 @@ export * from './auth';
 // Subject and Topic types
 export * from './subject';
 
+// Education level and course types
+export * from './education';
+
 // Question generation and evaluation types
 export * from './question';
 

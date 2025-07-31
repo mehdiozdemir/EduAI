@@ -192,67 +192,6 @@ const RecommendationsDemo: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Usage Instructions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Kullanım Kılavuzu</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4 text-sm text-gray-700">
-            <div>
-              <h4 className="font-semibold text-gray-900">Temel Kullanım:</h4>
-              <pre className="bg-gray-100 p-3 rounded mt-2 overflow-x-auto">
-                {`import { RecommendationList, useRecommendations } from '../components/features';
-
-const MyComponent = () => {
-  const {
-    recommendations,
-    loading,
-    error,
-    rateRecommendation,
-    markRecommendationUsed,
-    retry
-  } = useRecommendations({
-    subjectId: 1,
-    topicId: 2,
-    resourceType: 'youtube',
-    limit: 10
-  });
-
-  return (
-    <RecommendationList
-      recommendations={recommendations}
-      loading={loading}
-      error={error}
-      onResourceClick={(url) => window.open(url, '_blank')}
-      onRate={rateRecommendation}
-      onMarkUsed={markRecommendationUsed}
-      onRetry={retry}
-    />
-  );
-};`}
-              </pre>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900">Özellikler:</h4>
-              <ul className="list-disc list-inside space-y-1 mt-2">
-                <li>
-                  Kaynak türüne göre filtreleme (YouTube, Kitap, Web Sitesi)
-                </li>
-                <li>İlgililik skoruna göre sıralama</li>
-                <li>Arama fonksiyonu</li>
-                <li>5 yıldızlı değerlendirme sistemi</li>
-                <li>Kaynak kullanım takibi</li>
-                <li>Responsive tasarım</li>
-                <li>Loading ve error durumları</li>
-                <li>Güvenli external link açma</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

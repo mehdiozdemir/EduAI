@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { RegisterForm } from '../components/forms';
+import { AnimatedBackground } from '../components/ui';
 import { useAuth } from '../hooks';
 import type { RegisterData } from '../types';
 
@@ -57,9 +58,10 @@ const RegisterPage: React.FC = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8 px-4 sm:py-12 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div className="bg-white py-6 px-4 sm:py-8 sm:px-6 shadow rounded-lg text-center">
+      <div className="min-h-screen flex items-center justify-center py-8 px-4 sm:py-12 sm:px-6 lg:px-8 relative">
+        <AnimatedBackground variant="register" />
+        <div className="max-w-md w-full space-y-8 relative z-10">
+          <div className="bg-white/90 backdrop-blur-sm py-6 px-4 sm:py-8 sm:px-6 shadow-xl rounded-xl border border-white/20 text-center animate-fade-in">
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
               <svg
                 className="h-6 w-6 text-green-600"
@@ -88,24 +90,25 @@ const RegisterPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8 px-4 sm:py-12 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-6 sm:space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-2xl sm:text-3xl font-extrabold text-gray-900">
+    <div className="min-h-screen flex items-center justify-center py-8 px-4 sm:py-12 sm:px-6 lg:px-8 relative">
+      <AnimatedBackground variant="register" />
+      <div className="max-w-md w-full space-y-6 sm:space-y-8 relative z-10">
+        <div className="text-center animate-fade-in">
+          <h2 className="mt-6 text-2xl sm:text-3xl font-extrabold text-gray-900 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             EduAI'ya Kayıt Ol
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-sm text-gray-600">
             Zaten hesabınız var mı?{' '}
             <Link
               to="/login"
-              className="font-medium text-primary-600 hover:text-primary-500 touch-manipulation"
+              className="font-medium text-primary-600 hover:text-primary-500 touch-manipulation transition-colors duration-200"
             >
               Giriş yapın
             </Link>
           </p>
         </div>
 
-        <div className="bg-white py-6 px-4 sm:py-8 sm:px-6 shadow rounded-lg">
+        <div className="bg-white/90 backdrop-blur-sm py-6 px-4 sm:py-8 sm:px-6 shadow-xl rounded-xl border border-white/20 animate-fade-in" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
           <RegisterForm
             onSubmit={handleRegister}
             loading={loading}

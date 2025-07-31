@@ -29,7 +29,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
   } = useForm<LoginFormData>({
     mode: 'onChange',
     defaultValues: {
-      username: '',
+      email: '',
       password: '',
     },
   });
@@ -46,10 +46,10 @@ const LoginForm: React.FC<LoginFormProps> = ({
       feedback.showError(error);
       // Set form-level error for specific fields if needed
       if (
-        error.toLowerCase().includes('kullanıcı') ||
-        error.toLowerCase().includes('username')
+        error.toLowerCase().includes('e-posta') ||
+        error.toLowerCase().includes('email')
       ) {
-        setError('username', { message: 'Kullanıcı adı bulunamadı' });
+        setError('email', { message: 'E-posta bulunamadı' });
       } else if (
         error.toLowerCase().includes('şifre') ||
         error.toLowerCase().includes('password')
@@ -77,21 +77,21 @@ const LoginForm: React.FC<LoginFormProps> = ({
       noValidate
     >
       <Input
-        label="Kullanıcı Adı"
-        type="text"
-        placeholder="Kullanıcı adınızı girin"
-        error={errors.username?.message}
+        label="E-posta"
+        type="email"
+        placeholder="E-posta adresinizi girin"
+        error={errors.email?.message}
         state={
-          errors.username
+          errors.email
             ? 'error'
-            : touchedFields.username && !errors.username
+            : touchedFields.email && !errors.email
               ? 'success'
               : 'default'
         }
         showValidationIcon={true}
         realTimeValidation={true}
         required
-        {...register('username', validationSchemas.login.username)}
+        {...register('email', validationSchemas.login.email)}
       />
 
       <Input
