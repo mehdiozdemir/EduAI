@@ -6,13 +6,14 @@ import type { ApiError, ApiErrorResponse } from '../types';
 
 // Base API configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-const API_TIMEOUT = 30000; // 30 seconds
+// Removed timeout to prevent timeout errors on long-running operations
+// const API_TIMEOUT = 30000; // 30 seconds
 const MAX_RETRIES = 3;
 
 // Create axios instance with base configuration
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: API_TIMEOUT,
+  // timeout: API_TIMEOUT, // Removed timeout
   headers: {
     'Content-Type': 'application/json',
   },

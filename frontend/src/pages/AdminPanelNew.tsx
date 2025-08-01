@@ -1193,60 +1193,72 @@ const AdminPanelNew: React.FC = () => {
                     Sınav Bölümleri
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            {(examType.sections || []).map((section) => (
-                      <div key={section.id} className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg p-4 border border-purple-200">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-2xl">{section.icon || '📚'}</span>
-                            <div>
-                              <h5 className="font-semibold text-gray-900 text-sm">{section.name}</h5>
-                              <p className="text-xs text-gray-600 mt-1">
-                                {section.question_count || section.total_questions || 10} soru
-                              </p>
+                    {(examType.sections || []).map((section) => {
+                      // Derlenen başlık: "TYT • Türkçe" gibi
+                      const examTypeLabel = examType.name || section.exam_type_name || '';
+                      const sectionLabel = section.name || '';
+                      const composedName = examTypeLabel && sectionLabel
+                        ? `${examTypeLabel} • ${sectionLabel}`
+                        : sectionLabel || examTypeLabel || 'Bölüm';
+
+                      // Soru sayısı kaynağı (DB alanı -> fallback alanı -> varsayılan)
+                      const questionCount = section.question_count ?? section.total_questions ?? 10;
+
+                      return (
+                        <div key={section.id} className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg p-4 border border-purple-200">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">{section.icon || '📚'}</span>
+                              <div>
+                                <h5 className="font-semibold text-gray-900 text-sm">
+                                  {composedName}
+                                </h5>
+                                <p className="text-xs text-gray-600 mt-1">
+                                  {questionCount} soru
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex space-x-1">
-                            <button
-                              onClick={() => handleEditExamSection(section)}
-                              className="text-blue-500 hover:text-blue-700 p-1"
-                              title="Düzenle"
-                            >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (confirm('Bu sınav bölümünü silmek istediğinizden emin misiniz?')) {
-                                  adminApi.deleteExamSection(section.id).then(() => {
-                                    fetchExamSections();
-                                  }).catch(error => {
-                                    console.error('Sınav bölümü silinirken hata:', error);
-                                    setError('Sınav bölümü silinirken hata oluştu');
-                                  });
-                                }
-                              }}
-                              className="text-red-500 hover:text-red-700 p-1"
-                              title="Sil"
-                            >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <div className="flex space-x-1">
+                              <button
+                                onClick={() => handleEditExamSection(section)}
+                                className="text-blue-500 hover:text-blue-700 p-1"
+                                title="Düzenle"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
                               </button>
+                              <button
+                                onClick={() => {
+                                  if (confirm('Bu sınav bölümünü silmek istediğinizden emin misiniz?')) {
+                                    adminApi.deleteExamSection(section.id).then(() => {
+                                      fetchExamSections();
+                                    }).catch(error => {
+                                      console.error('Sınav bölümü silinirken hata:', error);
+                                      setError('Sınav bölümü silinirken hata oluştu');
+                                    });
+                                  }
+                                }}
+                                className="text-red-500 hover:text-red-700 p-1"
+                                title="Sil"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-gray-500">
+                            <span className="bg-white px-2 py-1 rounded-full">
+                              ID: {section.id}
+                            </span>
+                            <span className={`px-2 py-1 rounded-full ${section.color ? 'text-white' : 'bg-gray-100 text-gray-700'}`} style={{ backgroundColor: section.color || '#6B7280' }}>
+                              {examTypeLabel || 'Bölüm'}
+                            </span>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between text-xs text-gray-500">
-                          <span className="bg-white px-2 py-1 rounded-full">
-                            ID: {section.id}
-                          </span>
-                          <span className={`px-2 py-1 rounded-full ${
-                            section.color ? 'text-white' : 'bg-gray-100 text-gray-700'
-                          }`} style={{ backgroundColor: section.color || '#6B7280' }}>
-                            Bölüm
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
@@ -1825,11 +1837,17 @@ const AdminPanelNew: React.FC = () => {
                     required
                   >
                     <option value={0}>Sınav bölümü seçin</option>
-                    {(examSections || []).map((section) => (
-                      <option key={section.id} value={section.id}>
-                        {section.name} ({section.total_questions} soru)
-                      </option>
-                    ))}
+                    {(examSections || []).map((section) => {
+                      const examTypeName = section.exam_type_name || '';
+                      const sectionName = section.name || '';
+                      const label = examTypeName && sectionName ? `${examTypeName} • ${sectionName}` : (sectionName || examTypeName || 'Bölüm');
+                      const qCount = section.question_count ?? section.total_questions ?? 10;
+                      return (
+                        <option key={section.id} value={section.id}>
+                          {label} ({qCount} soru)
+                        </option>
+                      );
+                    })}
                   </select>
                   {examSections.length === 0 && (
                     <p className="text-sm text-red-500 mt-1">
