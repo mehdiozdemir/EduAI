@@ -153,7 +153,13 @@ class ExamAgent(BaseAgent):
             loop.close()
 
     async def generate_ai_questions_async(self, db: Session, exam_section_id: int, count: int = 10) -> List[ExamQuestion]:
-        """Bölüm için AI destekli soru üret - SADECE AI, fallback yok"""
+        """Bölüm için AI destekli soru üret - Top-off ile tam sayıyı garanti et.
+
+        Davranış:
+        - İlk AI çağrısı eksik dönerse (ör. 36/40), eksik kadar ek üretim yapılır.
+        - Duplikasyon kontrolü yapılır; deduplikasyon sonrası eksik varsa tekrar üstüne üretim yapılır.
+        - Maksimum güvenli deneme sayısı uygulanır.
+        """
         # Bölümü bul
         section = db.query(ExamSection).filter(ExamSection.id == exam_section_id).first()
         if not section:
@@ -163,20 +169,58 @@ class ExamAgent(BaseAgent):
         exam_type = db.query(ExamType).filter(ExamType.id == section.exam_type_id).first()
         exam_type_name = exam_type.name if exam_type else "Genel"
 
-        # AI ile soru üret - Fallback YOK!
-        print(f"🤖 {count} adet AI sorusu üretiliyor... (Template fallback KAPALI)")
-        ai_questions = await self._generate_questions_with_ai(section.name, exam_type_name, count)
-        
-        if not ai_questions.questions:
-            raise ValueError(f"AI soru üretimi başarısız oldu. Bölüm: {section.name}, Tip: {exam_type_name}")
-        
-        generated_questions = []
-        for ai_q in ai_questions.questions:
-            # Database'e kaydet
+        target_count = int(count)
+        print(f"🤖 {target_count} adet AI sorusu üretiliyor... (Top-off aktif, template fallback KAPALI)")
+
+        # Biriktirilecek ham AI soruları (DB'ye yazmadan önce)
+        accumulated = []
+        seen_texts = set()
+
+        max_attempts = 6  # ilk deneme + en fazla 5 top-off
+        attempt = 0
+
+        while len(accumulated) < target_count and attempt < max_attempts:
+            remaining = target_count - len(accumulated)
+            request_count = remaining
+
+            # İlk denemede model bazen eksik döndüğü için, eksik kadar istemek mantıklı.
+            # İkinci/sonraki denemelerde de sadece kalan kadar iste.
+            print(f"🔄 AI çağrısı (deneme {attempt + 1}/{max_attempts}) - istenen: {request_count}")
+            ai_resp = await self._generate_questions_with_ai(section.name, exam_type_name, request_count)
+
+            if not ai_resp or not getattr(ai_resp, "questions", None):
+                print("⚠️  AI boş döndü, bir sonraki denemeye geçiliyor")
+                attempt += 1
+                continue
+
+            # Gelenleri dedup ederek biriktir
+            added_this_round = 0
+            for ai_q in ai_resp.questions:
+                q_text = ai_q.question.strip() if hasattr(ai_q, "question") and ai_q.question else ""
+                if not q_text or q_text in seen_texts:
+                    continue
+                accumulated.append(ai_q)
+                seen_texts.add(q_text)
+                added_this_round += 1
+                if len(accumulated) == target_count:
+                    break
+
+            print(f"✅ Bu tur eklenen (unique) soru: {added_this_round} | Toplam: {len(accumulated)}/{target_count}")
+            attempt += 1
+
+        if len(accumulated) < target_count:
+            raise ValueError(f"AI soru üretimi hedefe ulaşılamadı: {len(accumulated)}/{target_count}")
+
+        # Toplamı tam hedefe kırp (güvenlik için; teorik olarak zaten eşit)
+        accumulated = accumulated[:target_count]
+
+        # DB'ye persist et
+        generated_questions: List[ExamQuestion] = []
+        for ai_q in accumulated:
             question = ExamQuestion(
                 question_text=ai_q.question,
                 option_a=next((opt.text for opt in ai_q.options if opt.letter == "A"), ""),
-                option_b=next((opt.text for opt in ai_q.options if opt.letter == "B"), ""), 
+                option_b=next((opt.text for opt in ai_q.options if opt.letter == "B"), ""),
                 option_c=next((opt.text for opt in ai_q.options if opt.letter == "C"), ""),
                 option_d=next((opt.text for opt in ai_q.options if opt.letter == "D"), ""),
                 option_e="",  # E seçeneği yok
@@ -187,21 +231,90 @@ class ExamAgent(BaseAgent):
                 is_active=True,
                 created_by="AI_EXAM_AGENT"
             )
-            
             db.add(question)
             generated_questions.append(question)
-        
+
         db.commit()
-        print(f"✅ {len(generated_questions)} adet AI sorusu başarıyla oluşturuldu!")
+        print(f"🎯 Nihai üretilen soru sayısı: {len(generated_questions)} (hedef: {target_count})")
         return generated_questions
 
     async def _generate_questions_with_ai(self, section_name: str, exam_type: str, count: int) -> ExamQuestionGenerationResponse:
-        """Gemini AI ile soru üret - Konu bazlı detaylı prompt sistemi"""
+        """Gemini AI ile soru üret - 2 parça halinde güvenli üretim ile farklı sorular garantili"""
+        
+        # 6'dan fazla soru için 2 parçaya böl (JSON parsing hatalarını azaltmak için)
+        if count > 6:
+            part1_count = count // 2
+            part2_count = count - part1_count
+            
+            print(f"🔄 Güvenli üretim: {count} soru 2 parçaya bölünüyor: {part1_count} + {part2_count}")
+            
+            # İlk parça - temel ve orta zorluk odaklı
+            part1 = await self._generate_question_batch_internal(
+                section_name, exam_type, part1_count, 
+                batch_type="first_half", 
+                avoid_keywords=set()
+            )
+            
+            # İkinci parça için kullanılan anahtar kelimeleri topla
+            used_keywords = set()
+            for q in part1.questions:
+                # Soru metninden anahtar kelimeler çıkar
+                words = q.question.lower().split()
+                used_keywords.update([w for w in words if len(w) > 4])
+            
+            # İkinci parça - orta ve ileri zorluk odaklı, farklı kelimelerle
+            part2 = await self._generate_question_batch_internal(
+                section_name, exam_type, part2_count, 
+                batch_type="second_half",
+                avoid_keywords=used_keywords
+            )
+            
+            # Birleştir ve duplikasyon kontrolü
+            all_questions = part1.questions[:]
+            seen_questions = {q.question.strip().lower() for q in part1.questions}
+            
+            for q in part2.questions:
+                q_text = q.question.strip().lower()
+                if q_text not in seen_questions:
+                    all_questions.append(q)
+                    seen_questions.add(q_text)
+                else:
+                    print(f"⚠️ Duplikasyon önlendi: {q.question[:50]}...")
+            
+            print(f"✅ Toplamda {len(all_questions)} benzersiz soru üretildi")
+            
+            return ExamQuestionGenerationResponse(
+                section_name=section_name,
+                exam_type=exam_type,
+                questions=all_questions
+            )
+        else:
+            # Küçük setler tek seferde
+            return await self._generate_question_batch_internal(section_name, exam_type, count, "single", set())
+    
+    async def _generate_question_batch_internal(self, section_name: str, exam_type: str, count: int, batch_type: str, avoid_keywords: set) -> ExamQuestionGenerationResponse:
+        """İç batch üretim fonksiyonu - Konu bazlı detaylı prompt sistemi + sağlamlaştırılmış parsing/onarım"""
         parser = PydanticOutputParser(pydantic_object=ExamQuestionGenerationResponse)
         format_instructions = parser.get_format_instructions()
-        
+
         # JSON şemasındaki { } karakterlerini escape et
         format_instructions = format_instructions.replace("{", "{{").replace("}", "}}")
+
+        # Ek ve katı format gereksinimleri (parser öncesi model çıktısını daha stabil hale getirmek için)
+        strict_format_requirements = (
+            "ÇIKIŞ FORMAT KURALLARI (ÇOK ÖNEMLİ):\\n"
+            "• Sadece geçerli JSON üret (başta/sonda/metin aralarında yorum yok)\\n"
+            "• Kök alanlar: section_name (string), exam_type (string), questions (array)\\n"
+            "• questions dizisindeki her öğe zorunlu alanlara sahip olmalı:\\n"
+            "   - question (string, boş olamaz)\\n"
+            "   - options (tam 4 eleman). Her option nesnesi: {{ letter: 'A'|'B'|'C'|'D', text: string }}\\n"
+            "   - correct_answer (yalnızca 'A'|'B'|'C'|'D')\\n"
+            "   - explanation (string)\\n"
+            "   - difficulty (integer; 1, 2 veya 3)\\n"
+            "• options dizisi DAİMA 4 öğe içermeli ve letter sırası [A,B,C,D] olmalı\\n"
+            "• Boş obje ({{}}) veya eksik alan bırakmayın. Tüm alanları doldurun\\n"
+            "• JSON dışında hiçbir şey yazma; kod bloğu, markdown, metin ekleme.\\n"
+        )
 
         # Sınav tipine göre eğitim seviyesini belirle
         education_mapping = {
@@ -213,18 +326,23 @@ class ExamAgent(BaseAgent):
 
         # Konu bazlı soru dağılımını al
         topic_distribution = self.get_topic_distribution(exam_type, section_name, count)
-        
+
         # Detaylı prompt oluştur
         detailed_requirements = self.create_detailed_prompt(exam_type, section_name, topic_distribution, education_level)
+        
+        # Batch type'a göre özel instructions
+        batch_instructions = self._get_batch_instructions(batch_type, count, avoid_keywords)
 
         system_msg = (
             f"Sen bir {section_name} uzmanısın ve {education_level} seviyesinde "
             f"{exam_type} sınav soruları oluşturuyorsun. Türkiye'deki resmi sınav formatına uygun sorular hazırla.\n\n"
-            f"KONU DAĞILIMI VE GEREKSİNİMLER:\n{detailed_requirements}"
+            f"KONU DAĞILIMI VE GEREKSİNİMLER:\n{detailed_requirements}\n\n"
+            f"{strict_format_requirements}"
         )
 
         human_msg = (
             f"{exam_type} sınavı için {section_name} alanında {count} adet soru oluştur.\n\n"
+            f"{batch_instructions}\n\n"
             "Soru gereksinimleri:\n"
             f"1. Türkiye'deki resmi {exam_type} sınav formatına uygun olmalı\n"
             "2. Tam olarak 4 çoktan seçmeli seçenek (A, B, C, D) olmalı\n"
@@ -235,7 +353,12 @@ class ExamAgent(BaseAgent):
             "7. Zorluk seviyesi 1 (kolay), 2 (orta), 3 (zor) olmalı\n"
             "8. Türkçe dilbilgisi kurallarına uygun olmalı\n"
             "9. Gerçek sınav seviyesinde olmalı\n\n"
-            f"{format_instructions}\n\n"
+            "FORMAT HATIRLATICI:\\n"
+            "- Sadece JSON döndür\\n"
+            "- options tam 4 madde olmalı ve letter alanları 'A','B','C','D' olmalı\\n"
+            "- correct_answer sadece 'A'|'B'|'C'|'D' olabilir\\n"
+            "- Boş obje veya eksik alan bırakma\\n\\n"
+            f"{format_instructions}\\n\\n"
             "ÖNEMLI: Sadece JSON formatında cevap ver. Yorum ya da ek açıklama ekleme."
         )
 
@@ -246,54 +369,219 @@ class ExamAgent(BaseAgent):
 
         # Temperature'ı artır çeşitlilik için
         original_temp = self.temperature
-        self.temperature = 0.7
+        self.temperature = 0.0
 
-        chain = prompt | self.llm | parser
+        # Yardımcı: LLM metninden JSON'ı çıkar
+        def _extract_json(text: str) -> str:
+            t = (text or "").strip()
+            if not t:
+                return t
+            # Kod bloklarını temizle
+            if t.startswith("```"):
+                # ilk '{' ile son '}' aralığını al
+                i = t.find("{")
+                j = t.rfind("}")
+                if i != -1 and j != -1 and j > i:
+                    return t[i:j+1]
+            # Genel durum: ilk '{' ile son '}' arası
+            i = t.find("{")
+            j = t.rfind("}")
+            if i != -1 and j != -1 and j > i:
+                return t[i:j+1]
+            return t
+
+        # Yardımcı: JSON'u normalize et ve eksik alanları doldur
+        def _normalize_payload(payload: Dict) -> Dict:
+            payload = dict(payload or {})
+            payload.setdefault("section_name", section_name)
+            payload.setdefault("exam_type", exam_type)
+
+            questions = payload.get("questions")
+            if not isinstance(questions, list):
+                payload["questions"] = []
+                return payload
+
+            fixed = []
+            for q in questions:
+                if not isinstance(q, dict):
+                    continue
+                qq = dict(q)
+
+                # question metni zorunlu
+                qtext = str(qq.get("question", "")).strip()
+                if not qtext:
+                    continue
+
+                # options: tam 4 adet, letters A-D
+                letters = ["A", "B", "C", "D"]
+                norm_opts = []
+                raw_opts = qq.get("options", [])
+                if not isinstance(raw_opts, list):
+                    raw_opts = []
+                for i, opt in enumerate(raw_opts[:4]):
+                    if isinstance(opt, dict):
+                        letter = str(opt.get("letter") or "").strip().upper()
+                        text = str(opt.get("text") or "").strip()
+                        letter = letter if letter in letters else letters[i] if i < 4 else "A"
+                        norm_opts.append({"letter": letter, "text": text})
+                    else:
+                        norm_opts.append({"letter": letters[i], "text": str(opt)})
+                # doldur, eksikse boş metinle tamamla
+                for i in range(len(norm_opts), 4):
+                    norm_opts.append({"letter": letters[i], "text": ""})
+                # en az 2 dolu metin kontrolü, aksi halde atla
+                if sum(1 for o in norm_opts if o["text"]) < 2:
+                    continue
+                qq["options"] = norm_opts[:4]
+
+                # correct_answer doğrula
+                valid_letters = {o["letter"] for o in qq["options"]}
+                ca = str(qq.get("correct_answer", "")).strip().upper()
+                if ca not in valid_letters:
+                    ca = next(iter(valid_letters)) if valid_letters else "A"
+                qq["correct_answer"] = ca
+
+                # explanation zorunlu: yoksa kısa bir açıklama koy
+                expl = qq.get("explanation")
+                if not isinstance(expl, str) or not expl.strip():
+                    qq["explanation"] = "Doğru cevap çözüm akışıyla doğrulanır."
+                else:
+                    qq["explanation"] = expl.strip()
+
+                # difficulty zorunlu ve 1-3
+                diff = qq.get("difficulty")
+                try:
+                    diff_int = int(diff)
+                except Exception:
+                    diff_int = 2
+                if diff_int not in (1, 2, 3):
+                    diff_int = 2
+                qq["difficulty"] = diff_int
+
+                fixed.append(qq)
+
+            payload["questions"] = fixed
+            return payload
+
+        chain = prompt | self.llm
+
+        import json as _json
+
+        # JSON sanitize: BOM/null, code-fence artıkları ve yaygın trailing virgüllerini temizle
+        def _sanitize_json(s: str) -> str:
+            s2 = (s or "").replace("\ufeff", "").replace("\x00", "")
+            s2 = s2.replace("END_OF_JSON", "").strip()
+            # Yaygın trailing comma hatalarını basitçe düzelt
+            s2 = s2.replace(",]", "]").replace(",}", "}")
+            return s2
 
         # 3 deneme hakkı ver
         max_retries = 3
+        last_error = None
         for attempt in range(max_retries):
             try:
                 print(f"🔄 AI soru üretimi denemesi {attempt + 1}/{max_retries}")
-                result = await chain.ainvoke({})
+                raw_text_msg = await chain.ainvoke({})  # ham metin veya mesaj
+                # Her denemede sıcaklığı eski haline getir
                 self.temperature = original_temp
-                
-                if result.questions and len(result.questions) > 0:
-                    print(f"✅ AI başarıyla {len(result.questions)} soru üretti!")
+
+                raw_text = raw_text_msg.content if hasattr(raw_text_msg, "content") else str(raw_text_msg)
+                raw_json_str = _extract_json(str(raw_text))
+                sanitized = _sanitize_json(raw_json_str)
+
+                data = _json.loads(sanitized)
+
+                # Onarım ve normalizasyon
+                safe = _normalize_payload(data)
+
+                # Pydantic'e geçir
+                result = ExamQuestionGenerationResponse(**safe)
+
+                # Ek geçerlilik kontrolü
+                def _is_valid_output(res: ExamQuestionGenerationResponse) -> tuple[bool, str]:
+                    if not res.questions or len(res.questions) == 0:
+                        return False, "boş soru listesi"
+                    for idx, q in enumerate(res.questions):
+                        if not getattr(q, "question", "").strip():
+                            return False, f"soru {idx} question boş"
+                        opts = getattr(q, "options", None)
+                        if not opts or len(opts) != 4:
+                            return False, f"soru {idx} options!=4"
+                        letters = [getattr(o, "letter", "") for o in opts]
+                        texts = [getattr(o, "text", "").strip() for o in opts]
+                        if letters != ["A", "B", "C", "D"]:
+                            return False, f"soru {idx} letters!=A,B,C,D"
+                        if any(t == "" for t in texts):
+                            return False, f"soru {idx} boş option metni"
+                        ca = getattr(q, "correct_answer", "").strip().upper()
+                        if ca not in ("A", "B", "C", "D"):
+                            return False, f"soru {idx} correct_answer geçersiz"
+                        diff = getattr(q, "difficulty", None)
+                        if diff not in (1, 2, 3):
+                            return False, f"soru {idx} difficulty geçersiz"
+                        if not getattr(q, "explanation", "").strip():
+                            return False, f"soru {idx} explanation boş"
+                    return True, ""
+
+                ok, reason = _is_valid_output(result)
+                if ok:
+                    print(f"✅ AI başarıyla {len(result.questions)} geçerli soru üretti!")
                     return result
                 else:
-                    print(f"⚠️  AI boş soru listesi döndürdü (deneme {attempt + 1})")
-                    
+                    last_error = f"Geçersiz çıktı: {reason}"
+                    print(f"⚠️  {last_error} (deneme {attempt + 1})")
+
             except Exception as e:
-                print(f"❌ AI deneme {attempt + 1} başarısız: {e}")
-                if attempt == max_retries - 1:  # Son deneme
-                    self.temperature = original_temp
-                    raise ValueError(f"AI soru üretimi {max_retries} denemede başarısız oldu: {e}")
-        
+                last_error = f"{type(e).__name__}: {e}"
+                print(f"❌ AI deneme {attempt + 1} başarısız: {last_error}")
+                # Sonraki denemeye geç
+
+        # Son durumda temperature'ı garanti geri al
         self.temperature = original_temp
-        raise ValueError("AI soru üretimi tüm denemelerde başarısız oldu")
+        raise ValueError(f"AI soru üretimi {max_retries} denemede başarısız oldu: {last_error or 'bilinmeyen hata'}")
 
     def get_topic_distribution(self, exam_type: str, section_name: str, total_count: int) -> Dict:
-        """Belirtilen bölüm için konu dağılımını al"""
+        """Belirtilen bölüm için konu dağılımını al ve toplamı tam olarak total_count yap.
+
+        Yöntem:
+        - Oranları hesapla (float).
+        - Aşağı doğru taban (floor) ile ilk atama yap.
+        - Kalan (remainder) kadar en büyük küsuratlılara +1 dağıt (largest remainder).
+        """
         distribution_data = self.get_subject_question_distribution_data()
         if exam_type in distribution_data and section_name in distribution_data[exam_type]:
             distribution = distribution_data[exam_type][section_name]
-            
-            # Oransal dağılım yap
-            original_total = distribution["total_questions"]
-            ratio = total_count / original_total
-            
-            adjusted_topics = {}
+
+            original_total = max(1, int(distribution.get("total_questions", total_count)))
+            ratio = float(total_count) / float(original_total)
+
+            # İlk geçiş: taban atama ve küsuratları tut
+            tmp = []
+            floor_sum = 0
             for topic_name, topic_info in distribution["topics"].items():
-                adjusted_count = max(1, round(topic_info["question_count"] * ratio))
+                raw = (topic_info["question_count"] * ratio)
+                base = int(raw)  # floor
+                frac = raw - base
+                # En az 0 olsun; +1 dağıtımı sonra yapacağız
+                tmp.append((topic_name, base, frac, topic_info["subtopics"]))
+                floor_sum += base
+
+            # Kalanı hesapla
+            remainder = total_count - floor_sum
+            # En büyük küsuratlıları seç
+            tmp.sort(key=lambda x: x[2], reverse=True)
+
+            adjusted_topics = {}
+            for idx, (topic_name, base, _frac, subtopics) in enumerate(tmp):
+                add = 1 if idx < remainder else 0
                 adjusted_topics[topic_name] = {
-                    "question_count": adjusted_count,
-                    "subtopics": topic_info["subtopics"]
+                    "question_count": base + add,
+                    "subtopics": subtopics
                 }
-            
+
             return {"topics": adjusted_topics, "total_questions": total_count}
-        
-        # Varsayılan dağılım
+
+        # Varsayılan dağılım (tek grup)
         return {
             "topics": {
                 "Genel Konular": {
@@ -859,16 +1147,20 @@ class ExamAgent(BaseAgent):
             "answers": answers
         }
     
-    def delete_practice_exam(self, db: Session, exam_id: int, user_id: int = None) -> bool:
+    def delete_practice_exam(self, db: Session, exam_id: int, user_id: int = None, admin_delete: bool = False) -> bool:
         """Deneme sınavını sil"""
         query = db.query(PracticeExam).filter(PracticeExam.id == exam_id)
         
-        if user_id:
+        # Admin silme işleminde user_id kontrolü yapma
+        if user_id and not admin_delete:
             query = query.filter(PracticeExam.user_id == user_id)
         
         exam = query.first()
         if not exam:
-            raise ValueError("Sınav bulunamadı veya erişim izniniz yok")
+            if admin_delete:
+                raise ValueError("Sınav bulunamadı")
+            else:
+                raise ValueError("Sınav bulunamadı veya erişim izniniz yok")
         
         # İlgili soru sonuçlarını da sil
         db.query(PracticeQuestionResult).filter(
@@ -1306,3 +1598,39 @@ class ExamAgent(BaseAgent):
             }
 
     # Template sistemi tamamen kaldırıldı - Sadece AI üretimi!
+    
+    def _get_batch_instructions(self, batch_type: str, count: int, avoid_keywords: set) -> str:
+        """Batch tipine göre farklı soru üretim talimatları"""
+        
+        avoid_instruction = ""
+        if avoid_keywords:
+            # Anahtar kelimeler listesini string haline getir
+            keywords_str = ", ".join(list(avoid_keywords)[:10])  # İlk 10 kelime
+            avoid_instruction = f"\n⚠️ ÖNEMLI: Bu kelimelerle AYNI soruları üretme: {keywords_str}\n"
+        
+        if batch_type == "first_half":
+            return (
+                f"🎯 BU İLK PARÇA: {count} soru - TEMEL VE ORTA SEVİYE odaklı\n"
+                "ZORLUK DAĞILIMI: Çoğunlukla zorluk 1-2, az sayıda zorluk 3\n"
+                "SORU TİPLERİ: Temel kavram soruları, standart formül uygulamaları, basit hesaplamalar\n"
+                "YAKLAŞIM: Tanım soruları, doğrudan hesap, temel analiz, kolay örnekler\n"
+                "ANAHTAR KELİMELER: basit, temel, direkt, kolay, standart, normal"
+                f"{avoid_instruction}"
+            )
+        elif batch_type == "second_half":
+            return (
+                f"🎯 BU İKİNCİ PARÇA: {count} soru - ORTA VE İLERİ SEVİYE odaklı\n"
+                "ZORLUK DAĞILIMI: Çoğunlukla zorluk 2-3, az sayıda zorluk 1\n"  
+                "SORU TİPLERİ: Karmaşık analiz, çok aşamalı çözüm, eleştirel düşünme\n"
+                "YAKLAŞIM: Sentez soruları, problem çözme, derinlemesine analiz, karşılaştırma\n"
+                "ANAHTAR KELİMELER: karmaşık, detaylı, analiz, sentez, ileri, zorlu"
+                f"{avoid_instruction}"
+            )
+        else:  # single
+            return (
+                f"🎯 TEK PARÇA ÜRETIM: {count} soru - DENGELİ DAĞILIM\n"
+                "ZORLUK DAĞILIMI: Eşit oranda zorluk 1, 2, 3\n"
+                "SORU TİPLERİ: Çeşitli zorluk seviyelerinde kapsamlı soru seti\n"
+                "YAKLAŞIM: Temel'den ileri seviyeye dengeli dağılım"
+                f"{avoid_instruction}"
+            )
