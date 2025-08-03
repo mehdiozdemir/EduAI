@@ -56,7 +56,7 @@ async def submit_practice_exam(
     exam_agent = ExamAgent()
     return exam_agent.submit_practice_exam(db, exam_id, current_user.id, answers)
 
-@router.get("/practice-exam/{exam_id}/results", response_model=PracticeExamResult)
+@router.get("/practice-exam/{exam_id}/results")
 async def get_exam_results(
     exam_id: int,
     current_user: User = Depends(get_current_user),

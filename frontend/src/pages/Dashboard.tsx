@@ -206,6 +206,86 @@ const DashboardContent: React.FC<{
         </ResponsiveGrid>
       </ErrorBoundarySection>
 
+      {/* Practice Exam Section */}
+      <ErrorBoundarySection>
+        <Card className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Deneme Sınavı</h3>
+              <p className="text-gray-600 text-sm mt-1">Gerçek sınav formatında kendinizi test edin</p>
+            </div>
+            <Link
+              to="/app/practice-exam"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center touch-manipulation min-h-[48px] flex items-center justify-center"
+            >
+              Sınav Başlat
+            </Link>
+          </div>
+          
+          <ResponsiveGrid
+            cols={{ default: 1, sm: 2, lg: 3 }}
+            gap="md"
+          >
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-100 border border-blue-200 rounded-lg p-4 touch-manipulation">
+              <div className="flex items-center mb-3">
+                <div className="p-2 bg-blue-500 rounded-lg mr-3">
+                  <div className="text-white text-lg">📋</div>
+                </div>
+                <div>
+                  <h4 className="font-medium text-blue-900">TYT Denemesi</h4>
+                  <p className="text-xs text-blue-700">Temel Yeterlilik Testi</p>
+                </div>
+              </div>
+              <p className="text-sm text-blue-800 mb-3">120 dakika • 40 soru</p>
+              <Link
+                to="/app/practice-exam"
+                className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800"
+              >
+                Başlat →
+              </Link>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-50 to-emerald-100 border border-green-200 rounded-lg p-4 touch-manipulation">
+              <div className="flex items-center mb-3">
+                <div className="p-2 bg-green-500 rounded-lg mr-3">
+                  <div className="text-white text-lg">🎓</div>
+                </div>
+                <div>
+                  <h4 className="font-medium text-green-900">AYT Denemesi</h4>
+                  <p className="text-xs text-green-700">Alan Yeterlilik Testi</p>
+                </div>
+              </div>
+              <p className="text-sm text-green-800 mb-3">180 dakika • 80 soru</p>
+              <Link
+                to="/app/practice-exam"
+                className="inline-flex items-center text-sm font-medium text-green-600 hover:text-green-800"
+              >
+                Başlat →
+              </Link>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-violet-100 border border-purple-200 rounded-lg p-4 touch-manipulation">
+              <div className="flex items-center mb-3">
+                <div className="p-2 bg-purple-500 rounded-lg mr-3">
+                  <div className="text-white text-lg">📊</div>
+                </div>
+                <div>
+                  <h4 className="font-medium text-purple-900">Sınav Geçmişi</h4>
+                  <p className="text-xs text-purple-700">Geçmiş performansınız</p>
+                </div>
+              </div>
+              <p className="text-sm text-purple-800 mb-3">Son sınavlarınızı görüntüleyin</p>
+              <Link
+                to="/app/practice-exam-history"
+                className="inline-flex items-center text-sm font-medium text-purple-600 hover:text-purple-800"
+              >
+                Görüntüle →
+              </Link>
+            </div>
+          </ResponsiveGrid>
+        </Card>
+      </ErrorBoundarySection>
+
       {/* Charts Row */}
       <ErrorBoundarySection>
         <ResponsiveGrid

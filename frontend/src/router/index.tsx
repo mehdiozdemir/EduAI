@@ -55,6 +55,18 @@ const SettingsPage = React.lazy(() =>
 const AdminPanel = React.lazy(() =>
   import(/* webpackChunkName: "admin" */ '../pages/AdminPanelNew').then(module => ({ default: module.default }))
 );
+const PracticeExamSelectionPage = React.lazy(() =>
+  import(/* webpackChunkName: "practice-exam" */ '../pages/PracticeExamSelectionPage').then(module => ({ default: module.default }))
+);
+const PracticeExamPage = React.lazy(() =>
+  import(/* webpackChunkName: "practice-exam" */ '../pages/PracticeExamPage').then(module => ({ default: module.default }))
+);
+const PracticeExamResultsPage = React.lazy(() =>
+  import(/* webpackChunkName: "practice-exam" */ '../pages/PracticeExamResultsPage').then(module => ({ default: module.default }))
+);
+const PracticeExamHistoryPage = React.lazy(() =>
+  import(/* webpackChunkName: "practice-exam" */ '../pages/PracticeExamHistoryPage').then(module => ({ default: module.default }))
+);
 const NotFoundPage = React.lazy(() =>
   import(/* webpackChunkName: "error" */ '../pages/NotFoundPage').then(
     module => ({ default: module.NotFoundPage })
@@ -207,6 +219,38 @@ export const router = createBrowserRouter([
         element: (
           <LazyWrapper>
             <AdminPanel />
+          </LazyWrapper>
+        ),
+      },
+      {
+        path: 'practice-exam',
+        element: (
+          <LazyWrapper>
+            <PracticeExamSelectionPage />
+          </LazyWrapper>
+        ),
+      },
+      {
+        path: 'practice-exam/:examId',
+        element: (
+          <LazyWrapper>
+            <PracticeExamPage />
+          </LazyWrapper>
+        ),
+      },
+      {
+        path: 'practice-exam/:examId/results',
+        element: (
+          <LazyWrapper>
+            <PracticeExamResultsPage />
+          </LazyWrapper>
+        ),
+      },
+      {
+        path: 'practice-exam-history',
+        element: (
+          <LazyWrapper>
+            <PracticeExamHistoryPage />
           </LazyWrapper>
         ),
       },

@@ -623,7 +623,13 @@ class ExamAgent(BaseAgent):
     
     def create_practice_exam(self, db: Session, exam_data: PracticeExamCreate, user_id: int, 
                            use_existing: bool = True, force_new: bool = False) -> PracticeExam:
-        """Deneme sınavı oluştur - Mevcut examlardan rastgele seç veya yeni üret"""
+        """Deneme sınavı oluştur - Kullanıcı başına tek sınav kaydı yaklaşımı"""
+        print(f"🏗️  Create Practice Exam Debug:")
+        print(f"   - User ID: {user_id}")
+        print(f"   - Exam Section ID: {exam_data.exam_section_id}")
+        print(f"   - Use Existing: {use_existing}")
+        print(f"   - Force New: {force_new}")
+        
         # Exam section'ı bul
         exam_section = db.query(ExamSection).filter(ExamSection.id == exam_data.exam_section_id).first()
         if not exam_section:
@@ -637,18 +643,49 @@ class ExamAgent(BaseAgent):
         # Sabit soru sayısını belirle
         question_count = self.get_fixed_question_count(exam_type.name, exam_section.name, db)
         
-        # Eğer force_new değilse ve use_existing True ise, mevcut examlardan rastgele seç
-        if not force_new and use_existing:
-            existing_exam = self.get_random_existing_exam(db, exam_data.exam_section_id, user_id)
-            if existing_exam:
-                print(f"🎲 Mevcut examlardan rastgele seçildi: {existing_exam.name}")
-                return existing_exam
+        # Eğer force_new değilse, bu kullanıcının bu bölümde mevcut bir sınavı var mı kontrol et
+        if not force_new:
+            existing_user_exam = db.query(PracticeExam).filter(
+                PracticeExam.exam_section_id == exam_data.exam_section_id,
+                PracticeExam.user_id == user_id,
+                PracticeExam.status.in_(["not_started", "in_progress"])  # Sadece tamamlanmamış sınavlar
+            ).first()
+            
+            if existing_user_exam:
+                print(f"♻️  Kullanıcının mevcut sınavı bulundu: {existing_user_exam.name} (ID: {existing_user_exam.id})")
+                return existing_user_exam
         
-        # Yeni exam üret
-        print("🤖 Yeni AI soruları üretiliyor (sabit soru sayısı kullanılıyor)...")
+        # Force_new ise veya havuzda yeterli soru yoksa yeni AI soruları üret
+        available_count = db.query(ExamQuestion).filter(
+            ExamQuestion.exam_section_id == exam_data.exam_section_id,
+            ExamQuestion.is_active == True
+        ).count()
         
-        # Sabit sayıda soru üret - artık count parametresi gerekmez
-        questions = self.generate_questions(db, exam_data.exam_section_id)
+        if force_new:
+            # Yeni sınav üretimi zorlandıysa her zaman AI ile yeni sorular üret
+            print("✨ Yeni sınav üretimi istendi, AI ile fresh sorular üretiliyor...")
+            questions = self.generate_questions(db, exam_data.exam_section_id, question_count)
+        elif available_count >= question_count:
+            # Havuz yeterli ise AI üretimine gerek yok; sadece exam kaydı oluştur
+            print(f"📚 Mevcut soru havuzu yeterli ({available_count} >= {question_count}), yeni exam kaydı oluşturuluyor.")
+            practice_exam = PracticeExam(
+                name=f"{exam_type.name} {exam_section.name} Denemesi",
+                exam_type_id=exam_section.exam_type_id,
+                exam_section_id=exam_data.exam_section_id,
+                user_id=user_id,
+                total_questions=question_count,
+                duration_minutes=exam_type.duration_minutes or 60,
+                status="not_started",
+                start_time=datetime.utcnow()
+            )
+            db.add(practice_exam)
+            db.commit()
+            db.refresh(practice_exam)
+            return practice_exam
+        else:
+            # Havuz yetersizse yeni AI soruları üret
+            print("🤖 Mevcut soru havuzu yetersiz, yeni AI soruları üretiliyor...")
+            questions = self.generate_questions(db, exam_data.exam_section_id, question_count)
         
         # Practice exam oluştur
         practice_exam = PracticeExam(
@@ -725,50 +762,21 @@ class ExamAgent(BaseAgent):
             return 20
 
     def get_random_existing_exam(self, db: Session, exam_section_id: int, user_id: int) -> Optional[PracticeExam]:
-        """Belirtilen bölümden rastgele mevcut bir exam döndür"""
-        # User'ın bu bölümde daha önce çözdüğü examları bul
-        existing_exams = db.query(PracticeExam).filter(
-            PracticeExam.exam_section_id == exam_section_id,
-            PracticeExam.user_id == user_id,
-            PracticeExam.status == "completed"  # Sadece tamamlanmış examlardan seç
-        ).all()
+        """Belirtilen bölümden rastgele mevcut bir exam döndür.
         
-        if not existing_exams:
-            # Bu kullanıcının tamamlanmış exami yoksa, diğer kullanıcıların examlarından seç
-            existing_exams = db.query(PracticeExam).filter(
-                PracticeExam.exam_section_id == exam_section_id,
-                PracticeExam.status == "completed"
-            ).limit(50).all()  # Performans için limit koy
-        
-        if existing_exams:
-            # Rastgele bir exam seç ve kopyala
-            original_exam = random.choice(existing_exams)
-            return self.clone_exam_for_user(db, original_exam, user_id)
-        
+        GÜNCELLEME: Artık klonlama yapmıyoruz, sadece None döndürüp yeni exam oluşturulmasını sağlıyoruz.
+        Bu sayede havuzda aynı sınavların çoğalması önlenir.
+        """
+        # Artık klonlama yapmıyoruz, direkt None döndür ki yeni exam oluşturulsun
         return None
-
-    def clone_exam_for_user(self, db: Session, original_exam: PracticeExam, new_user_id: int) -> PracticeExam:
-        """Mevcut bir exami yeni kullanıcı için klonla"""
-        # Yeni exam oluştur
-        cloned_exam = PracticeExam(
-            name=f"{original_exam.name} (Rastgele)",
-            exam_type_id=original_exam.exam_type_id,
-            exam_section_id=original_exam.exam_section_id,
-            user_id=new_user_id,
-            total_questions=original_exam.total_questions,
-            duration_minutes=original_exam.duration_minutes,
-            status="not_started",
-            start_time=datetime.utcnow()
-        )
-        
-        db.add(cloned_exam)
-        db.commit()
-        db.refresh(cloned_exam)
-        
-        return cloned_exam
     
     def submit_practice_exam(self, db: Session, exam_id: int, user_id: int, answers: dict) -> Dict:
-        """Deneme sınavı sonuçlarını değerlendir"""
+        """Deneme sınavı sonuçlarını değerlendir - boş/yanlış ayrımı doğru hesaplanır"""
+        print(f"🔍 Submit Practice Exam Debug:")
+        print(f"   - Exam ID: {exam_id}")
+        print(f"   - User ID: {user_id}")
+        print(f"   - Answers received: {answers}")
+        
         # Practice exam'ı bul
         practice_exam = db.query(PracticeExam).filter(
             PracticeExam.id == exam_id,
@@ -777,7 +785,7 @@ class ExamAgent(BaseAgent):
         
         if not practice_exam:
             raise ValueError("Deneme sınavı bulunamadı")
-
+ 
         # Exam section bilgilerini al
         exam_section = db.query(ExamSection).filter(
             ExamSection.id == practice_exam.exam_section_id
@@ -802,47 +810,58 @@ class ExamAgent(BaseAgent):
             ).limit(practice_exam.total_questions).all()
         
         # Cevapları değerlendir ve sonuçları kaydet
-        correct_count = 0
         total_questions = len(questions)
+        correct_count = 0
+        answered_count = 0
         wrong_topics = []
-        difficult_topics = []
         
         for question in questions:
+            # user_answer yoksa boş kabul edilir
             user_answer = answers.get(str(question.id))
-            is_correct = user_answer == question.correct_answer
+            print(f"   Question {question.id}: correct={question.correct_answer}, user={user_answer}")
             
+            if user_answer is not None and str(user_answer).strip() != "":
+                answered_count += 1
+                is_correct = (str(user_answer).strip().upper() == str(question.correct_answer).strip().upper())
+                print(f"      -> Answered: {user_answer}, Correct: {is_correct}")
+            else:
+                is_correct = False  # boş soruların is_correct False tutulur
+                print(f"      -> Empty answer")
+
             if is_correct:
                 correct_count += 1
             else:
-                # Yanlış cevaplanan soruların topic'lerini topla
-                if hasattr(question, 'topic') and question.topic:
-                    wrong_topics.append(question.topic)
-                elif hasattr(question, 'content') and question.content:
-                    # Content'ten topic çıkarmaya çalış
-                    content_lower = question.content.lower()
-                    if any(word in content_lower for word in ['polinom', 'faktör']):
-                        wrong_topics.append('polinom')
-                    elif any(word in content_lower for word in ['geometri', 'alan', 'çevre']):
-                        wrong_topics.append('geometri')
-                    elif any(word in content_lower for word in ['trigonometri', 'sinüs', 'kosinüs']):
-                        wrong_topics.append('trigonometri')
-                    else:
-                        wrong_topics.append('genel')
-            
-            # Her soru için sonuç kaydet
+                # sadece cevaplanmış ve yanlış ise konu topla (boşları dahil etme)
+                if user_answer is not None and str(user_answer).strip() != "":
+                    if hasattr(question, 'topic') and question.topic:
+                        wrong_topics.append(question.topic)            # Her soru için sonuç kaydet
             question_result = PracticeQuestionResult(
                 practice_exam_id=exam_id,
                 question_id=question.id,
-                user_answer=user_answer,
+                user_answer=(str(user_answer).strip().upper() if user_answer is not None and str(user_answer).strip() != "" else None),
                 is_correct=is_correct,
                 time_spent_seconds=0  # Şimdilik 0, gelecekte timer eklenebilir
             )
             db.add(question_result)
         
+        empty_count = max(0, total_questions - answered_count)
+        wrong_count = max(0, answered_count - correct_count)
+        
+        print(f"🔍 Final Results:")
+        print(f"   - Total Questions: {total_questions}")
+        print(f"   - Answered: {answered_count}")
+        print(f"   - Correct: {correct_count}")
+        print(f"   - Wrong: {wrong_count}")
+        print(f"   - Empty: {empty_count}")
+        print(f"   - Questions examined: {[q.id for q in questions]}")
+        print(f"   - Answers keys: {list(answers.keys())}")
+        
         # Practice exam'ı güncelle
         score_percentage = (correct_count / total_questions) * 100 if total_questions > 0 else 0
+        print(f"   - Score: {score_percentage}%")
         practice_exam.correct_answers = correct_count
-        practice_exam.wrong_answers = total_questions - correct_count
+        practice_exam.wrong_answers = wrong_count
+        practice_exam.empty_answers = empty_count
         practice_exam.score = score_percentage
         practice_exam.status = "completed"
         practice_exam.end_time = datetime.utcnow()
@@ -856,11 +875,11 @@ class ExamAgent(BaseAgent):
                 exam_data={
                     "exam_id": exam_id,
                     "exam_type": exam_type.name if exam_type else "Bilinmiyor",
-                    "exam_section": exam_section.name if exam_section else "Bilinmiyor", 
+                    "exam_section": exam_section.name if exam_section else "Bilinmiyor",
                     "score": score_percentage,
                     "correct_answers": correct_count,
                     "total_questions": total_questions,
-                    "wrong_topics": list(set(wrong_topics)),  # Unique topics
+                    "wrong_topics": list(set(wrong_topics)),
                     "accuracy": score_percentage,
                     "timestamp": practice_exam.end_time.isoformat() if practice_exam.end_time else datetime.utcnow().isoformat()
                 }
@@ -868,7 +887,7 @@ class ExamAgent(BaseAgent):
         except Exception as e:
             print(f"⚠️ Memory kaydı sırasında hata: {e}")
             # Memory hatası sınav sonucunu etkilemesin
-        
+ 
         # Sonuç döndür
         return {
             "exam_id": exam_id,
@@ -877,7 +896,8 @@ class ExamAgent(BaseAgent):
             "total_questions": total_questions,
             "time_spent": 0,  # Şimdilik 0
             "percentage": score_percentage,
-            "wrong_topics": list(set(wrong_topics)),  # Unique topics
+            "wrong_answers": wrong_count,
+            "empty_answers": empty_count,
             "exam_type": exam_type.name if exam_type else "Bilinmiyor",
             "exam_section": exam_section.name if exam_section else "Bilinmiyor"
         }
@@ -937,6 +957,12 @@ class ExamAgent(BaseAgent):
     def start_practice_exam(self, db: Session, user_id: int, exam_data: PracticeExamCreate, 
                           use_existing: bool = True, force_new: bool = False) -> Dict:
         """Deneme sınavı başlat - Mevcut examlardan rastgele seç veya yeni üret"""
+        print(f"🚀 Start Practice Exam Debug:")
+        print(f"   - User ID: {user_id}")
+        print(f"   - Exam Section ID: {exam_data.exam_section_id}")
+        print(f"   - Use Existing: {use_existing}")
+        print(f"   - Force New: {force_new}")
+        
         practice_exam = self.create_practice_exam(db, exam_data, user_id, use_existing, force_new)
         
         # Sabit soru sayısını belirle
@@ -945,19 +971,27 @@ class ExamAgent(BaseAgent):
         question_count = self.get_fixed_question_count(exam_type.name, exam_section.name, db)
         
         # Soruları getir
-        if not force_new and use_existing:
-            # Mevcut examlardan geliyorsa, rastgele sorular al
-            questions = db.query(ExamQuestion).filter(
-                ExamQuestion.exam_section_id == exam_data.exam_section_id,  
-                ExamQuestion.is_active == True
-            ).order_by(text("RANDOM()")).limit(question_count).all()
-        else:
-            # Yeni oluşturulan exam için en son eklenen AI sorularını getir
+        if force_new:
+            # Force_new ise en son üretilen AI sorularını kullan (en yeni olan)
             questions = db.query(ExamQuestion).filter(
                 ExamQuestion.exam_section_id == exam_data.exam_section_id,  
                 ExamQuestion.is_active == True,
                 ExamQuestion.created_by == "AI_EXAM_AGENT"
             ).order_by(ExamQuestion.id.desc()).limit(question_count).all()
+            print(f"✨ Force_new: En son üretilen {len(questions)} AI sorusu kullanılıyor")
+        elif not use_existing:
+            # Yeni oluşturulan exam için en son eklenen AI sorularını getir
+            questions = db.query(ExamQuestion).filter(
+                ExamQuestion.exam_section_id == exam_data.exam_section_id,  
+                ExamQuestion.is_active == True,
+                ExamQuestion.created_by == "AI_EXAM_AGENT"
+            ).order_by(ExamQuestion.id.asc()).limit(question_count).all()
+        else:
+            # Mevcut examlardan geliyorsa, rastgele sorular al (status bağımsız, soru havuzundan)
+            questions = db.query(ExamQuestion).filter(
+                ExamQuestion.exam_section_id == exam_data.exam_section_id,
+                ExamQuestion.is_active == True
+            ).order_by(text("RANDOM()")).limit(question_count).all()
         
         # Eğer yeterli soru yoksa, tümünü al
         if len(questions) < question_count:
@@ -1003,7 +1037,7 @@ class ExamAgent(BaseAgent):
         }
     
     def get_exam_results(self, db: Session, exam_id: int, user_id: int) -> Dict:
-        """Sınav sonuçlarını getir"""
+        """Sınav sonuçlarını getir - kesin wrong/empty hesaplanmış alanlarla"""
         practice_exam = db.query(PracticeExam).filter(
             PracticeExam.id == exam_id,
             PracticeExam.user_id == user_id
@@ -1012,18 +1046,94 @@ class ExamAgent(BaseAgent):
         if not practice_exam:
             raise ValueError("Sınav sonucu bulunamadı")
         
+        # Exam section ve type bilgilerini al
+        exam_section = db.query(ExamSection).filter(
+            ExamSection.id == practice_exam.exam_section_id
+        ).first()
+        
+        exam_type = None
+        if exam_section:
+            exam_type = db.query(ExamType).filter(
+                ExamType.id == exam_section.exam_type_id
+            ).first()
+        
         # Soru sonuçlarını al
         question_results = db.query(PracticeQuestionResult).filter(
             PracticeQuestionResult.practice_exam_id == exam_id
         ).all()
         
-        return {
+        # Soruları al zorluk seviyesi için
+        questions = db.query(ExamQuestion).filter(
+            ExamQuestion.exam_section_id == practice_exam.exam_section_id,
+            ExamQuestion.is_active == True
+        ).limit(practice_exam.total_questions).all()
+        
+        # Question ID'den zorluk seviyesine mapping
+        question_difficulty_map = {q.id: q.difficulty_level for q in questions}
+        
+        # Zorluk seviyesi performansını hesapla
+        difficulty_performance = {1: {"total": 0, "correct": 0}, 2: {"total": 0, "correct": 0}, 3: {"total": 0, "correct": 0}}
+        
+        total_questions = practice_exam.total_questions or len(question_results) or 0
+        # Kesin sayımlar
+        answered = 0
+        correct_val = 0
+        wrong_val = 0
+        for r in question_results:
+            # Zorluk seviyesi performance'ı için
+            question_difficulty = question_difficulty_map.get(r.question_id, 2)  # Default orta zorluk
+            difficulty_performance[question_difficulty]["total"] += 1
+            
+            # user_answer null/None/'' ise cevaplanmamış
+            if r.user_answer is not None and str(r.user_answer).strip() != "":
+                answered += 1
+                if r.is_correct is True:
+                    correct_val += 1
+                    difficulty_performance[question_difficulty]["correct"] += 1
+                else:
+                    wrong_val += 1
+        empty_val = max(0, total_questions - answered)
+        
+        # Zorluk seviyesi yüzdelerini hesapla
+        difficulty_percentages = {}
+        difficulty_labels = {1: "easy", 2: "medium", 3: "hard"}
+        for level, stats in difficulty_performance.items():
+            if stats["total"] > 0:
+                percentage = (stats["correct"] / stats["total"]) * 100
+                difficulty_percentages[difficulty_labels[level]] = round(percentage, 1)
+        
+        score_val = float(practice_exam.score or 0)
+        
+        # time_spent: saniye
+        if practice_exam.start_time and practice_exam.end_time:
+            time_spent_seconds = int((practice_exam.end_time - practice_exam.start_time).total_seconds())
+        else:
+            time_spent_seconds = 0
+        
+        percentage_val = float(score_val)  # score 0-100
+        
+        # Not: FastAPI response model PracticeExamResult yalnızca
+        # exam_id, score, correct_answers, total_questions, time_spent, percentage alanlarını bekliyor.
+        # İsteminiz doğrultusunda wrong/empty da döndürelim; model katıysa exam.py şemasını da genişletmek gerekir.
+        result = {
             "exam_id": exam_id,
-            "score": practice_exam.score or 0,
-            "correct_answers": practice_exam.correct_answers or 0,
-            "total_questions": practice_exam.total_questions or 0,
-            "completed_at": practice_exam.end_time.isoformat() if practice_exam.end_time else None
+            "score": score_val,
+            "correct_answers": int(correct_val),
+            "total_questions": int(total_questions),
+            "time_spent": time_spent_seconds,
+            "percentage": percentage_val,
         }
+        # Ek alanları da ekle (frontend kullanacak)
+        result.update({
+            "wrong_answers": int(wrong_val),
+            "empty_answers": int(empty_val),
+            "exam_type": exam_type.name if exam_type else "Bilinmiyor",
+            "exam_section": exam_section.name if exam_section else "Bilinmiyor",
+            "difficulty_performance": difficulty_percentages
+        })
+        
+        print(f"🔍 Get Exam Results - Returning: {result}")
+        return result
     
     def get_user_exams(self, db: Session, user_id: int) -> List[Dict]:
         """Kullanıcının sınavlarını listele"""
@@ -1033,16 +1143,28 @@ class ExamAgent(BaseAgent):
         
         result = []
         for exam in exams:
+            # Exam type ve section bilgilerini al
+            exam_type = db.query(ExamType).filter(ExamType.id == exam.exam_type_id).first()
+            exam_section = db.query(ExamSection).filter(ExamSection.id == exam.exam_section_id).first()
+            
             exam_data = {
                 "id": exam.id,
-                "title": exam.name,
-                "total_questions": exam.total_questions,
+                "name": exam.name,
+                "exam_type_id": exam.exam_type_id,
+                "exam_section_id": exam.exam_section_id,
+                "user_id": exam.user_id,
+                "status": exam.status,
+                "start_time": exam.start_time.isoformat() if exam.start_time else None,
+                "end_time": exam.end_time.isoformat() if exam.end_time else None,
                 "duration_minutes": exam.duration_minutes,
-                "created_at": exam.created_at.isoformat(),
-                "completed_at": exam.end_time.isoformat() if exam.end_time else None,
-                "is_completed": exam.status == "completed",
+                "total_questions": exam.total_questions,
+                "correct_answers": exam.correct_answers or 0,
+                "wrong_answers": exam.wrong_answers or 0,
+                "empty_answers": exam.empty_answers or 0,
                 "score": exam.score or 0,
-                "correct_answers": exam.correct_answers or 0
+                "created_at": exam.created_at.isoformat(),
+                "exam_type_name": exam_type.name if exam_type else "Bilinmeyen",
+                "exam_section_name": exam_section.name if exam_section else "Bilinmeyen"
             }
             
             result.append(exam_data)
@@ -1330,7 +1452,7 @@ class ExamAgent(BaseAgent):
             ExamQuestion.is_active == True
         ).order_by(
             ExamQuestion.created_by.desc(),  # AI_EXAM_AGENT önce gelsin
-            ExamQuestion.id.desc()
+            ExamQuestion.id.asc()
         ).limit(exam.total_questions).all()
         
         result = []
@@ -1384,7 +1506,7 @@ class ExamAgent(BaseAgent):
             ExamQuestion.is_active == True
         ).order_by(
             ExamQuestion.created_by.desc(),  # AI_EXAM_AGENT önce gelsin
-            ExamQuestion.id.desc()
+            ExamQuestion.id.asc()
         ).limit(exam.total_questions).all()
         
         result = []
