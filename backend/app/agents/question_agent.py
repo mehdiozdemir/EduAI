@@ -53,7 +53,7 @@ class QuestionAgent(BaseAgent):
         try:
             request_params = self._validate_request(input_data)
             questions = await self._generate_questions(**request_params)
-            return self._success_response(questions.dict() if hasattr(questions, "dict") else questions)
+            return self._success_response(questions.model_dump() if hasattr(questions, "model_dump") else questions)
         except Exception as exc:  # noqa: BLE001 – surface the error but keep response shape consistent
             return self._error_response(str(exc))
 

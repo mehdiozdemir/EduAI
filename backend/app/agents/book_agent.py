@@ -31,7 +31,7 @@ class BookAgent(BaseAgent):
             )
 
         self._search_tool = TavilySearch(
-            max_results=15,
+            max_results=35,  # Daha fazla sonuç al
             topic="general",
             tavily_api_key=settings.TAVILY_API_KEY,
         )
@@ -50,46 +50,84 @@ class BookAgent(BaseAgent):
 
         try:
             # -----------------------------
-            # 1. Build a single search query
+            # 1. Build multiple search queries for better coverage
             # -----------------------------
+            search_queries = []
+            
             if custom_query:
-                query = custom_query
+                search_queries.append(custom_query)
             else:
-                # Fallback to derived query from weak topics
-                joined_topics = ", ".join(weak_topics[:3]) if weak_topics else "genel konu"
-                query = f"{joined_topics} konu anlatımı soru bankası kitap Trendyol"
+                # Education level mapping
+                level_terms = {
+                    "lise": ["lise", "yks", "tyt", "ayt"],
+                    "ortaokul": ["ortaokul", "8. sınıf", "lgs"],
+                    "ilkokul": ["ilkokul", "matematik temeli"]
+                }
+                
+                level_keywords = level_terms.get(education_level.lower(), ["lise"])
+                
+                # Create multiple targeted queries
+                if weak_topics:
+                    for topic in weak_topics[:3]:  # İlk 3 zayıf konu için
+                        for level_keyword in level_keywords[:3]:  # İlk 3 seviye terimi için
+                            # Çeşitli arama kombinasyonları
+                            search_queries.append(f"{topic} {level_keyword} soru bankası Trendyol")
+                            search_queries.append(f"{topic} {level_keyword} konu anlatımı kitap Trendyol")
+                            search_queries.append(f"{topic} {level_keyword} test kitabı Trendyol")
+                            search_queries.append(f"{topic} {level_keyword} deneme sınavı Trendyol")
+                
+                # Ek genel aramalar
+                main_topic = weak_topics[0] if weak_topics else "matematik"
+                search_queries.append(f"{main_topic} kitap önerisi Trendyol")
+                search_queries.append(f"{main_topic} kaynak kitap Trendyol")
+                search_queries.append(f"{main_topic} kurs kitabı Trendyol")
 
             # -----------------------------
-            # 2. Execute Tavily search
+            # 2. Execute multiple Tavily searches and combine results
             # -----------------------------
-            tavily_response = self._search_tool.invoke({"query": query})  # type: ignore[arg-type]
-            search_results: List[dict] = tavily_response.get("results", [])  # list[dict]
+            all_search_results = []
+            used_queries = []
+            
+            for query in search_queries[:6]:  # Maksimum 6 farklı arama
+                try:
+                    tavily_response = self._search_tool.invoke({"query": query})
+                    search_results = tavily_response.get("results", [])
+                    all_search_results.extend(search_results)
+                    used_queries.append(query)
+                    
+                    # Rate limiting için kısa bekleme
+                    await asyncio.sleep(0.5)
+                except Exception as e:
+                    print(f"Search failed for query '{query}': {e}")
+                    continue
 
-            # If no Trendyol product URLs found, try a fallback query pattern
-            found_trendyol = any(
-                ("-p-" in r.get("url", "") or "/pd/" in r.get("url", "")) for r in search_results
-            )
+            # Remove duplicates based on URL
+            seen_urls = set()
+            unique_results = []
+            for result in all_search_results:
+                url = result.get("url", "")
+                if url not in seen_urls:
+                    seen_urls.add(url)
+                    unique_results.append(result)
 
-            if not found_trendyol and weak_topics:
-                fallback_query = f"{weak_topics[0]} soru bankası Trendyol"
-                tavily_response2 = self._search_tool.invoke({"query": fallback_query})  # type: ignore[arg-type]
-                search_results.extend(tavily_response2.get("results", []))
-
-            # Keep only Trendyol product URLs and limit to first 3 for prompt brevity
+            # Keep only Trendyol product URLs and expand to 8 results
             trendy_results = [
-                item for item in search_results
+                item for item in unique_results
                 if ("-p-" in item.get("url", "") or "/pd/" in item.get("url", ""))
             ]
-            if len(trendy_results) >= 3:
-                trendy_results = trendy_results[:3]
-            elif not trendy_results:
+            
+            if len(trendy_results) > 8:
+                trendy_results = trendy_results[:8]  # En fazla 8 kitap
+            
+            if not trendy_results:
                 # still if empty return graceful
                 return {
                     "status": "success",
                     "agent": "Book Agent",
                     "data": {
                         "recommendations": [],
-                        "search_query": query,
+                        "search_query": " | ".join(used_queries),
+                        "search_summary": f"Arama yapıldı ama {education_level} seviyesinde uygun kitap bulunamadı.",
                         "total_found": 0,
                     },
                 }
@@ -110,7 +148,9 @@ class BookAgent(BaseAgent):
                         "öğrencinin zayıf olduğu konulara yönelik Trendyol kitap linkleri öner. "
                         "Yalnızca Trendyol ürün sayfası URL'lerini kullan (\"-p-\" veya '/pd/' içerir). "
                         "Her öneri BookRecommendation şemasına tam uymalı. "
-                        "Özellikle \"description\" alanı 400 karakteri ASLA geçmemeli."
+                        "Özellikle \"description\" alanı 400 karakteri ASLA geçmemeli. "
+                        "MÜMKÜİN OLDUĞUNCA ÇOK KİTAP ÖNERİSİ YAPMAYA ÇALIŞ (minimum 6-8 adet). "
+                        "MUTLAKA 'url' alanını doldur - bu alan boş OLMAMALI!"
                     ),
                 ),
                 (
@@ -121,6 +161,9 @@ class BookAgent(BaseAgent):
                         "Arama Sorgusu: {query}\n"
                         "\n"
                         "Tavily Sonuçları (title | url):\n{search_results}\n"
+                        "\n"
+                        "ÖNEMLİ: Her kitap için 'url' alanına mutlaka Trendyol URL'sini koy! "
+                        "URL boş olmamalı, tam Trendyol ürün linkini içermeli. "
                         "\n"
                         f"{escaped_format_instructions}"
                     ),
@@ -155,8 +198,8 @@ class BookAgent(BaseAgent):
                     "status": "success",
                     "agent": "Book Agent",
                     "data": {
-                        **recommendations.dict(),
-                        "recommendations": [rec.dict() for rec in available_recs],
+                        **recommendations.model_dump(),  # Updated to model_dump()
+                        "recommendations": [rec.model_dump() for rec in available_recs],  # Updated to model_dump()
                         "total_found": len(available_recs),
                     },
                 }

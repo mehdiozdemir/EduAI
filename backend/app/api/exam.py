@@ -74,18 +74,31 @@ async def submit_practice_exam(
             # Analiz sonucunu ekle
             if "analysis_agent" in parallel_results:
                 analysis_data = parallel_results["analysis_agent"]
-                result["analysis"] = analysis_data.get("data", {}) if analysis_data.get("status") == "success" else None
+                analysis_result = analysis_data.get("data", {}) if analysis_data.get("status") == "success" else {}
+                
+                # YouTube önerilerini analiz verisine ekle
+                if "youtube_agent" in parallel_results:
+                    youtube_data = parallel_results["youtube_agent"]
+                    if youtube_data.get("status") == "success":
+                        analysis_result["youtube_recommendations"] = youtube_data.get("data", {})
+                
+                # Kitap önerilerini analiz verisine ekle
+                if "book_agent" in parallel_results:
+                    book_data = parallel_results["book_agent"]
+                    if book_data.get("status") == "success":
+                        analysis_result["book_recommendations"] = book_data.get("data", {})
+                
+                result["analysis"] = analysis_result
                 result["analysis_status"] = analysis_data.get("status", "error")
                 if analysis_data.get("status") == "error":
                     result["analysis_error"] = analysis_data.get("error", "Bilinmeyen hata")
             
-            # YouTube önerilerini ekle
+            # Ayrıca backward compatibility için ayrı alanlar da ekle
             if "youtube_agent" in parallel_results:
                 youtube_data = parallel_results["youtube_agent"]
                 result["youtube_recommendations"] = youtube_data.get("data", {}) if youtube_data.get("status") == "success" else None
                 result["youtube_status"] = youtube_data.get("status", "error")
             
-            # Kitap önerilerini ekle
             if "book_agent" in parallel_results:
                 book_data = parallel_results["book_agent"]
                 result["book_recommendations"] = book_data.get("data", {}) if book_data.get("status") == "success" else None
