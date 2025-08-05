@@ -104,7 +104,7 @@ app.openapi = custom_openapi
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(subjects.router)
-app.include_router(performance.router)
+app.include_router(performance.router, prefix="/api/v1", tags=["performance"])
 app.include_router(agents.router)
 app.include_router(exam.router, prefix="/api/v1", tags=["exams"])
 app.include_router(education.router, prefix="/api/v1", tags=["education"])

@@ -54,7 +54,94 @@ async def submit_practice_exam(
 ):
     """Deneme sınavını tamamla ve sonuçları al"""
     exam_agent = ExamAgent()
-    return exam_agent.submit_practice_exam(db, exam_id, current_user.id, answers)
+    result = exam_agent.submit_practice_exam(db, exam_id, current_user.id, answers)
+    
+    # Paralel analiz ve öneri sistemi
+    try:
+        from app.services.parallel_agent_service import parallel_agent_service
+        
+        # Paralel agent servisi ile analiz ve önerileri çalıştır
+        parallel_result = await parallel_agent_service.process_exam_results_parallel(
+            db=db,
+            exam_id=exam_id,
+            user_id=current_user.id
+        )
+        
+        # Sonuçları birleştir
+        if parallel_result.get("status") == "success":
+            parallel_results = parallel_result.get("results", {})
+            
+            # Analiz sonucunu ekle
+            if "analysis_agent" in parallel_results:
+                analysis_data = parallel_results["analysis_agent"]
+                analysis_result = analysis_data.get("data", {}) if analysis_data.get("status") == "success" else {}
+                
+                # YouTube önerilerini analiz verisine ekle
+                if "youtube_agent" in parallel_results:
+                    youtube_data = parallel_results["youtube_agent"]
+                    if youtube_data.get("status") == "success":
+                        analysis_result["youtube_recommendations"] = youtube_data.get("data", {})
+                
+                # Kitap önerilerini analiz verisine ekle
+                if "book_agent" in parallel_results:
+                    book_data = parallel_results["book_agent"]
+                    if book_data.get("status") == "success":
+                        analysis_result["book_recommendations"] = book_data.get("data", {})
+                
+                result["analysis"] = analysis_result
+                result["analysis_status"] = analysis_data.get("status", "error")
+                if analysis_data.get("status") == "error":
+                    result["analysis_error"] = analysis_data.get("error", "Bilinmeyen hata")
+            
+            # Ayrıca backward compatibility için ayrı alanlar da ekle
+            if "youtube_agent" in parallel_results:
+                youtube_data = parallel_results["youtube_agent"]
+                result["youtube_recommendations"] = youtube_data.get("data", {}) if youtube_data.get("status") == "success" else None
+                result["youtube_status"] = youtube_data.get("status", "error")
+            
+            if "book_agent" in parallel_results:
+                book_data = parallel_results["book_agent"]
+                result["book_recommendations"] = book_data.get("data", {}) if book_data.get("status") == "success" else None
+                result["book_status"] = book_data.get("status", "error")
+            
+            # Paralel işlem bilgilerini ekle
+            result["parallel_processing"] = {
+                "enabled": True,
+                "execution_summary": parallel_result.get("execution_summary", {}),
+                "processing_time": "paralel"
+            }
+        else:
+            # Paralel sistem başarısız olursa fallback olarak eski sistemi kullan
+            from app.api.performance import analyze_exam_performance
+            analysis_result = await analyze_exam_performance(exam_id, current_user.id, db)
+            result["analysis"] = analysis_result.get("data", {}) if analysis_result.get("status") == "success" else None
+            result["analysis_status"] = analysis_result.get("status", "error")
+            result["parallel_processing"] = {
+                "enabled": False,
+                "error": parallel_result.get("error", "Paralel sistem kullanılamadı"),
+                "fallback": True
+            }
+        
+    except Exception as e:
+        print(f"⚠️ Paralel agent sistemi hatası: {e}")
+        # Fallback: Eski sistem
+        try:
+            from app.api.performance import analyze_exam_performance
+            analysis_result = await analyze_exam_performance(exam_id, current_user.id, db)
+            result["analysis"] = analysis_result.get("data", {}) if analysis_result.get("status") == "success" else None
+            result["analysis_status"] = analysis_result.get("status", "error")
+        except Exception as fallback_error:
+            result["analysis"] = None
+            result["analysis_status"] = "error"
+            result["analysis_error"] = str(fallback_error)
+        
+        result["parallel_processing"] = {
+            "enabled": False,
+            "error": str(e),
+            "fallback": True
+        }
+    
+    return result
 
 @router.get("/practice-exam/{exam_id}/results")
 async def get_exam_results(
@@ -132,15 +219,49 @@ async def review_practice_exam(
     # Sınav detaylarını al
     exam_details = exam_agent.get_practice_exam_details(db, exam_id, current_user.id)
     
-    # Eğer sınav tamamlanmışsa, soruları da cevapları ile al
-    if exam_details.get("status") == "completed":
-        questions_with_answers = exam_agent.get_practice_exam_questions(db, exam_id, current_user.id, include_answers=True)
-        exam_details["detailed_questions"] = questions_with_answers
-    else:
-        exam_details["detailed_questions"] = []
-        exam_details["message"] = "Sınav henüz tamamlanmamış, cevaplar görüntülenemez"
+    if not exam_details or exam_details.get("status") == "error":
+        raise HTTPException(status_code=404, detail="Sınav bulunamadı")
     
-    return exam_details
+    # Sınav sorularını ve cevapları al
+    questions = exam_agent.get_practice_exam_questions(db, exam_id, current_user.id, include_answers=True)
+    
+    return {
+        "exam": exam_details,
+        "detailed_questions": questions,
+        "message": "Sınav detayları başarıyla alındı"
+    }
+
+@router.post("/weak-topics/recommendations")
+async def get_weak_topic_recommendations(
+    weak_topics: List[str],
+    subject: str,
+    education_level: str = "lise",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Zayıf konular için paralel öneri sistemi"""
+    
+    if not weak_topics:
+        raise HTTPException(status_code=400, detail="En az bir zayıf konu belirtilmelidir")
+    
+    try:
+        from app.services.parallel_agent_service import parallel_agent_service
+        
+        # Paralel öneri sistemini çalıştır
+        recommendations = await parallel_agent_service.get_recommendations_for_weak_topics(
+            user_id=current_user.id,
+            weak_topics=weak_topics,
+            subject=subject,
+            education_level=education_level
+        )
+        
+        return recommendations
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Öneri sistemi hatası: {str(e)}"
+        )
 
 @router.get("/user/exam-memory", response_model=dict)
 async def get_user_exam_memory(

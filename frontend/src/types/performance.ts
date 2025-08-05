@@ -20,8 +20,8 @@ export interface PerformanceAnalysisRequest {
 export interface PerformanceAnalysis {
   id: number;
   user_id: number;
-  subject_id: number;
-  topic_id: number;
+  subject_id: number | null;
+  topic_id: number | null;
   total_questions: number;
   correct_answers: number;
   accuracy: number;

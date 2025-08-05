@@ -4,8 +4,8 @@ from typing import Optional
 
 class PerformanceAnalysisBase(BaseModel):
     user_id: int
-    subject_id: int
-    topic_id: int
+    subject_id: Optional[int] = None
+    topic_id: Optional[int] = None
     total_questions: int = 0
     correct_answers: int = 0
     accuracy: float = 0.0

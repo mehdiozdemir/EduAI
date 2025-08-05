@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import List, Optional, Dict, Any
 from app.models.exam import ExamType, ExamSection, ExamQuestion, PracticeExam, PracticeQuestionResult
+from app.models.education_level import CourseTopic, Course
 from app.schemas.exam import PracticeExamCreate, PracticeExamResult
 from app.agents.base_agent import BaseAgent
 from app.services.memory_service import memory_service
@@ -26,6 +27,7 @@ class AIGeneratedExamQuestion(BaseModel):
     correct_answer: str = Field(description="Doğru cevap harfi (A, B, C, D)")
     explanation: str = Field(description="Doğru cevabın açıklaması")
     difficulty: int = Field(description="Zorluk seviyesi (1: kolay, 2: orta, 3: zor)")
+    topic_name: str = Field(description="Bu sorunun ait olduğu spesifik konu adı")
 
 class ExamQuestionGenerationResponse(BaseModel):
     section_name: str = Field(description="Bölüm adı")
@@ -217,6 +219,11 @@ class ExamAgent(BaseAgent):
         # DB'ye persist et
         generated_questions: List[ExamQuestion] = []
         for ai_q in accumulated:
+            # Topic ID'yi bulmaya çalış
+            topic_id = None
+            if hasattr(ai_q, 'topic_name') and ai_q.topic_name:
+                topic_id = self._find_topic_id(db, ai_q.topic_name, exam_section_id)
+            
             question = ExamQuestion(
                 question_text=ai_q.question,
                 option_a=next((opt.text for opt in ai_q.options if opt.letter == "A"), ""),
@@ -228,6 +235,7 @@ class ExamAgent(BaseAgent):
                 explanation=ai_q.explanation,
                 difficulty_level=ai_q.difficulty,
                 exam_section_id=exam_section_id,
+                topic_id=topic_id,  # Topic ID'yi ekle
                 is_active=True,
                 created_by="AI_EXAM_AGENT"
             )
@@ -311,7 +319,9 @@ class ExamAgent(BaseAgent):
             "   - correct_answer (yalnızca 'A'|'B'|'C'|'D')\\n"
             "   - explanation (string)\\n"
             "   - difficulty (integer; 1, 2 veya 3)\\n"
+            "   - topic_name (string, sorunun hangi konuyla ilgili olduğunu belirtir)\\n"
             "• options dizisi DAİMA 4 öğe içermeli ve letter sırası [A,B,C,D] olmalı\\n"
+            "• topic_name alanı zorunludur ve boş bırakılamaz\\n"
             "• Boş obje ({{}}) veya eksik alan bırakmayın. Tüm alanları doldurun\\n"
             "• JSON dışında hiçbir şey yazma; kod bloğu, markdown, metin ekleme.\\n"
         )
@@ -352,11 +362,13 @@ class ExamAgent(BaseAgent):
             "6. Doğru cevabın açık açıklaması olmalı\n"
             "7. Zorluk seviyesi 1 (kolay), 2 (orta), 3 (zor) olmalı\n"
             "8. Türkçe dilbilgisi kurallarına uygun olmalı\n"
-            "9. Gerçek sınav seviyesinde olmalı\n\n"
+            "9. Gerçek sınav seviyesinde olmalı\n"
+            "10. Her soru için topic_name alanında hangi konuyla ilgili olduğunu belirt\n\n"
             "FORMAT HATIRLATICI:\\n"
             "- Sadece JSON döndür\\n"
             "- options tam 4 madde olmalı ve letter alanları 'A','B','C','D' olmalı\\n"
             "- correct_answer sadece 'A'|'B'|'C'|'D' olabilir\\n"
+            "- topic_name alanı zorunludur ve sorunun hangi konuyla ilgili olduğunu belirtmeli\\n"
             "- Boş obje veya eksik alan bırakma\\n\\n"
             f"{format_instructions}\\n\\n"
             "ÖNEMLI: Sadece JSON formatında cevap ver. Yorum ya da ek açıklama ekleme."
@@ -457,6 +469,13 @@ class ExamAgent(BaseAgent):
                 if diff_int not in (1, 2, 3):
                     diff_int = 2
                 qq["difficulty"] = diff_int
+
+                # topic_name zorunlu
+                topic_name = qq.get("topic_name")
+                if not isinstance(topic_name, str) or not topic_name.strip():
+                    qq["topic_name"] = "Genel"  # Varsayılan topic
+                else:
+                    qq["topic_name"] = topic_name.strip()
 
                 fixed.append(qq)
 
@@ -831,10 +850,17 @@ class ExamAgent(BaseAgent):
             if is_correct:
                 correct_count += 1
             else:
-                # sadece cevaplanmış ve yanlış ise konu topla (boşları dahil etme)
-                if user_answer is not None and str(user_answer).strip() != "":
-                    if hasattr(question, 'topic') and question.topic:
-                        wrong_topics.append(question.topic)            # Her soru için sonuç kaydet
+                # Yanlış cevap veya boş cevap için topic bilgisini topla
+                if question.topic_id:
+                    try:
+                        topic = db.query(CourseTopic).filter(CourseTopic.id == question.topic_id).first()
+                        if topic:
+                            wrong_topics.append(topic.name)
+                            print(f"      -> Wrong topic added: {topic.name}")
+                    except Exception as e:
+                        print(f"      -> Topic query error: {e}")
+                        
+            # Her soru için sonuç kaydet
             question_result = PracticeQuestionResult(
                 practice_exam_id=exam_id,
                 question_id=question.id,
@@ -887,6 +913,31 @@ class ExamAgent(BaseAgent):
         except Exception as e:
             print(f"⚠️ Memory kaydı sırasında hata: {e}")
             # Memory hatası sınav sonucunu etkilemesin
+        
+        # 🔍 Analiz agentını çağır - yanlış cevaplar için topic analizi
+        try:
+            analysis_result = asyncio.create_task(self._trigger_analysis_agent(
+                user_id=user_id,
+                exam_data={
+                    "exam_id": exam_id,
+                    "exam_type": exam_type.name if exam_type else "Bilinmiyor",
+                    "exam_section": exam_section.name if exam_section else "Bilinmiyor",
+                    "score": score_percentage,
+                    "correct_answers": correct_count,
+                    "total_questions": total_questions,
+                    "wrong_answers": wrong_count,
+                    "empty_answers": empty_count,
+                    "wrong_topics": list(set(wrong_topics)),
+                    "detailed_answers": self._collect_detailed_answers(questions, answers),
+                    "questions_with_topics": self._get_questions_with_topics(db, questions)
+                },
+                subject=exam_section.name if exam_section else "Genel",
+                topic=exam_type.name if exam_type else "Deneme Sınavı"
+            ))
+            print(f"✅ Analiz agenti tetiklendi")
+        except Exception as e:
+            print(f"⚠️ Analiz agenti tetikleme hatası: {e}")
+            # Analiz hatası sınav sonucunu etkilemesin
  
         # Sonuç döndür
         return {
@@ -1756,3 +1807,120 @@ class ExamAgent(BaseAgent):
                 "YAKLAŞIM: Temel'den ileri seviyeye dengeli dağılım"
                 f"{avoid_instruction}"
             )
+    
+    def _find_topic_id(self, db: Session, topic_name: str, exam_section_id: int) -> Optional[int]:
+        """Topic adından topic_id bulmaya çalış"""
+        try:
+            # Önce exam section'dan course'u bul
+            exam_section = db.query(ExamSection).filter(ExamSection.id == exam_section_id).first()
+            if not exam_section:
+                return None
+            
+            # Course'dan topic'leri ara
+            course_id = exam_section.course_id if hasattr(exam_section, 'course_id') else None
+            if not course_id:
+                return None
+            
+            # Tam eşleşme ara
+            topic = db.query(CourseTopic).filter(
+                CourseTopic.course_id == course_id,
+                CourseTopic.name.ilike(f"%{topic_name}%")
+            ).first()
+            
+            if topic:
+                return topic.id
+                
+            # Eğer bulunamazsa, genel topic olarak kaydet
+            # Yeni topic oluştur
+            new_topic = CourseTopic(
+                name=topic_name,
+                course_id=course_id,
+                description=f"AI tarafından üretilen topic: {topic_name}",
+                difficulty_level=2,
+                is_active=1
+            )
+            db.add(new_topic)
+            db.flush()  # ID'yi al ama henüz commit etme
+            return new_topic.id
+            
+        except Exception as e:
+            print(f"⚠️ Topic ID bulunamadı: {topic_name} - {e}")
+            return None
+    
+    async def _trigger_analysis_agent(self, user_id: int, exam_data: Dict, subject: str, topic: str) -> Dict:
+        """Analiz agentını tetikle"""
+        try:
+            from app.agents.analysis_agent import AnalysisAgent
+            
+            analysis_agent = AnalysisAgent()
+            
+            input_data = {
+                "user_id": str(user_id),
+                "subject": subject,
+                "topic": topic,
+                "education_level": "lise",  # Varsayılan
+                "performance_data": {
+                    "totalQuestions": exam_data.get("total_questions", 0),
+                    "correctAnswers": exam_data.get("correct_answers", 0),
+                    "wrongAnswers": exam_data.get("wrong_answers", 0),
+                    "emptyAnswers": exam_data.get("empty_answers", 0),
+                    "accuracy": exam_data.get("score", 0),
+                    "wrongTopics": exam_data.get("wrong_topics", []),
+                    "detailedAnswers": exam_data.get("detailed_answers", ""),
+                    "questionsWithTopics": exam_data.get("questions_with_topics", [])
+                }
+            }
+            
+            result = await analysis_agent.process(input_data)
+            print(f"🎯 Analiz agenti sonucu: {result.get('status', 'unknown')}")
+            return result
+            
+        except Exception as e:
+            print(f"⚠️ Analiz agenti çağırma hatası: {e}")
+            return {"status": "error", "error": str(e)}
+    
+    def _collect_detailed_answers(self, questions: List, answers: Dict) -> str:
+        """Detaylı cevap analizi için metin oluştur"""
+        try:
+            details = []
+            for question in questions:
+                user_answer = answers.get(str(question.id))
+                is_correct = (
+                    user_answer is not None and 
+                    str(user_answer).strip().upper() == str(question.correct_answer).strip().upper()
+                ) if user_answer else False
+                
+                status = "Doğru" if is_correct else ("Yanlış" if user_answer else "Boş")
+                
+                details.append(
+                    f"Soru {question.id}: {status} "
+                    f"(Kullanıcı: {user_answer or 'Boş'}, Doğru: {question.correct_answer})"
+                )
+            
+            return "\n".join(details)
+        except Exception as e:
+            return f"Detaylı cevap analizi hatası: {e}"
+    
+    def _get_questions_with_topics(self, db: Session, questions: List) -> List[Dict]:
+        """Soruları topic bilgileriyle birlikte döndür"""
+        try:
+            result = []
+            for question in questions:
+                topic_name = "Bilinmiyor"
+                if question.topic_id:
+                    topic = db.query(CourseTopic).filter(CourseTopic.id == question.topic_id).first()
+                    if topic:
+                        topic_name = topic.name
+                
+                result.append({
+                    "question_id": question.id,
+                    "topic_name": topic_name,
+                    "topic_id": question.topic_id,
+                    "difficulty": question.difficulty_level,
+                    "question_text": question.question_text[:100] + "..." if len(question.question_text) > 100 else question.question_text
+                })
+            
+            return result
+        except Exception as e:
+            print(f"⚠️ Topic bilgisi toplama hatası: {e}")
+            return []

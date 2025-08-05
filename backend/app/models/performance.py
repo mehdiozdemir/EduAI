@@ -7,8 +7,8 @@ class PerformanceAnalysis(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), index=True)
-    subject_id = Column(Integer, ForeignKey("subjects.id"), index=True)
-    topic_id = Column(Integer, ForeignKey("topics.id"), index=True)
+    subject_id = Column(Integer, ForeignKey("subjects.id"), index=True, nullable=True)
+    topic_id = Column(Integer, ForeignKey("topics.id"), index=True, nullable=True)
     total_questions = Column(Integer, default=0)
     correct_answers = Column(Integer, default=0)
     accuracy = Column(Float, default=0.0)

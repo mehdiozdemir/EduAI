@@ -53,7 +53,7 @@ class AnalysisAgent(BaseAgent):
             return {
                 "status": "success",
                 "agent": str(self.name),
-                "data": analysis_result.dict()
+                "data": analysis_result.model_dump()  # Updated to model_dump()
             }
             
         except Exception as e:

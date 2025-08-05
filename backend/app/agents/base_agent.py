@@ -12,7 +12,8 @@ class BaseAgent(ChatGoogleGenerativeAI):
             model="gemini-2.0-flash",
             google_api_key=settings.GEMINI_API_KEY,
             temperature=0.0,
-            **kwargs
+            **kwargs,
+            cache=False
         )
         # Store agent metadata separately (not as Pydantic fields)
         self._agent_name = name

@@ -37,6 +37,253 @@ async def analyze_performance(
             detail=f"Error analyzing performance: {str(e)}"
         )
 
+@router.post("/analyze-exam", response_model=dict)
+async def analyze_exam_performance(
+    exam_id: int,
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    """Sınav sonucu için paralel analiz ve öneri sistemi"""
+    try:
+        from app.services.parallel_agent_service import parallel_agent_service
+        from app.models.exam import PracticeExam, PracticeQuestionResult, ExamQuestion, ExamSection, ExamType
+        
+        # Sınav bilgilerini al
+        practice_exam = db.query(PracticeExam).filter(
+            PracticeExam.id == exam_id,
+            PracticeExam.user_id == user_id
+        ).first()
+        
+        if not practice_exam:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Sınav bulunamadı"
+            )
+        
+        # Sınav section ve type bilgilerini al
+        exam_section = db.query(ExamSection).filter(
+            ExamSection.id == practice_exam.exam_section_id
+        ).first()
+        
+        exam_type = None
+        if exam_section:
+            exam_type = db.query(ExamType).filter(
+                ExamType.id == exam_section.exam_type_id
+            ).first()
+        
+        # Soru sonuçlarını al
+        question_results = db.query(PracticeQuestionResult).filter(
+            PracticeQuestionResult.practice_exam_id == exam_id
+        ).all()
+        
+        # Yanlış cevaplanan soruların topic'lerini topla
+        wrong_topics = []
+        questions_with_topics = []
+        
+        for result in question_results:
+            if not result.is_correct:
+                question = db.query(ExamQuestion).filter(
+                    ExamQuestion.id == result.question_id
+                ).first()
+                
+                if question and question.topic_id:
+                    from app.models.education_level import CourseTopic
+                    topic = db.query(CourseTopic).filter(
+                        CourseTopic.id == question.topic_id
+                    ).first()
+                    
+                    if topic:
+                        wrong_topics.append(topic.name)
+                        questions_with_topics.append({
+                            "question_id": question.id,
+                            "topic_name": topic.name,
+                            "user_answer": result.user_answer,
+                            "correct_answer": question.correct_answer,
+                            "is_correct": result.is_correct
+                        })
+        
+        # Exam result verisi hazırla
+        exam_result = {
+            "totalQuestions": practice_exam.total_questions,
+            "correctAnswers": practice_exam.correct_answers,
+            "wrongAnswers": practice_exam.wrong_answers,
+            "emptyAnswers": practice_exam.empty_answers,
+            "accuracy": practice_exam.score,
+            "score": practice_exam.score,
+            "weak_topics": list(set(wrong_topics)),
+            "exam_section": exam_section.name if exam_section else "Genel",
+            "exam_type": exam_type.name if exam_type else "Deneme Sınavı",
+            "detailedAnswers": f"Toplam: {practice_exam.total_questions}, Doğru: {practice_exam.correct_answers}, Yanlış: {practice_exam.wrong_answers}, Boş: {practice_exam.empty_answers}",
+            "questionsWithTopics": questions_with_topics
+        }
+        
+        # Paralel agent servisi ile analiz ve önerileri al
+        parallel_result = await parallel_agent_service.process_exam_results_parallel(
+            db=db,
+            user_id=user_id,
+            exam_id=exam_id,
+            exam_result=exam_result
+        )
+        
+        if parallel_result.get("status") == "success":
+            results = parallel_result.get("results", {})
+            
+            # Base analysis data structure oluştur
+            analysis_data = {
+                "weakness_level": 5,  # Default value
+                "weak_topics": list(set(wrong_topics)),
+                "strong_topics": [],
+                "recommendations": [],
+                "detailed_analysis": "Analiz tamamlanıyor...",
+                "personalized_insights": [],
+                "improvement_trend": "Veri analiz ediliyor..."
+            }
+            
+            # Analiz sonucunu al ve merge et
+            if "analysis_agent" in results:
+                analysis_result = results["analysis_agent"]
+                if analysis_result.get("status") == "success":
+                    agent_data = analysis_result.get("data", {})
+                    # Nested data varsa içini al
+                    if "data" in agent_data:
+                        agent_data = agent_data["data"]
+                    
+                    # Merge analysis data
+                    analysis_data.update({
+                        "weakness_level": agent_data.get("weakness_level", 5),
+                        "weak_topics": agent_data.get("weak_topics", list(set(wrong_topics))),
+                        "strong_topics": agent_data.get("strong_topics", []),
+                        "recommendations": agent_data.get("recommendations", []),
+                        "detailed_analysis": agent_data.get("detailed_analysis", "Analiz tamamlandı."),
+                        "personalized_insights": agent_data.get("personalized_insights", []),
+                        "improvement_trend": agent_data.get("improvement_trend", "Veri yetersiz.")
+                    })
+            
+            # YouTube önerilerini ekle ve JSON-safe formata çevir
+            if "youtube_agent" in results:
+                youtube_result = results["youtube_agent"]
+                print(f"🔍 YouTube result: {youtube_result}")
+                if youtube_result.get("status") == "success":
+                    youtube_agent_data = youtube_result.get("data", {})
+                    # Nested data varsa içini al
+                    if "data" in youtube_agent_data:
+                        youtube_data = youtube_agent_data["data"]
+                    else:
+                        youtube_data = youtube_agent_data
+                    
+                    # JSON-safe formata çevir
+                    if "recommendations" in youtube_data:
+                        safe_videos = []
+                        for video in youtube_data["recommendations"]:
+                            safe_video = {
+                                "title": str(video.get("title", "")),
+                                "channel": str(video.get("channel", "")),
+                                "duration": str(video.get("duration", "")),
+                                "level": str(video.get("level", "lise")),
+                                "video_url": str(video.get("video_url", "")),
+                                "topics_covered": video.get("topics_covered", []),
+                                "why_recommended": str(video.get("why_recommended", "Bu video zayıf konularınız için önerilmiştir.")),
+                                "thumbnail_url": str(video.get("thumbnail_url", "")) if video.get("thumbnail_url") else None,
+                                "channel_url": str(video.get("channel_url", "")) if video.get("channel_url") else None
+                            }
+                            safe_videos.append(safe_video)
+                        
+                        analysis_data["youtube_recommendations"] = {
+                            "recommendations": safe_videos,
+                            "search_strategy": youtube_data.get("search_strategy", "YouTube videolar bulundu.")
+                        }
+            
+                        # Kitap önerilerini ekle ve JSON-safe formata çevir
+            if "book_agent" in results:
+                book_result = results["book_agent"]
+                print(f"🔍 Book result: {book_result}")
+                if book_result.get("status") == "success":
+                    book_agent_data = book_result.get("data", {})
+                    # Nested data varsa içini al
+                    if "data" in book_agent_data:
+                        book_data = book_agent_data["data"]
+                    else:
+                        book_data = book_agent_data
+                    
+                    # JSON-safe formata çevir
+                    if "recommendations" in book_data:
+                        safe_books = []
+                        for book in book_data["recommendations"]:
+                            safe_book = {
+                                "title": str(book.get("title", "")),
+                                "author": str(book.get("author", "")),
+                                "publisher": str(book.get("publisher", "")),
+                                "year": 2024,  # Default year
+                                "price": str(book.get("price", "")) if book.get("price") else None,
+                                "stock_status": str(book.get("stock_status", "")).replace("<StockStatus.", "").replace(">", "").split(":")[0] if book.get("stock_status") else "available",
+                                "purchase_links": [str(book.get("url", ""))] if book.get("url") else [],
+                                "topics_covered": book.get("key_topics", []),
+                                "difficulty_level": book.get("target_audience", "Lise"),
+                                "why_recommended": book.get("description", "Bu kitap zayıf konularınız için önerilmiştir."),
+                                "cover_image": None
+                            }
+                            safe_books.append(safe_book)
+                        
+                        analysis_data["book_recommendations"] = {
+                            "recommendations": safe_books,
+                            "search_summary": book_data.get("search_summary", "Kitap önerileri bulundu.")
+                        }
+            
+            # Exam bilgilerini ekle
+            analysis_data["exam_info"] = {
+                "exam_id": exam_id,
+                "exam_type": exam_type.name if exam_type else "Bilinmiyor",
+                "exam_section": exam_section.name if exam_section else "Bilinmiyor", 
+                "score": practice_exam.score,
+                "completion_date": practice_exam.end_time.isoformat() if practice_exam.end_time else None
+            }
+            
+            # İşlem bilgilerini ekle
+            analysis_data["parallel_processing"] = {
+                "enabled": True,
+                "execution_summary": parallel_result.get("execution_summary", {}),
+                "processing_time": "paralel"
+            }
+            
+            return {
+                "status": "success",
+                "data": analysis_data
+            }
+        else:
+            # Paralel işlem başarısız oldu, fallback olarak normal analiz yap
+            from app.agents.analysis_agent import AnalysisAgent
+            analysis_agent = AnalysisAgent()
+            
+            input_data = {
+                "user_id": str(user_id),
+                "subject": exam_section.name if exam_section else "Genel",
+                "topic": exam_type.name if exam_type else "Deneme Sınavı",
+                "education_level": "lise",
+                "performance_data": exam_result
+            }
+            
+            result = await analysis_agent.process(input_data)
+            
+            # Exam bilgilerini ekle
+            if result.get("status") == "success":
+                result["data"]["exam_info"] = {
+                    "exam_id": exam_id,
+                    "exam_type": exam_type.name if exam_type else "Bilinmiyor",
+                    "exam_section": exam_section.name if exam_section else "Bilinmiyor",
+                    "score": practice_exam.score,
+                    "completion_date": practice_exam.end_time.isoformat() if practice_exam.end_time else None
+                }
+            
+            return result
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Sınav analizi hatası: {str(e)}"
+        )
+
 @router.post("/", response_model=schemas.PerformanceAnalysis)
 def create_performance_analysis(
     analysis: schemas.PerformanceAnalysisCreate,
@@ -51,23 +298,25 @@ def create_performance_analysis(
             detail="User not found"
         )
     
-    # Check if subject exists
-    db_subject = db.query(models.Subject).filter(models.Subject.id == analysis.subject_id).first()
+    # Check if subject exists (if provided)
+    if analysis.subject_id is not None:
+        db_subject = db.query(models.Subject).filter(models.Subject.id == analysis.subject_id).first()
+        
+        if not db_subject:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Subject not found"
+            )
     
-    if not db_subject:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Subject not found"
-        )
-    
-    # Check if topic exists
-    db_topic = db.query(models.Topic).filter(models.Topic.id == analysis.topic_id).first()
-    
-    if not db_topic:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Topic not found"
-        )
+    # Check if topic exists (if provided)
+    if analysis.topic_id is not None:
+        db_topic = db.query(models.Topic).filter(models.Topic.id == analysis.topic_id).first()
+        
+        if not db_topic:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Topic not found"
+            )
     
     # Create new performance analysis
     db_analysis = models.PerformanceAnalysis(**analysis.dict())
