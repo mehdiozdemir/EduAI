@@ -11,6 +11,8 @@ import type {
 } from '../types';
 
 export class PerformanceService extends BaseApiService {
+  private baseUrl = '/api/v1';
+
   /**
    * Analyze user performance based on quiz results
    */
@@ -18,7 +20,7 @@ export class PerformanceService extends BaseApiService {
     data: PerformanceAnalysisRequest
   ): Promise<PerformanceAnalysis> {
     const response = await this.post<PerformanceAnalysis>(
-      '/performance/analyze',
+      `${this.baseUrl}/performance/analyze`,
       data
     );
     return response;
@@ -52,7 +54,7 @@ export class PerformanceService extends BaseApiService {
 
     // Note: Backend endpoint doesn't support other filters yet
     // These would need to be added to the backend endpoint
-    const url = `/performance/user/${userId}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `${this.baseUrl}/performance/user/${userId}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     return await this.get<PerformanceAnalysis[]>(url);
   }
 
@@ -60,7 +62,7 @@ export class PerformanceService extends BaseApiService {
    * Get performance analysis by ID
    */
   async getPerformanceAnalysis(id: number): Promise<PerformanceAnalysis> {
-    return await this.get<PerformanceAnalysis>(`/performance/${id}`);
+    return await this.get<PerformanceAnalysis>(`${this.baseUrl}/performance/${id}`);
   }
 
   /**
@@ -70,7 +72,7 @@ export class PerformanceService extends BaseApiService {
     analysisId: number
   ): Promise<ResourceRecommendation[]> {
     return await this.get<ResourceRecommendation[]>(
-      `/performance/${analysisId}/recommendations`
+      `${this.baseUrl}/performance/${analysisId}/recommendations`
     );
   }
 
@@ -98,7 +100,7 @@ export class PerformanceService extends BaseApiService {
       queryParams.append('limit', params.limit.toString());
     }
 
-    const url = `/recommendations${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `${this.baseUrl}/recommendations${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     return await this.get<ResourceRecommendation[]>(url);
   }
 
@@ -132,7 +134,7 @@ export class PerformanceService extends BaseApiService {
 
     console.log('PerformanceService.getDashboardData called with userId:', userId);
     try {
-      const result = await this.get(`/performance/dashboard/${userId}`) as {
+      const result = await this.get(`${this.baseUrl}/performance/dashboard/${userId}`) as {
         overall_stats: {
           total_questions: number;
           total_correct: number;
@@ -187,7 +189,7 @@ export class PerformanceService extends BaseApiService {
       queryParams.append('topic_id', params.topic_id.toString());
     }
 
-    const url = `/performance/trends${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `${this.baseUrl}/performance/trends${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     return await this.get<PerformanceData[]>(url);
   }
 
@@ -224,7 +226,7 @@ export class PerformanceService extends BaseApiService {
       queryParams.append('education_level', params.education_level);
     }
 
-    const url = `/performance/comparison${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `${this.baseUrl}/performance/comparison${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     return await this.get(url);
   }
 
@@ -260,7 +262,7 @@ export class PerformanceService extends BaseApiService {
       queryParams.append('topic_id', params.topic_id.toString());
     }
 
-    const url = `/performance/export?${queryParams.toString()}`;
+    const url = `${this.baseUrl}/performance/export?${queryParams.toString()}`;
 
     const response = await this.client.get(url, {
       responseType: 'blob',
@@ -273,7 +275,7 @@ export class PerformanceService extends BaseApiService {
    * Delete performance analysis
    */
   async deletePerformanceAnalysis(id: number): Promise<void> {
-    await this.delete(`/performance/${id}`);
+    await this.delete(`${this.baseUrl}/performance/${id}`);
   }
 
   /**
@@ -284,7 +286,7 @@ export class PerformanceService extends BaseApiService {
     rating: number,
     feedback?: string
   ): Promise<void> {
-    await this.post(`/recommendations/${recommendationId}/rate`, {
+    await this.post(`${this.baseUrl}/recommendations/${recommendationId}/rate`, {
       rating,
       feedback,
     });
@@ -294,7 +296,7 @@ export class PerformanceService extends BaseApiService {
    * Mark recommendation as used
    */
   async markRecommendationUsed(recommendationId: number): Promise<void> {
-    await this.post(`/recommendations/${recommendationId}/used`);
+    await this.post(`${this.baseUrl}/recommendations/${recommendationId}/used`);
   }
 
   /**
@@ -318,7 +320,7 @@ export class PerformanceService extends BaseApiService {
       queryParams.append('user_id', userId.toString());
     }
 
-    const url = `/performance/goals${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `${this.baseUrl}/performance/goals${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     return await this.get(url);
   }
 
@@ -331,7 +333,7 @@ export class PerformanceService extends BaseApiService {
     target_accuracy: number;
     deadline?: string;
   }): Promise<void> {
-    await this.post('/performance/goals', goal);
+    await this.post(`${this.baseUrl}/performance/goals`, goal);
   }
 }
 

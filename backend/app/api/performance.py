@@ -37,6 +37,111 @@ async def analyze_performance(
             detail=f"Error analyzing performance: {str(e)}"
         )
 
+@router.post("/analyze-exam", response_model=dict)
+async def analyze_exam_performance(
+    exam_id: int,
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    """Sınav sonucu için analiz yap"""
+    try:
+        from app.agents.analysis_agent import AnalysisAgent
+        from app.models.exam import PracticeExam, PracticeQuestionResult, ExamQuestion, ExamSection, ExamType
+        
+        # Sınav bilgilerini al
+        practice_exam = db.query(PracticeExam).filter(
+            PracticeExam.id == exam_id,
+            PracticeExam.user_id == user_id
+        ).first()
+        
+        if not practice_exam:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Sınav bulunamadı"
+            )
+        
+        # Sınav section ve type bilgilerini al
+        exam_section = db.query(ExamSection).filter(
+            ExamSection.id == practice_exam.exam_section_id
+        ).first()
+        
+        exam_type = None
+        if exam_section:
+            exam_type = db.query(ExamType).filter(
+                ExamType.id == exam_section.exam_type_id
+            ).first()
+        
+        # Soru sonuçlarını al
+        question_results = db.query(PracticeQuestionResult).filter(
+            PracticeQuestionResult.practice_exam_id == exam_id
+        ).all()
+        
+        # Yanlış cevaplanan soruların topic'lerini topla
+        wrong_topics = []
+        questions_with_topics = []
+        
+        for result in question_results:
+            if not result.is_correct:
+                question = db.query(ExamQuestion).filter(
+                    ExamQuestion.id == result.question_id
+                ).first()
+                
+                if question and question.topic_id:
+                    from app.models.education_level import CourseTopic
+                    topic = db.query(CourseTopic).filter(
+                        CourseTopic.id == question.topic_id
+                    ).first()
+                    
+                    if topic:
+                        wrong_topics.append(topic.name)
+                        questions_with_topics.append({
+                            "question_id": question.id,
+                            "topic_name": topic.name,
+                            "user_answer": result.user_answer,
+                            "correct_answer": question.correct_answer,
+                            "is_correct": result.is_correct
+                        })
+        
+        # Analiz agentını çağır
+        analysis_agent = AnalysisAgent()
+        
+        input_data = {
+            "user_id": str(user_id),
+            "subject": exam_section.name if exam_section else "Genel",
+            "topic": exam_type.name if exam_type else "Deneme Sınavı",
+            "education_level": "lise",
+            "performance_data": {
+                "totalQuestions": practice_exam.total_questions,
+                "correctAnswers": practice_exam.correct_answers,
+                "wrongAnswers": practice_exam.wrong_answers,
+                "emptyAnswers": practice_exam.empty_answers,
+                "accuracy": practice_exam.score,
+                "wrongTopics": list(set(wrong_topics)),
+                "detailedAnswers": f"Toplam: {practice_exam.total_questions}, Doğru: {practice_exam.correct_answers}, Yanlış: {practice_exam.wrong_answers}, Boş: {practice_exam.empty_answers}",
+                "questionsWithTopics": questions_with_topics
+            }
+        }
+        
+        result = await analysis_agent.process(input_data)
+        
+        # Sonuca exam bilgilerini de ekle
+        if result.get("status") == "success":
+            result["exam_info"] = {
+                "exam_id": exam_id,
+                "exam_type": exam_type.name if exam_type else "Bilinmiyor",
+                "exam_section": exam_section.name if exam_section else "Bilinmiyor",
+                "score": practice_exam.score,
+                "completion_date": practice_exam.end_time.isoformat() if practice_exam.end_time else None
+            }
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Sınav analizi hatası: {str(e)}"
+        )
+
 @router.post("/", response_model=schemas.PerformanceAnalysis)
 def create_performance_analysis(
     analysis: schemas.PerformanceAnalysisCreate,
@@ -51,23 +156,25 @@ def create_performance_analysis(
             detail="User not found"
         )
     
-    # Check if subject exists
-    db_subject = db.query(models.Subject).filter(models.Subject.id == analysis.subject_id).first()
+    # Check if subject exists (if provided)
+    if analysis.subject_id is not None:
+        db_subject = db.query(models.Subject).filter(models.Subject.id == analysis.subject_id).first()
+        
+        if not db_subject:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Subject not found"
+            )
     
-    if not db_subject:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Subject not found"
-        )
-    
-    # Check if topic exists
-    db_topic = db.query(models.Topic).filter(models.Topic.id == analysis.topic_id).first()
-    
-    if not db_topic:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Topic not found"
-        )
+    # Check if topic exists (if provided)
+    if analysis.topic_id is not None:
+        db_topic = db.query(models.Topic).filter(models.Topic.id == analysis.topic_id).first()
+        
+        if not db_topic:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Topic not found"
+            )
     
     # Create new performance analysis
     db_analysis = models.PerformanceAnalysis(**analysis.dict())

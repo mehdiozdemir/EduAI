@@ -156,6 +156,12 @@ const PracticeExamPage: React.FC = () => {
 
       const result = await examService.submitPracticeExam(parseInt(examId!), answers);
       
+      console.log('🎯 Submit result received:', result);
+      console.log('🧠 Analysis status:', result.analysis_status);
+      console.log('📺 YouTube status:', result.youtube_status);
+      console.log('📚 Book status:', result.book_status);
+      console.log('⚡ Parallel processing:', result.parallel_processing);
+      
       // Navigate to results page
       navigate(`/app/practice-exam/${examId}/results`, {
         state: {

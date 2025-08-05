@@ -125,6 +125,20 @@ class ExamService {
     correct_count: number;
     total_questions: number;
     results: any;
+    analysis?: any; // Analiz sonuçları
+    analysis_status?: string;
+    analysis_error?: string;
+    youtube_recommendations?: any; // YouTube önerileri
+    youtube_status?: string;
+    book_recommendations?: any; // Kitap önerileri
+    book_status?: string;
+    parallel_processing?: {
+      enabled: boolean;
+      execution_summary?: any;
+      processing_time?: string;
+      error?: string;
+      fallback?: boolean;
+    };
   }> {
     const response = await apiClient.post(`${this.baseUrl}/practice-exam/${examId}/submit`, answers);
     return response.data;
@@ -161,6 +175,32 @@ class ExamService {
     performance_by_type: any;
   }> {
     const response = await apiClient.get(`${this.baseUrl}/statistics`);
+    return response.data;
+  }
+
+  // Get exam analysis (separate endpoint)
+  async getExamAnalysis(examId: number, userId?: number): Promise<{
+    status: string;
+    data?: {
+      weakness_level: number;
+      weak_topics: string[];
+      strong_topics: string[];
+      recommendations: string[];
+      detailed_analysis: string;
+      personalized_insights: string[];
+      improvement_trend: string;
+    };
+    exam_info?: {
+      exam_id: number;
+      exam_type: string;
+      exam_section: string;
+      score: number;
+      completion_date?: string;
+    };
+    error?: string;
+  }> {
+    const params = userId ? `?exam_id=${examId}&user_id=${userId}` : `?exam_id=${examId}`;
+    const response = await apiClient.post(`/api/v1/performance/analyze-exam${params}`);
     return response.data;
   }
 }

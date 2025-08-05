@@ -3,6 +3,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { examService, type ExamQuestion } from '../services/examService';
 import Button from '../components/ui/Button';
 import { Loading } from '../components/ui/Loading';
+import ExamAnalysisResults from '../components/exam/ExamAnalysisResults';
+import { useAuth } from '../hooks/useAuth';
 
 interface LocationState {
   examName?: string;
@@ -37,17 +39,73 @@ interface ExamResults {
   grade: string;
 }
 
+interface AnalysisData {
+  weakness_level: number;
+  weak_topics: string[];
+  strong_topics: string[];
+  recommendations: string[];
+  detailed_analysis: string;
+  personalized_insights: string[];
+  improvement_trend: string;
+}
+
+interface YouTubeRecommendation {
+  title: string;
+  channel: string;
+  duration: string;
+  level: string;
+  video_url: string;
+  search_query: string;
+  topics_covered: string[];
+  why_recommended: string;
+  thumbnail_url: string;
+  channel_url: string;
+}
+
+interface BookRecommendation {
+  title: string;
+  url: string;
+  price: string;
+  description: string;
+  author?: string;
+  rating?: string;
+  stock_status: string;
+  why_recommended: string;
+}
+
+interface ParallelProcessingResult {
+  enabled: boolean;
+  execution_summary?: {
+    total_agents: number;
+    successful_agents: number;
+    failed_agents: number;
+  };
+  processing_time?: string;
+  error?: string;
+  fallback?: boolean;
+}
+
 const PracticeExamResultsPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState;
+  const { user } = useAuth();
 
   const [results, setResults] = useState<ExamResults | null>(null);
   const [detailedQuestions, setDetailedQuestions] = useState<ExamQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDetailedReview, setShowDetailedReview] = useState(false);
+  const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  
+  // New state for parallel processing results
+  const [youtubeRecommendations, setYoutubeRecommendations] = useState<YouTubeRecommendation[]>([]);
+  const [bookRecommendations, setBookRecommendations] = useState<BookRecommendation[]>([]);
+  const [parallelProcessing, setParallelProcessing] = useState<ParallelProcessingResult | null>(null);
+  const [showRecommendations, setShowRecommendations] = useState(false);
 
   useEffect(() => {
     if (examId) {
@@ -55,39 +113,105 @@ const PracticeExamResultsPage: React.FC = () => {
     }
   }, [examId]);
 
+  // Process exam results and handle parallel processing data
+  const processExamResults = (backendResults: any) => {
+    console.log('🔍 Backend results received:', backendResults);
+    console.log('🔍 Analysis data:', backendResults.analysis);
+    console.log('🔍 YouTube data:', backendResults.youtube_recommendations);
+    console.log('🔍 Book data:', backendResults.book_recommendations);
+    console.log('🔍 Parallel processing:', backendResults.parallel_processing);
+    
+    // Handle parallel processing results
+    if (backendResults.parallel_processing) {
+      setParallelProcessing(backendResults.parallel_processing);
+      
+      // Process YouTube recommendations
+      if (backendResults.youtube_recommendations && backendResults.youtube_status === 'success') {
+        const youtubeData = backendResults.youtube_recommendations;
+        console.log('📺 Processing YouTube data:', youtubeData);
+        if (youtubeData.recommendations) {
+          setYoutubeRecommendations(youtubeData.recommendations);
+          console.log('📺 YouTube recommendations set:', youtubeData.recommendations.length);
+        }
+      } else {
+        console.log('📺 YouTube recommendations not available:', backendResults.youtube_status);
+      }
+      
+      // Process book recommendations
+      if (backendResults.book_recommendations && backendResults.book_status === 'success') {
+        const bookData = backendResults.book_recommendations;
+        console.log('📚 Processing Book data:', bookData);
+        if (bookData.recommendations) {
+          setBookRecommendations(bookData.recommendations);
+          console.log('📚 Book recommendations set:', bookData.recommendations.length);
+        }
+      } else {
+        console.log('📚 Book recommendations not available:', backendResults.book_status);
+      }
+      
+      // Show recommendations if we have any
+      const hasRecommendations = (backendResults.youtube_recommendations && backendResults.youtube_status === 'success') ||
+                                (backendResults.book_recommendations && backendResults.book_status === 'success');
+      setShowRecommendations(hasRecommendations);
+      console.log('🎯 Show recommendations:', hasRecommendations);
+    }
+    
+    // Handle analysis data
+    if (backendResults.analysis && backendResults.analysis_status === 'success') {
+      setAnalysisData(backendResults.analysis);
+      setShowAnalysis(true);
+      console.log('🧠 Analysis data set successfully');
+    } else {
+      console.log('🧠 Analysis data not available:', backendResults.analysis_status);
+    }
+    
+    // Transform backend response to expected frontend format
+    const transformedResults: ExamResults = {
+      exam: {
+        id: backendResults.exam_id || parseInt(examId!),
+        name: state?.examName || 'Deneme Sınavı',
+        score: backendResults.score || 0,
+        correct_answers: backendResults.correct_answers || 0,
+        wrong_answers: backendResults.wrong_answers || 0,
+        empty_answers: backendResults.empty_answers || 0,
+        total_questions: backendResults.total_questions || 0,
+        duration_minutes: 0,
+        exam_type_name: backendResults.exam_type || 'Bilinmiyor',
+        exam_section_name: backendResults.exam_section || 'Bilinmiyor'
+      },
+      statistics: {
+        accuracy_rate: backendResults.percentage || 0,
+        time_per_question: (backendResults.time_spent || 0) / Math.max(1, backendResults.total_questions || 1),
+        difficulty_performance: backendResults.difficulty_performance || {}
+      },
+      recommendations: [],
+      grade: backendResults.percentage >= 80 ? 'A' : 
+             backendResults.percentage >= 60 ? 'B' : 
+             backendResults.percentage >= 40 ? 'C' : 'D'
+    };
+    
+    return transformedResults;
+  };
+
   const loadResults = async () => {
     try {
       setLoading(true);
       setError(null);
 
+      // İlk önce state'ten gelen result'ı kontrol et
+      if (state?.result) {
+        console.log('🎯 Using result from navigation state:', state.result);
+        const transformedResults = processExamResults(state.result);
+        setResults(transformedResults);
+        return;
+      }
+
+      // State'te result yoksa backend'ten çek
+      console.log('🔍 No result in state, fetching from backend...');
       const backendResults: any = await examService.getExamResults(parseInt(examId!));
-      console.log('Backend results received:', backendResults);
       
-      // Transform backend response to expected frontend format
-      const transformedResults: ExamResults = {
-        exam: {
-          id: backendResults.exam_id || parseInt(examId!),
-          name: state?.examName || 'Deneme Sınavı',
-          score: backendResults.score || 0,
-          correct_answers: backendResults.correct_answers || 0,
-          wrong_answers: backendResults.wrong_answers || 0,
-          empty_answers: backendResults.empty_answers || 0,
-          total_questions: backendResults.total_questions || 0,
-          duration_minutes: 0,
-          exam_type_name: backendResults.exam_type || 'Bilinmiyor',
-          exam_section_name: backendResults.exam_section || 'Bilinmiyor'
-        },
-        statistics: {
-          accuracy_rate: backendResults.percentage || 0,
-          time_per_question: (backendResults.time_spent || 0) / Math.max(1, backendResults.total_questions || 1),
-          difficulty_performance: backendResults.difficulty_performance || {}
-        },
-        recommendations: [],
-        grade: backendResults.percentage >= 80 ? 'A' : 
-               backendResults.percentage >= 60 ? 'B' : 
-               backendResults.percentage >= 40 ? 'C' : 'D'
-      };
-      
+      // Use the new processing function
+      const transformedResults = processExamResults(backendResults);
       console.log('Transformed results:', transformedResults);
       setResults(transformedResults);
 
@@ -96,6 +220,31 @@ const PracticeExamResultsPage: React.FC = () => {
       setError('Sonuçlar yüklenirken hata oluştu');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAnalysisData = async () => {
+    if (!user?.id) {
+      setError('Kullanıcı bilgisi bulunamadı');
+      return;
+    }
+
+    try {
+      setAnalysisLoading(true);
+      const analysisResponse = await examService.getExamAnalysis(parseInt(examId!), user.id);
+      
+      if (analysisResponse.status === 'success' && analysisResponse.data) {
+        setAnalysisData(analysisResponse.data);
+        setShowAnalysis(true);
+      } else {
+        console.error('Analysis failed:', analysisResponse.error);
+        setError(analysisResponse.error || 'Analiz verileri alınamadı');
+      }
+    } catch (err) {
+      console.error('Error loading analysis:', err);
+      setError('Analiz verileri yüklenirken hata oluştu');
+    } finally {
+      setAnalysisLoading(false);
     }
   };
 
@@ -434,8 +583,236 @@ const PracticeExamResultsPage: React.FC = () => {
           </div>
         )}
 
+        {/* Debug Panel (Temporary) */}
+        <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 mb-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">🔍 Debug Bilgileri</h3>
+          <div className="space-y-2 text-sm">
+            <div>📊 Analysis Data: {analysisData ? '✅ Var' : '❌ Yok'}</div>
+            <div>📺 YouTube Recommendations: {youtubeRecommendations.length} adet</div>
+            <div>📚 Book Recommendations: {bookRecommendations.length} adet</div>
+            <div>⚡ Parallel Processing: {parallelProcessing ? '✅ Var' : '❌ Yok'}</div>
+            <div>👁️ Show Analysis: {showAnalysis ? '✅ Gösteriliyor' : '❌ Gizli'}</div>
+            <div>👁️ Show Recommendations: {showRecommendations ? '✅ Gösteriliyor' : '❌ Gizli'}</div>
+            {state?.result && (
+              <div className="mt-2 p-2 bg-white rounded border">
+                <strong>State Result Keys:</strong> {Object.keys(state.result).join(', ')}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Analysis Results */}
+        {showAnalysis && analysisData && (
+          <div className="mb-8">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  🧠 AI Analiz Sonuçları
+                </h3>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowAnalysis(false)}
+                >
+                  Gizle
+                </Button>
+              </div>
+            </div>
+            <ExamAnalysisResults 
+              analysis={analysisData}
+              examInfo={results ? {
+                exam_id: results.exam.id,
+                exam_type: results.exam.exam_type_name || 'Bilinmiyor',
+                exam_section: results.exam.exam_section_name || 'Bilinmiyor',
+                score: results.exam.score
+              } : undefined}
+            />
+          </div>
+        )}
+
+        {/* Parallel Processing Results */}
+        {showRecommendations && (
+          <div className="mb-8">
+            {/* Processing Info */}
+            {parallelProcessing && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-blue-600">⚡</span>
+                  <h4 className="text-sm font-semibold text-blue-900">
+                    Paralel İşlem Sonuçları
+                  </h4>
+                </div>
+                <div className="text-sm text-blue-800">
+                  {parallelProcessing.enabled ? (
+                    <div className="flex flex-wrap gap-4">
+                      <span>✅ Paralel işlem aktif</span>
+                      {parallelProcessing.execution_summary && (
+                        <>
+                          <span>🤖 {parallelProcessing.execution_summary.total_agents} agent</span>
+                          <span>✅ {parallelProcessing.execution_summary.successful_agents} başarılı</span>
+                          {parallelProcessing.execution_summary.failed_agents > 0 && (
+                            <span>❌ {parallelProcessing.execution_summary.failed_agents} başarısız</span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span>⚠️ Paralel işlem kullanılamadı</span>
+                      {parallelProcessing.fallback && <span>(Fallback modu)</span>}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* YouTube Recommendations */}
+            {youtubeRecommendations.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  📺 Video Önerileri
+                  <span className="text-sm font-normal text-gray-500">
+                    ({youtubeRecommendations.length} video)
+                  </span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {youtubeRecommendations.map((video, index) => (
+                    <div
+                      key={index}
+                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-start gap-3">
+                        <img
+                          src={video.thumbnail_url || '/video-placeholder.png'}
+                          alt={video.title}
+                          className="w-20 h-15 object-cover rounded"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/video-placeholder.png';
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-semibold text-gray-900 line-clamp-2 mb-1">
+                            {video.title}
+                          </h4>
+                          <p className="text-xs text-gray-600 mb-1">
+                            📺 {video.channel} • 🕒 {video.duration}
+                          </p>
+                          {video.topics_covered && video.topics_covered.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {video.topics_covered.slice(0, 2).map((topic, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
+                                >
+                                  {topic}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <a
+                            href={video.video_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
+                          >
+                            🎥 İzle
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Book Recommendations */}
+            {bookRecommendations.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  📚 Kitap Önerileri
+                  <span className="text-sm font-normal text-gray-500">
+                    ({bookRecommendations.length} kitap)
+                  </span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {bookRecommendations.map((book, index) => (
+                    <div
+                      key={index}
+                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-16 h-20 bg-gray-200 rounded flex items-center justify-center text-gray-500">
+                          📖
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-semibold text-gray-900 line-clamp-2 mb-1">
+                            {book.title}
+                          </h4>
+                          {book.author && (
+                            <p className="text-xs text-gray-600 mb-1">
+                              ✍️ {book.author}
+                            </p>
+                          )}
+                          <p className="text-xs text-gray-700 line-clamp-2 mb-2">
+                            {book.description}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            {book.price && (
+                              <span className="text-sm font-medium text-green-600">
+                                💰 {book.price}
+                              </span>
+                            )}
+                            <div className="flex items-center gap-2">
+                              {book.stock_status === 'AVAILABLE' && (
+                                <span className="text-xs text-green-600">✅ Stokta</span>
+                              )}
+                              <a
+                                href={book.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:text-blue-800"
+                              >
+                                🛒 Satın Al
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          {!showAnalysis && (
+            <Button
+              onClick={loadAnalysisData}
+              disabled={analysisLoading}
+              variant="primary"
+              size="lg"
+            >
+              {analysisLoading ? 'Analiz ediliyor...' : '🧠 AI Analizi Gör'}
+            </Button>
+          )}
+          
+          {/* Show/Hide Recommendations Button */}
+          {(youtubeRecommendations.length > 0 || bookRecommendations.length > 0) && (
+            <Button
+              onClick={() => setShowRecommendations(!showRecommendations)}
+              variant={showRecommendations ? "secondary" : "primary"}
+              size="lg"
+            >
+              {showRecommendations ? '📚 Önerileri Gizle' : '📚 Önerileri Göster'}
+              <span className="ml-2">
+                ({youtubeRecommendations.length + bookRecommendations.length})
+              </span>
+            </Button>
+          )}
+          
           <Button
             onClick={loadDetailedReview}
             disabled={loading}
