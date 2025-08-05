@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, BackgroundTasks
 from fastapi.security import HTTPAuthorizationCredentials
 from typing import Dict, Any, Optional
 from pydantic import BaseModel
+import asyncio
 from app.agents.master_agent import MasterAgent, AgentAction
 from app.services.memory_service import memory_service
 from app.core.auth_deps import get_current_user, get_current_user_optional, security as bearer_scheme
@@ -79,7 +80,9 @@ async def process_request(
             "user_id": user_id,
             **request.dict()
         }
-        result = await master_agent.process(input_data)
+        # Agent işlemini non-blocking async task olarak çalıştır
+        task = asyncio.create_task(master_agent.process(input_data))
+        result = await task
         return result
     except Exception as e:
         raise HTTPException(
@@ -109,7 +112,9 @@ async def analyze_performance(
             "user_id": user_id,
             **request.dict()
         }
-        result = await master_agent.process(input_data)
+        # Agent işlemini non-blocking async task olarak çalıştır
+        task = asyncio.create_task(master_agent.process(input_data))
+        result = await task
         return result
     except Exception as e:
         raise HTTPException(
@@ -135,7 +140,9 @@ async def recommend_youtube_videos(
             "user_id": user_id,
             **request.dict()
         }
-        result = await master_agent.process(input_data)
+        # Agent işlemini non-blocking async task olarak çalıştır
+        task = asyncio.create_task(master_agent.process(input_data))
+        result = await task
         return result
     except Exception as e:
         raise HTTPException(
@@ -157,7 +164,9 @@ async def recommend_books(
             "user_id": user_id,
             **request.dict()
         }
-        result = await master_agent.process(input_data)
+        # Agent işlemini non-blocking async task olarak çalıştır
+        task = asyncio.create_task(master_agent.process(input_data))
+        result = await task
         return result
     except Exception as e:
         raise HTTPException(
@@ -209,7 +218,9 @@ async def complete_learning_cycle(
             "user_id": user_id,
             **request.dict()
         }
-        result = await master_agent.process(input_data)
+        # Agent işlemini non-blocking async task olarak çalıştır
+        task = asyncio.create_task(master_agent.process(input_data))
+        result = await task
         return result
     except Exception as e:
         raise HTTPException(

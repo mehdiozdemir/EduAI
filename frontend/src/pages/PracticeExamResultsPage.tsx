@@ -4,6 +4,7 @@ import { examService, type ExamQuestion } from '../services/examService';
 import Button from '../components/ui/Button';
 import { Loading } from '../components/ui/Loading';
 import ExamAnalysisResults from '../components/exam/ExamAnalysisResults';
+import AIAnalysisAnimation from '../components/ui/AIAnalysisAnimation';
 import { useAuth } from '../hooks/useAuth';
 
 interface LocationState {
@@ -47,6 +48,9 @@ interface AnalysisData {
   detailed_analysis: string;
   personalized_insights: string[];
   improvement_trend: string;
+  parallel_processing?: ParallelProcessingResult;
+  youtube_recommendations?: YouTubeRecommendation[];
+  book_recommendations?: BookRecommendation[];
 }
 
 interface YouTubeRecommendation {
@@ -101,6 +105,11 @@ const PracticeExamResultsPage: React.FC = () => {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
   
+  // Auto analysis states
+  const [autoAnalysisRunning, setAutoAnalysisRunning] = useState(false);
+  const [analysisStage, setAnalysisStage] = useState<'analyzing' | 'processing' | 'generating' | 'completed'>('analyzing');
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+  
   // New state for parallel processing results
   const [youtubeRecommendations, setYoutubeRecommendations] = useState<YouTubeRecommendation[]>([]);
   const [bookRecommendations, setBookRecommendations] = useState<BookRecommendation[]>([]);
@@ -112,6 +121,28 @@ const PracticeExamResultsPage: React.FC = () => {
       loadResults();
     }
   }, [examId]);
+
+  // Auto-start AI analysis when results are loaded (only for fresh exam results)
+  useEffect(() => {
+    // Check if this is a fresh exam result (from state) and no existing analysis
+    const isFreshExamResult = state?.result && !state.result.analysis;
+    // Also check if we don't have analysis data in results already
+    const hasExistingAnalysis = results && (results as any).analysis;
+    
+    console.log('🔍 Auto-analysis check:', {
+      results: !!results,
+      analysisData: !!analysisData,
+      autoAnalysisRunning,
+      analysisLoading,
+      isFreshExamResult,
+      hasExistingAnalysis
+    });
+    
+    if (results && !analysisData && !autoAnalysisRunning && !analysisLoading && isFreshExamResult && !hasExistingAnalysis) {
+      console.log('🚀 Starting auto-analysis...');
+      startAutoAnalysis();
+    }
+  }, [results]);
 
   // Process exam results and handle parallel processing data
   const processExamResults = (backendResults: any) => {
@@ -161,6 +192,11 @@ const PracticeExamResultsPage: React.FC = () => {
       setAnalysisData(backendResults.analysis);
       setShowAnalysis(true);
       console.log('🧠 Analysis data set successfully');
+    } else if (backendResults.analysis) {
+      // If there's analysis data but no status, it might be existing data
+      setAnalysisData(backendResults.analysis);
+      setShowAnalysis(true);
+      console.log('🧠 Existing analysis data loaded');
     } else {
       console.log('🧠 Analysis data not available:', backendResults.analysis_status);
     }
@@ -191,6 +227,77 @@ const PracticeExamResultsPage: React.FC = () => {
     };
     
     return transformedResults;
+  };
+
+  // Auto analysis with animation
+  const startAutoAnalysis = async () => {
+    if (!user?.id) return;
+    
+    setAutoAnalysisRunning(true);
+    setAnalysisStage('analyzing');
+    setAnalysisProgress(0);
+
+    try {
+      // Simulate progress stages
+      const updateProgress = (stage: typeof analysisStage, progress: number) => {
+        setAnalysisStage(stage);
+        setAnalysisProgress(progress);
+      };
+
+      // Stage 1: Analyzing (0-25%)
+      updateProgress('analyzing', 10);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      updateProgress('analyzing', 25);
+
+      // Stage 2: Processing (25-50%)
+      updateProgress('processing', 35);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Start actual analysis
+      const analysisResponse = await examService.getExamAnalysis(parseInt(examId!), user.id);
+      
+      updateProgress('processing', 50);
+
+      // Stage 3: Generating (50-75%)
+      updateProgress('generating', 60);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      updateProgress('generating', 75);
+
+      // Stage 4: Completing (75-100%)
+      await new Promise(resolve => setTimeout(resolve, 800));
+      updateProgress('completed', 100);
+
+      // Process results
+      if (analysisResponse.status === 'success' && analysisResponse.data) {
+        setAnalysisData(analysisResponse.data);
+        setShowAnalysis(true);
+        
+        // Process any new parallel processing results if available
+        if (analysisResponse.data.parallel_processing) {
+          setParallelProcessing(analysisResponse.data.parallel_processing);
+          
+          if (analysisResponse.data.youtube_recommendations) {
+            setYoutubeRecommendations(analysisResponse.data.youtube_recommendations);
+          }
+          
+          if (analysisResponse.data.book_recommendations) {
+            setBookRecommendations(analysisResponse.data.book_recommendations);
+          }
+          
+          setShowRecommendations(true);
+        }
+      }
+
+      // Wait a bit to show completion
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+    } catch (error) {
+      console.error('Auto analysis error:', error);
+      setAnalysisProgress(100);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } finally {
+      setAutoAnalysisRunning(false);
+    }
   };
 
   const loadResults = async () => {
@@ -465,8 +572,17 @@ const PracticeExamResultsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <>
+      {/* Auto Analysis Animation Overlay */}
+      {autoAnalysisRunning && (
+        <AIAnalysisAnimation 
+          stage={analysisStage} 
+          progress={analysisProgress} 
+        />
+      )}
+      
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -788,14 +904,14 @@ const PracticeExamResultsPage: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          {!showAnalysis && (
+          {!showAnalysis && !autoAnalysisRunning && (
             <Button
               onClick={loadAnalysisData}
               disabled={analysisLoading}
-              variant="primary"
+              variant="secondary"
               size="lg"
             >
-              {analysisLoading ? 'Analiz ediliyor...' : '🧠 AI Analizi Gör'}
+              {analysisLoading ? 'Analiz ediliyor...' : '🔄 Analizi Tekrar Çalıştır'}
             </Button>
           )}
           
@@ -828,8 +944,9 @@ const PracticeExamResultsPage: React.FC = () => {
             🎯 Yeni Sınav Çöz
           </Button>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

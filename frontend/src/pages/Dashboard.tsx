@@ -12,6 +12,7 @@ import ResponsiveGrid from '../components/ui/ResponsiveGrid';
 import ResponsiveContainer from '../components/ui/ResponsiveContainer';
 import { ResponsiveTable, ResponsiveTableHeader, ResponsiveTableBody, ResponsiveTableRow, ResponsiveTableCell } from '../components/ui/ResponsiveTable';
 import type { PerformanceAnalysis, PerformanceData } from '../types';
+import { BookOpen, Play, TrendingUp, Target, Star } from 'lucide-react';
 
 interface DashboardData {
   overall_stats: {
@@ -35,11 +36,26 @@ interface DashboardData {
   progress_chart: PerformanceData[];
 }
 
+interface RecommendationStats {
+  by_status: {
+    active: number;
+    completed: number;
+    deleted: number;
+    total: number;
+  };
+  by_category: {
+    [key: string]: number;
+  };
+  total_active: number;
+  completion_rate: number;
+}
+
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const { isMobile } = useBreakpoint();
   const { handleError } = useErrorHandler();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [recommendationStats, setRecommendationStats] = useState<RecommendationStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchDashboardData = async () => {
@@ -48,9 +64,24 @@ export const Dashboard: React.FC = () => {
     console.log('Dashboard.fetchDashboardData called');
     setLoading(true);
     try {
-      const data = await performanceService.getDashboardData(user.id);
-      console.log('Dashboard received data:', data);
-      setDashboardData(data);
+      const [dashboardData, statsData] = await Promise.all([
+        performanceService.getDashboardData(user.id),
+        performanceService.getRecommendationStats().catch(() => ({
+          status: 'success',
+          data: {
+            by_status: { active: 0, completed: 0, deleted: 0, total: 0 },
+            by_category: {},
+            total_active: 0,
+            completion_rate: 0
+          }
+        }))
+      ]);
+      
+      console.log('Dashboard received data:', dashboardData);
+      console.log('Recommendation stats:', statsData);
+      
+      setDashboardData(dashboardData);
+      setRecommendationStats(statsData.data);
     } catch (error: any) {
       console.error('Dashboard error:', error);
       handleError(error);
@@ -117,6 +148,7 @@ export const Dashboard: React.FC = () => {
           {dashboardData && (
             <DashboardContent
               dashboardData={dashboardData}
+              recommendationStats={recommendationStats}
               user={user}
               isMobile={isMobile}
             />
@@ -129,9 +161,10 @@ export const Dashboard: React.FC = () => {
 
 const DashboardContent: React.FC<{
   dashboardData: DashboardData;
+  recommendationStats: RecommendationStats | null;
   user: any;
   isMobile: boolean;
-}> = ({ dashboardData, user, isMobile }) => {
+}> = ({ dashboardData, recommendationStats, user, isMobile }) => {
   const { overall_stats, recent_performance, subject_breakdown, weakness_areas, progress_chart } = dashboardData;
 
   return (
@@ -285,6 +318,112 @@ const DashboardContent: React.FC<{
           </ResponsiveGrid>
         </Card>
       </ErrorBoundarySection>
+
+      {/* Personalized Recommendations Section */}
+      {recommendationStats && recommendationStats.total_active > 0 && (
+        <ErrorBoundarySection>
+          <Card className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Kişiselleştirilmiş Önerilerim</h3>
+                <p className="text-gray-600 text-sm mt-1">Size özel hazırlanmış AI önerileri</p>
+              </div>
+              <Link
+                to="/app/recommendations"
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-center touch-manipulation min-h-[48px] flex items-center justify-center"
+              >
+                Tüm Önerileri Gör
+              </Link>
+            </div>
+            
+            {/* Stats Overview */}
+            <ResponsiveGrid
+              cols={{ default: 2, sm: 4 }}
+              gap="sm"
+              className="mb-6"
+            >
+              <div className="bg-gradient-to-br from-green-50 to-emerald-100 border border-green-200 rounded-lg p-3 text-center">
+                <div className="text-green-600 text-2xl font-bold">{recommendationStats.total_active}</div>
+                <div className="text-green-700 text-xs">Aktif Öneri</div>
+              </div>
+              <div className="bg-gradient-to-br from-blue-50 to-sky-100 border border-blue-200 rounded-lg p-3 text-center">
+                <div className="text-blue-600 text-2xl font-bold">{recommendationStats.by_status.completed}</div>
+                <div className="text-blue-700 text-xs">Tamamlanan</div>
+              </div>
+              <div className="bg-gradient-to-br from-purple-50 to-violet-100 border border-purple-200 rounded-lg p-3 text-center">
+                <div className="text-purple-600 text-2xl font-bold">{recommendationStats.completion_rate}%</div>
+                <div className="text-purple-700 text-xs">Tamamlama Oranı</div>
+              </div>
+              <div className="bg-gradient-to-br from-orange-50 to-amber-100 border border-orange-200 rounded-lg p-3 text-center">
+                <div className="text-orange-600 text-2xl font-bold">{Object.keys(recommendationStats.by_category).length}</div>
+                <div className="text-orange-700 text-xs">Kategori</div>
+              </div>
+            </ResponsiveGrid>
+
+            {/* Category Breakdown */}
+            <ResponsiveGrid
+              cols={{ default: 1, sm: 2, lg: 3 }}
+              gap="md"
+            >
+              {Object.entries(recommendationStats.by_category).map(([category, count]) => {
+                const getCategoryIcon = (cat: string) => {
+                  switch (cat) {
+                    case 'video': return <Play className="w-5 h-5 text-red-500" />;
+                    case 'books': return <BookOpen className="w-5 h-5 text-blue-500" />;
+                    case 'ai_tips': return <TrendingUp className="w-5 h-5 text-green-500" />;
+                    default: return <Target className="w-5 h-5 text-gray-500" />;
+                  }
+                };
+                
+                const getCategoryTitle = (cat: string) => {
+                  switch (cat) {
+                    case 'video': return 'Video Önerileri';
+                    case 'books': return 'Kitap Önerileri';
+                    case 'ai_tips': return 'AI Tavsiyeleri';
+                    default: return 'Genel Öneriler';
+                  }
+                };
+                
+                const getCategoryColor = (cat: string) => {
+                  switch (cat) {
+                    case 'video': return 'border-red-200 bg-red-50';
+                    case 'books': return 'border-blue-200 bg-blue-50';
+                    case 'ai_tips': return 'border-green-200 bg-green-50';
+                    default: return 'border-gray-200 bg-gray-50';
+                  }
+                };
+
+                return (
+                  <div key={category} className={`${getCategoryColor(category)} border rounded-lg p-4 touch-manipulation`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        {getCategoryIcon(category)}
+                        <h4 className="font-medium text-gray-900 text-sm">{getCategoryTitle(category)}</h4>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Star className="w-3 h-3 text-yellow-500" />
+                        <span className="text-xs text-gray-600">{count}</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-600 mb-3">
+                      {category === 'video' && 'YouTube videoları ile öğren'}
+                      {category === 'books' && 'Önerilen kitaplarla derinleş'}
+                      {category === 'ai_tips' && 'AI analizli kişisel tavsiyeler'}
+                      {category === 'general' && 'Genel öğrenme kaynakları'}
+                    </p>
+                    <Link
+                      to="/app/recommendations"
+                      className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-gray-900"
+                    >
+                      İncele →
+                    </Link>
+                  </div>
+                );
+              })}
+            </ResponsiveGrid>
+          </Card>
+        </ErrorBoundarySection>
+      )}
 
       {/* Charts Row */}
       <ErrorBoundarySection>

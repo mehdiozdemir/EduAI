@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { examService, type ExamQuestion, type PracticeExam } from '../services/examService';
 import Button from '../components/ui/Button';
 import { Loading } from '../components/ui/Loading';
+import ExamSubmitAnimation from '../components/ui/ExamSubmitAnimation';
 
 interface LocationState {
   examName?: string;
@@ -25,6 +26,11 @@ const PracticeExamPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  
+  // Submit animation states
+  const [showSubmitAnimation, setShowSubmitAnimation] = useState(false);
+  const [submitStage, setSubmitStage] = useState<'analyzing' | 'processing' | 'generating' | 'completed'>('analyzing');
+  const [submitProgress, setSubmitProgress] = useState(0);
 
   // Load exam data
   useEffect(() => {
@@ -145,7 +151,13 @@ const PracticeExamPage: React.FC = () => {
 
     try {
       setSubmitting(true);
+      setShowSubmitConfirm(false);
+      setShowSubmitAnimation(true);
       setError(null);
+      
+      // Reset animation states
+      setSubmitStage('analyzing');
+      setSubmitProgress(0);
 
       console.log('🔍 Frontend Submit Debug:');
       console.log('   - Exam ID:', examId);
@@ -154,13 +166,41 @@ const PracticeExamPage: React.FC = () => {
       console.log('   - Answers count:', Object.keys(answers).length);
       console.log('   - Question IDs:', questions.map(q => q.id));
 
+      // Stage 1: Analyzing (0-25%)
+      setSubmitStage('analyzing');
+      setSubmitProgress(10);
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setSubmitProgress(25);
+
+      // Stage 2: Processing (25-50%)
+      setSubmitStage('processing');
+      setSubmitProgress(35);
+      await new Promise(resolve => setTimeout(resolve, 600));
+      
+      // Submit the exam
       const result = await examService.submitPracticeExam(parseInt(examId!), answers);
+      
+      setSubmitProgress(50);
+
+      // Stage 3: Generating (50-75%)
+      setSubmitStage('generating');
+      setSubmitProgress(60);
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setSubmitProgress(75);
+
+      // Stage 4: Completing (75-100%)
+      await new Promise(resolve => setTimeout(resolve, 600));
+      setSubmitStage('completed');
+      setSubmitProgress(100);
       
       console.log('🎯 Submit result received:', result);
       console.log('🧠 Analysis status:', result.analysis_status);
       console.log('📺 YouTube status:', result.youtube_status);
       console.log('📚 Book status:', result.book_status);
       console.log('⚡ Parallel processing:', result.parallel_processing);
+      
+      // Wait a bit to show completion
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Navigate to results page
       navigate(`/app/practice-exam/${examId}/results`, {
@@ -173,9 +213,9 @@ const PracticeExamPage: React.FC = () => {
     } catch (err) {
       console.error('Error submitting exam:', err);
       setError('Sınav gönderilirken hata oluştu');
+      setShowSubmitAnimation(false);
     } finally {
       setSubmitting(false);
-      setShowSubmitConfirm(false);
     }
   };
 
@@ -427,6 +467,14 @@ const PracticeExamPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Submit Animation */}
+      {showSubmitAnimation && (
+        <ExamSubmitAnimation 
+          stage={submitStage} 
+          progress={submitProgress} 
+        />
       )}
     </div>
   );

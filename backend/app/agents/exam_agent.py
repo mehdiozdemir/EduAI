@@ -1183,6 +1183,108 @@ class ExamAgent(BaseAgent):
             "difficulty_performance": difficulty_percentages
         })
         
+        # Mevcut analiz verilerini kontrol et ve ekle
+        from app.models.performance import PerformanceAnalysis, ResourceRecommendation
+        
+        # İlk olarak bu specific exam için analiz var mı diye memory'de kontrol et
+        try:
+            exam_memory_key = f"exam_analysis_{exam_id}_{user_id}"
+            existing_analysis = memory_service.search_memory(exam_memory_key)
+            print(f"🧠 Memory service search for {exam_memory_key}: {existing_analysis}")
+        except Exception as e:
+            print(f"🚨 Memory service search failed: {e}")
+            existing_analysis = None
+        
+        # Performance analysis var mı kontrol et
+        # Son 7 gün içinde aynı kullanıcı için benzer skorlarda analiz var mı bak
+        from datetime import datetime, timedelta
+        week_ago = datetime.now() - timedelta(days=7)
+        
+        performance_analysis = db.query(PerformanceAnalysis).filter(
+            PerformanceAnalysis.user_id == user_id,
+            PerformanceAnalysis.total_questions == total_questions,
+            PerformanceAnalysis.correct_answers == correct_val,
+            PerformanceAnalysis.created_at >= week_ago
+        ).order_by(PerformanceAnalysis.created_at.desc()).first()
+        
+        if performance_analysis:
+            print(f"🧠 Found existing analysis for exam {exam_id}")
+            
+            # Analysis data oluştur
+            analysis_data = {
+                "weakness_level": performance_analysis.weakness_level or 0,
+                "weak_topics": [],  # Bu bilgi eksik, boş bırakıyoruz
+                "strong_topics": [],  # Bu bilgi eksik, boş bırakıyoruz
+                "recommendations": [],
+                "detailed_analysis": f"Doğruluk oranı: %{percentage_val:.1f}",
+                "personalized_insights": [
+                    f"Toplam {total_questions} sorudan {correct_val} tanesini doğru cevapladınız",
+                    f"Yanlış cevap sayısı: {wrong_val}",
+                    f"Boş bırakılan soru sayısı: {empty_val}"
+                ],
+                "improvement_trend": "stable"
+            }
+            
+            # Recommendations'ları al
+            recommendations = db.query(ResourceRecommendation).filter(
+                ResourceRecommendation.performance_analysis_id == performance_analysis.id
+            ).all()
+            
+            youtube_recs = []
+            book_recs = []
+            ai_recs = []
+            
+            for rec in recommendations:
+                if rec.resource_type == "youtube":
+                    youtube_recs.append({
+                        "title": rec.title,
+                        "video_url": rec.url,
+                        "why_recommended": rec.description,
+                        "channel": "Unknown",
+                        "duration": "Unknown",
+                        "level": "intermediate",
+                        "topics_covered": [],
+                        "thumbnail_url": "",
+                        "channel_url": ""
+                    })
+                elif rec.resource_type == "book":
+                    book_recs.append({
+                        "title": rec.title,
+                        "url": rec.url,
+                        "description": rec.description,
+                        "why_recommended": rec.description,
+                        "price": "Unknown",
+                        "stock_status": "AVAILABLE"
+                    })
+                elif rec.resource_type == "ai_advice":
+                    ai_recs.append(rec.description)
+            
+            # Analysis data'ya recommendations ekle
+            analysis_data["recommendations"] = ai_recs
+            
+            # Result'a analysis data ekle
+            result["analysis"] = analysis_data
+            result["analysis_status"] = "success"
+            
+            # Parallel processing bilgileri ekle
+            if youtube_recs or book_recs:
+                result["parallel_processing"] = {
+                    "enabled": True,
+                    "execution_summary": {
+                        "total_agents": 2,
+                        "successful_agents": len([x for x in [youtube_recs, book_recs] if x]),
+                        "failed_agents": 0
+                    }
+                }
+                
+                if youtube_recs:
+                    result["youtube_recommendations"] = {"recommendations": youtube_recs}
+                    result["youtube_status"] = "success"
+                    
+                if book_recs:
+                    result["book_recommendations"] = {"recommendations": book_recs}
+                    result["book_status"] = "success"
+        
         print(f"🔍 Get Exam Results - Returning: {result}")
         return result
     

@@ -243,6 +243,114 @@ class ParallelAgentService:
                 "agent_name": agent_name,
                 "data": None
             }
+    
+    async def get_existing_analysis(
+        self,
+        db: Session,
+        user_id: int,
+        exam_id: int
+    ) -> Dict[str, Any]:
+        """
+        Mevcut analiz verilerini database'den getir
+        """
+        try:
+            from app.models.performance import PerformanceAnalysis, ResourceRecommendation
+            from datetime import datetime, timedelta
+            
+            # Son 7 gün içinde bu kullanıcı için analiz var mı kontrol et
+            week_ago = datetime.now() - timedelta(days=7)
+            
+            performance_analysis = db.query(PerformanceAnalysis).filter(
+                PerformanceAnalysis.user_id == user_id,
+                PerformanceAnalysis.created_at >= week_ago
+            ).order_by(PerformanceAnalysis.created_at.desc()).first()
+            
+            if not performance_analysis:
+                return {"status": "not_found", "results": {}}
+            
+            # Recommendations'ları al
+            recommendations = db.query(ResourceRecommendation).filter(
+                ResourceRecommendation.performance_analysis_id == performance_analysis.id
+            ).all()
+            
+            # Analysis agent formatında data hazırla
+            analysis_data = {
+                "weakness_level": performance_analysis.weakness_level or 0,
+                "weak_topics": [],
+                "strong_topics": [],
+                "recommendations": [],
+                "detailed_analysis": f"Doğruluk oranı: %{performance_analysis.accuracy:.1f}",
+                "personalized_insights": [
+                    f"Toplam {performance_analysis.total_questions} sorudan {performance_analysis.correct_answers} tanesini doğru cevapladınız",
+                    f"Analiz tarihi: {performance_analysis.created_at.strftime('%d.%m.%Y %H:%M')}"
+                ],
+                "improvement_trend": "stable"
+            }
+            
+            youtube_recs = []
+            book_recs = []
+            ai_recommendations = []
+            
+            for rec in recommendations:
+                if rec.resource_type == "youtube":
+                    youtube_recs.append({
+                        "title": rec.title,
+                        "video_url": rec.url,
+                        "why_recommended": rec.description,
+                        "channel": "Unknown",
+                        "duration": "Unknown",
+                        "level": "intermediate",
+                        "topics_covered": [],
+                        "thumbnail_url": "",
+                        "channel_url": ""
+                    })
+                elif rec.resource_type == "book":
+                    book_recs.append({
+                        "title": rec.title,
+                        "url": rec.url,
+                        "description": rec.description,
+                        "why_recommended": rec.description,
+                        "price": "Unknown",
+                        "stock_status": "AVAILABLE"
+                    })
+                elif rec.resource_type == "ai_advice":
+                    ai_recommendations.append(rec.description)
+            
+            analysis_data["recommendations"] = ai_recommendations
+            
+            # Results formatında döndür
+            results = {}
+            
+            if analysis_data:
+                results["analysis_agent"] = {
+                    "status": "success",
+                    "data": analysis_data
+                }
+            
+            if youtube_recs:
+                results["youtube_agent"] = {
+                    "status": "success", 
+                    "data": {"recommendations": youtube_recs}
+                }
+            
+            if book_recs:
+                results["book_agent"] = {
+                    "status": "success",
+                    "data": {"recommendations": book_recs}
+                }
+            
+            return {
+                "status": "success",
+                "results": results
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting existing analysis: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "results": {}
+            }
 
 # Global instance
 parallel_agent_service = ParallelAgentService()

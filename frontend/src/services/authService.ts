@@ -11,6 +11,10 @@ export class AuthService extends BaseApiService {
    */
   async login(credentials: LoginCredentials): Promise<User> {
     try {
+      // First clear any existing data
+      TokenManager.removeToken();
+      this.currentUser = null;
+      
       // Backend login implementation
       const loginData = {
         email: credentials.email,
@@ -28,6 +32,8 @@ export class AuthService extends BaseApiService {
       
       // Store user data
       this.currentUser = response.user;
+      
+      console.log('Login successful for user:', response.user);
       
       return response.user;
     } catch (error: any) {
@@ -89,6 +95,8 @@ export class AuthService extends BaseApiService {
       // Always clear local data
       TokenManager.removeToken();
       this.currentUser = null;
+      // Force clear any cached data
+      localStorage.clear();
     }
   }
 
@@ -113,9 +121,11 @@ export class AuthService extends BaseApiService {
   async getProfile(): Promise<User> {
     try {
       const user = await this.get<User>('/auth/me');
+      console.log('Profile fetched for user:', user);
       this.currentUser = user;
       return user;
     } catch (error: any) {
+      console.error('Profile fetch failed:', error);
       // If token is invalid, clear it
       TokenManager.removeToken();
       this.currentUser = null;

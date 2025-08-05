@@ -2,6 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app import schemas, models
 from app.database import get_db
+from app.core.auth_deps import get_current_user
+from app.models.user import User
+from app.models.performance import PerformanceAnalysis, ResourceRecommendation, RecommendationStatus
 from app.agents.master_agent import MasterAgent, AgentAction
 
 router = APIRouter(
@@ -245,6 +248,21 @@ async def analyze_exam_performance(
                 "processing_time": "paralel"
             }
             
+            # Önerileri database'e kaydet
+            try:
+                from app.api.exam import save_recommendations_to_db
+                exam_result_data = {
+                    "total_questions": exam_result.get("total_questions", 0),
+                    "correct_answers": exam_result.get("correct_answers", 0),
+                    "percentage": exam_result.get("percentage", 0.0)
+                }
+                await save_recommendations_to_db(db, user_id, results, exam_result_data)
+                analysis_data["recommendations_saved"] = True
+            except Exception as e:
+                print(f"❌ Error saving recommendations: {e}")
+                analysis_data["recommendations_saved"] = False
+                analysis_data["save_error"] = str(e)
+            
             return {
                 "status": "success",
                 "data": analysis_data
@@ -319,7 +337,7 @@ def create_performance_analysis(
             )
     
     # Create new performance analysis
-    db_analysis = models.PerformanceAnalysis(**analysis.dict())
+    db_analysis = PerformanceAnalysis(**analysis.dict())
     db.add(db_analysis)
     db.commit()
     db.refresh(db_analysis)
@@ -344,17 +362,17 @@ def get_performance_trends(
     if not db.query(models.User.id).filter(models.User.id == user_id).first():
         raise HTTPException(status_code=404, detail="User not found")
 
-    query = db.query(models.PerformanceAnalysis).filter(
-        models.PerformanceAnalysis.user_id == user_id
+    query = db.query(PerformanceAnalysis).filter(
+        PerformanceAnalysis.user_id == user_id
     )
 
     if subject_id is not None:
-        query = query.filter(models.PerformanceAnalysis.subject_id == subject_id)
+        query = query.filter(PerformanceAnalysis.subject_id == subject_id)
 
     if topic_id is not None:
-        query = query.filter(models.PerformanceAnalysis.topic_id == topic_id)
+        query = query.filter(PerformanceAnalysis.topic_id == topic_id)
 
-    analyses = query.order_by(models.PerformanceAnalysis.created_at.asc()).all()
+    analyses = query.order_by(PerformanceAnalysis.created_at.asc()).all()
 
     return [
         {"date": a.created_at.isoformat(), "accuracy": a.accuracy} for a in analyses
@@ -362,8 +380,8 @@ def get_performance_trends(
 
 @router.get("/{analysis_id}", response_model=schemas.PerformanceAnalysis)
 def get_performance_analysis(analysis_id: int, db: Session = Depends(get_db)):
-    db_analysis = db.query(models.PerformanceAnalysis).filter(
-        models.PerformanceAnalysis.id == analysis_id
+    db_analysis = db.query(PerformanceAnalysis).filter(
+        PerformanceAnalysis.id == analysis_id
     ).first()
     
     if not db_analysis:
@@ -373,6 +391,175 @@ def get_performance_analysis(analysis_id: int, db: Session = Depends(get_db)):
         )
     
     return db_analysis
+
+@router.get("/user/all-recommendations")
+async def get_user_all_recommendations(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all recommendations for the current user from exam analyses"""
+    try:
+        # Get all performance analyses for the user
+        # Get active recommendations for user, grouped by category
+        
+        active_recs = db.query(ResourceRecommendation).filter(
+            ResourceRecommendation.user_id == current_user.id,
+            ResourceRecommendation.status == RecommendationStatus.ACTIVE
+        ).order_by(
+            ResourceRecommendation.category,
+            ResourceRecommendation.relevance_score.desc(),
+            ResourceRecommendation.created_at.desc()
+        ).all()
+        
+        # Group by category
+        recommendations_by_category = {}
+        for rec in active_recs:
+            category = rec.category or "general"
+            if category not in recommendations_by_category:
+                recommendations_by_category[category] = []
+            
+            recommendations_by_category[category].append({
+                "id": rec.id,
+                "resource_type": rec.resource_type,
+                "title": rec.title,
+                "url": rec.url,
+                "description": rec.description,
+                "relevance_score": rec.relevance_score,
+                "category": rec.category,
+                "created_at": rec.created_at.isoformat() if rec.created_at else None
+            })
+        
+        return {
+            "status": "success",
+            "data": {
+                "total_recommendations": len(active_recs),
+                "categories": recommendations_by_category
+            }
+        }
+        
+    except Exception as e:
+        print(f"Error getting user recommendations: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Öneriler alınırken hata oluştu: {str(e)}"
+        )
+
+@router.patch("/recommendation/{recommendation_id}/status")
+async def update_recommendation_status(
+    recommendation_id: int,
+    status_param: str,  # "completed" or "deleted"
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update recommendation status (complete or delete)"""
+    try:
+        
+        # Validate status
+        if status_param not in ["completed", "deleted"]:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid status. Use 'completed' or 'deleted'"
+            )
+        
+        # Find recommendation
+        recommendation = db.query(ResourceRecommendation).filter(
+            ResourceRecommendation.id == recommendation_id,
+            ResourceRecommendation.user_id == current_user.id
+        ).first()
+        
+        if not recommendation:
+            raise HTTPException(
+                status_code=404,
+                detail="Recommendation not found"
+            )
+        
+        # Update status
+        if status_param == "completed":
+            recommendation.status = RecommendationStatus.COMPLETED
+        elif status_param == "deleted":
+            recommendation.status = RecommendationStatus.DELETED
+        
+        db.commit()
+        
+        return {
+            "status": "success",
+            "message": f"Recommendation marked as {status_param}",
+            "data": {
+                "id": recommendation.id,
+                "status": recommendation.status.value
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error updating recommendation status: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error updating recommendation: {str(e)}"
+        )
+
+@router.get("/recommendations/stats")
+async def get_recommendations_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get recommendation statistics for user"""
+    try:
+        from sqlalchemy import func, text
+        
+        # Get count by status - using raw SQL to handle string/enum conversion
+        stats = db.execute(text("""
+            SELECT status, COUNT(*) as count 
+            FROM resource_recommendations 
+            WHERE user_id = :user_id 
+            GROUP BY status
+        """), {"user_id": current_user.id}).fetchall()
+        
+        # Get count by category (only active) - using raw SQL
+        category_stats = db.execute(text("""
+            SELECT category, COUNT(*) as count 
+            FROM resource_recommendations 
+            WHERE user_id = :user_id AND status = 'active'
+            GROUP BY category
+        """), {"user_id": current_user.id}).fetchall()
+        
+        stats_dict = {
+            "active": 0,
+            "completed": 0,
+            "deleted": 0,
+            "total": 0
+        }
+        
+        for stat in stats:
+            # stat is now a raw SQL result with .status and .count attributes
+            status_key = str(stat.status)
+            stats_dict[status_key] = stat.count
+            stats_dict["total"] += stat.count
+        
+        categories_dict = {}
+        for cat_stat in category_stats:
+            # cat_stat is now a raw SQL result
+            categories_dict[cat_stat.category] = cat_stat.count
+        
+        return {
+            "status": "success",
+            "data": {
+                "by_status": stats_dict,
+                "by_category": categories_dict,
+                "total_active": stats_dict["active"],
+                "completion_rate": round((stats_dict["completed"] / stats_dict["total"] * 100), 1) if stats_dict["total"] > 0 else 0
+            }
+        }
+        
+    except Exception as e:
+        print(f"Error getting recommendation stats: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error getting stats: {str(e)}"
+        )
 
 @router.get("/user/{user_id}", response_model=list[schemas.PerformanceAnalysis])
 def get_user_performance_analyses(
@@ -390,8 +577,8 @@ def get_user_performance_analyses(
             detail="User not found"
         )
     
-    analyses = db.query(models.PerformanceAnalysis).filter(
-        models.PerformanceAnalysis.user_id == user_id
+    analyses = db.query(PerformanceAnalysis).filter(
+        PerformanceAnalysis.user_id == user_id
     ).offset(skip).limit(limit).all()
     
     return analyses
@@ -403,8 +590,8 @@ def create_resource_recommendation(
     db: Session = Depends(get_db)
 ):
     # Check if performance analysis exists
-    db_analysis = db.query(models.PerformanceAnalysis).filter(
-        models.PerformanceAnalysis.id == analysis_id
+    db_analysis = db.query(PerformanceAnalysis).filter(
+        PerformanceAnalysis.id == analysis_id
     ).first()
     
     if not db_analysis:
@@ -414,7 +601,7 @@ def create_resource_recommendation(
         )
     
     # Create new resource recommendation
-    db_recommendation = models.ResourceRecommendation(**recommendation.dict())
+    db_recommendation = ResourceRecommendation(**recommendation.dict())
     db.add(db_recommendation)
     db.commit()
     db.refresh(db_recommendation)
@@ -429,8 +616,8 @@ def get_resource_recommendations(
     db: Session = Depends(get_db)
 ):
     # Check if performance analysis exists
-    db_analysis = db.query(models.PerformanceAnalysis).filter(
-        models.PerformanceAnalysis.id == analysis_id
+    db_analysis = db.query(PerformanceAnalysis).filter(
+        PerformanceAnalysis.id == analysis_id
     ).first()
     
     if not db_analysis:
@@ -439,8 +626,8 @@ def get_resource_recommendations(
             detail="Performance analysis not found"
         )
     
-    recommendations = db.query(models.ResourceRecommendation).filter(
-        models.ResourceRecommendation.performance_analysis_id == analysis_id
+    recommendations = db.query(ResourceRecommendation).filter(
+        ResourceRecommendation.performance_analysis_id == analysis_id
     ).offset(skip).limit(limit).all()
     
     return recommendations
@@ -463,10 +650,10 @@ def get_performance_dashboard(user_id: int, db: Session = Depends(get_db)):
 
     # Overall stats
     overall = db.query(
-        func.coalesce(func.sum(models.PerformanceAnalysis.total_questions), 0),
-        func.coalesce(func.sum(models.PerformanceAnalysis.correct_answers), 0),
-        func.count(models.PerformanceAnalysis.id),
-    ).filter(models.PerformanceAnalysis.user_id == user_id).one()
+        func.coalesce(func.sum(PerformanceAnalysis.total_questions), 0),
+        func.coalesce(func.sum(PerformanceAnalysis.correct_answers), 0),
+        func.count(PerformanceAnalysis.id),
+    ).filter(PerformanceAnalysis.user_id == user_id).one()
 
     total_questions, total_correct, session_count = overall
     overall_accuracy = (
@@ -475,9 +662,9 @@ def get_performance_dashboard(user_id: int, db: Session = Depends(get_db)):
 
     # Recent performance (last 10 analyses)
     recent = (
-        db.query(models.PerformanceAnalysis)
-        .filter(models.PerformanceAnalysis.user_id == user_id)
-        .order_by(models.PerformanceAnalysis.created_at.desc())
+        db.query(PerformanceAnalysis)
+        .filter(PerformanceAnalysis.user_id == user_id)
+        .order_by(PerformanceAnalysis.created_at.desc())
         .limit(10)
         .all()
     )
@@ -486,11 +673,11 @@ def get_performance_dashboard(user_id: int, db: Session = Depends(get_db)):
     subject_stats = (
         db.query(
             models.Subject.name.label("subject_name"),
-            func.coalesce(func.sum(models.PerformanceAnalysis.correct_answers), 0).label("correct"),
-            func.coalesce(func.sum(models.PerformanceAnalysis.total_questions), 0).label("total"),
+            func.coalesce(func.sum(PerformanceAnalysis.correct_answers), 0).label("correct"),
+            func.coalesce(func.sum(PerformanceAnalysis.total_questions), 0).label("total"),
         )
-        .join(models.Subject, models.Subject.id == models.PerformanceAnalysis.subject_id)
-        .filter(models.PerformanceAnalysis.user_id == user_id)
+        .join(models.Subject, models.Subject.id == PerformanceAnalysis.subject_id)
+        .filter(PerformanceAnalysis.user_id == user_id)
         .group_by(models.Subject.name)
         .all()
     )
@@ -509,12 +696,12 @@ def get_performance_dashboard(user_id: int, db: Session = Depends(get_db)):
         db.query(
             models.Topic.name.label("topic_name"),
             models.Subject.name.label("subject_name"),
-            models.PerformanceAnalysis.weakness_level,
+            PerformanceAnalysis.weakness_level,
         )
-        .join(models.Topic, models.Topic.id == models.PerformanceAnalysis.topic_id)
-        .join(models.Subject, models.Subject.id == models.PerformanceAnalysis.subject_id)
-        .filter(models.PerformanceAnalysis.user_id == user_id)
-        .order_by(models.PerformanceAnalysis.weakness_level.desc())
+        .join(models.Topic, models.Topic.id == PerformanceAnalysis.topic_id)
+        .join(models.Subject, models.Subject.id == PerformanceAnalysis.subject_id)
+        .filter(PerformanceAnalysis.user_id == user_id)
+        .order_by(PerformanceAnalysis.weakness_level.desc())
         .limit(5)
         .all()
     )
@@ -532,11 +719,11 @@ def get_performance_dashboard(user_id: int, db: Session = Depends(get_db)):
     # Progress chart (last 20 analyses)
     progress = (
         db.query(
-            models.PerformanceAnalysis.created_at.label("date"),
-            models.PerformanceAnalysis.accuracy.label("accuracy"),
+            PerformanceAnalysis.created_at.label("date"),
+            PerformanceAnalysis.accuracy.label("accuracy"),
         )
-        .filter(models.PerformanceAnalysis.user_id == user_id)
-        .order_by(models.PerformanceAnalysis.created_at.asc())
+        .filter(PerformanceAnalysis.user_id == user_id)
+        .order_by(PerformanceAnalysis.created_at.asc())
         .limit(20)
         .all()
     )

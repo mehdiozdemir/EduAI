@@ -219,12 +219,17 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const handleLogout = (): void => {
     console.log('AuthContext.handleLogout called - clearing token and state');
     TokenManager.removeToken();
+    
+    // Clear all localStorage to ensure no cached data remains
+    localStorage.clear();
+    
     dispatch({ type: 'AUTH_LOGOUT' });
     console.log('AuthContext logout state cleared');
     
-    // Redirect to login page
+    // Force page reload to clear any cached state
     setTimeout(() => {
       window.location.href = '/login';
+      window.location.reload();
     }, 100);
   };
 

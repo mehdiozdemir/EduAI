@@ -335,6 +335,52 @@ export class PerformanceService extends BaseApiService {
   }): Promise<void> {
     await this.post(`${this.baseUrl}/performance/goals`, goal);
   }
+
+  /**
+   * Get all user recommendations from exam analyses
+   */
+  async getAllUserRecommendations(): Promise<{
+    status: string;
+    data: {
+      total_recommendations: number;
+      categories: {
+        [key: string]: Array<{
+          id: number;
+          resource_type: string;
+          title: string;
+          url: string;
+          description: string;
+          relevance_score: number;
+          category: string;
+          created_at: string;
+        }>;
+      };
+    };
+  }> {
+    return await this.get(`${this.baseUrl}/performance/user/all-recommendations`);
+  }
+
+  /**
+   * Get recommendation statistics
+   */
+  async getRecommendationStats(): Promise<{
+    status: string;
+    data: {
+      by_status: {
+        active: number;
+        completed: number;
+        deleted: number;
+        total: number;
+      };
+      by_category: {
+        [key: string]: number;
+      };
+      total_active: number;
+      completion_rate: number;
+    };
+  }> {
+    return await this.get(`${this.baseUrl}/performance/recommendations/stats`);
+  }
 }
 
 // Create and export singleton instance
