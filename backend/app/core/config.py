@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     
     # API Keys
     GEMINI_API_KEY: Optional[str] = None
+    GOOGLE_API_KEY: Optional[str] = None  # New Google GenAI SDK uses GOOGLE_API_KEY
     YOUTUBE_API_KEY: Optional[str] = None
     TAVILY_API_KEY: Optional[str] = None
     

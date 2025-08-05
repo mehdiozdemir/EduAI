@@ -32,16 +32,22 @@ class PersonalizedMemoryService:
             self.memory = None
             return
         
-        # Environment variable'ları set et
+        # Environment variable'ları set et - Mem0 now uses GOOGLE_API_KEY
+        api_key = None
         if hasattr(settings, 'GEMINI_API_KEY') and settings.GEMINI_API_KEY:
-            os.environ["GEMINI_API_KEY"] = settings.GEMINI_API_KEY
-            gemini_api_key = settings.GEMINI_API_KEY
+            api_key = settings.GEMINI_API_KEY
+            os.environ["GOOGLE_API_KEY"] = settings.GEMINI_API_KEY
+        elif hasattr(settings, 'GOOGLE_API_KEY') and settings.GOOGLE_API_KEY:
+            api_key = settings.GOOGLE_API_KEY
+            os.environ["GOOGLE_API_KEY"] = settings.GOOGLE_API_KEY
+        elif os.environ.get("GOOGLE_API_KEY"):
+            api_key = os.environ.get("GOOGLE_API_KEY")
         else:
-            logger.error("GEMINI_API_KEY not found in settings")
+            logger.error("GOOGLE_API_KEY not found in settings or environment")
             self.memory = None
             return
             
-        # Mem0 Gemini konfigürasyonu - dokümantasyona göre
+        # Mem0 Gemini konfigürasyonu - updated for new google.genai SDK
         self.config = {
             "vector_store": {
                 "provider": "chroma",
@@ -53,8 +59,8 @@ class PersonalizedMemoryService:
             "llm": {
                 "provider": "gemini",
                 "config": {
-                    "model": "gemini-2.0-flash",
-                    "api_key": gemini_api_key,
+                    "model": "gemini-2.0-flash-001",
+                    "api_key": api_key,
                     "temperature": 0.2,
                     "max_tokens": 2000,
                     "top_p": 1.0
@@ -64,7 +70,7 @@ class PersonalizedMemoryService:
                 "provider": "gemini",
                 "config": {
                     "model": "text-embedding-004",
-                    "api_key": gemini_api_key
+                    "api_key": api_key
                 }
             },
             "version": "v1.1"

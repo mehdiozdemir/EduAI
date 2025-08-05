@@ -48,13 +48,6 @@ export const SubjectListPage: React.FC = () => {
     }
   };
 
-  // Education level name to API data mapping
-  const EDUCATION_LEVEL_MAPPING = {
-    'ilkokul': 'ilkokul',
-    'ortaokul': 'ortaokul', 
-    'lise': 'lise'
-  } as const;
-
   const loadCoursesByEducationLevel = async (levelId: number) => {
     console.log('SubjectListPage.loadCoursesByEducationLevel called with levelId:', levelId);
     setCoursesLoading(true);
@@ -75,15 +68,17 @@ export const SubjectListPage: React.FC = () => {
     console.log('SubjectListPage.handleEducationLevelSelect called with level:', level);
     setSelectedEducationLevel(level);
     
-    // Find the corresponding education level data
-    const levelName = EDUCATION_LEVEL_MAPPING[level];
-    const levelData = educationLevels.find(el => el.name === levelName);
+    // Find the corresponding education level data - case insensitive search
+    const levelData = educationLevels.find(el => 
+      el.name.toLowerCase() === level.toLowerCase()
+    );
     
     if (levelData) {
       setSelectedEducationLevelData(levelData);
       await loadCoursesByEducationLevel(levelData.id);
     } else {
       console.error('Education level data not found for:', level);
+      console.log('Available education levels:', educationLevels.map(el => el.name));
       setSelectedEducationLevelData(null);
       setCourses([]);
     }
@@ -294,7 +289,7 @@ export const SubjectListPage: React.FC = () => {
                   <ErrorBoundarySection>
                     <div className="mb-4">
                       <h3 className="text-lg font-semibold text-gray-900">
-                        {EDUCATION_LEVEL_MAPPING[selectedEducationLevel]} Dersleri ({filteredSubjects.length})
+                        {selectedEducationLevelData?.name || selectedEducationLevel} Dersleri ({filteredSubjects.length})
                       </h3>
                       <p className="text-sm text-gray-600">Geçici olarak eski ders sistemi kullanılıyor.</p>
                     </div>

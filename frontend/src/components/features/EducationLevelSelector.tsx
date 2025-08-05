@@ -12,6 +12,22 @@ interface EducationLevelSelectorProps {
 
 // Education level configuration mapping API data to display data
 const EDUCATION_LEVEL_CONFIG = {
+  'İlkokul': {
+    key: 'ilkokul' as EducationLevelName,
+    title: 'İlkokul',
+    description: '1-4. Sınıf'
+  },
+  'Ortaokul': {
+    key: 'ortaokul' as EducationLevelName,
+    title: 'Ortaokul',
+    description: '5-8. Sınıf'
+  },
+  'Lise': {
+    key: 'lise' as EducationLevelName,
+    title: 'Lise',
+    description: '9-12. Sınıf'
+  },
+  // Backward compatibility with lowercase versions
   'ilkokul': {
     key: 'ilkokul' as EducationLevelName,
     title: 'İlkokul',
@@ -45,6 +61,7 @@ export const EducationLevelSelector: React.FC<EducationLevelSelectorProps> = ({
         setLoading(true);
         setError(null);
         const levels = await educationService.getEducationLevels();
+        console.log('EducationLevelSelector: Fetched levels:', levels);
         setEducationLevels(levels);
         onEducationLevelsLoaded?.(levels);
       } catch (err) {
@@ -122,21 +139,17 @@ export const EducationLevelSelector: React.FC<EducationLevelSelectorProps> = ({
     );
   }
 
-  // Map API data to display configuration
-  const displayLevels = educationLevels
-    .map(level => {
-      const config = EDUCATION_LEVEL_CONFIG[level.name as keyof typeof EDUCATION_LEVEL_CONFIG];
-      if (!config) return null;
-      
-      return {
-        ...level,
-        key: config.key,
-        displayTitle: config.title,
-        displayDescription: level.grade_range || config.description
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => a!.sort_order - b!.sort_order);
+  // Map API data to display configuration - simplified approach
+  console.log('EducationLevelSelector: Raw levels from API:', educationLevels);
+  
+  const displayLevels = educationLevels.map(level => ({
+    ...level,
+    key: level.name.toLowerCase() as EducationLevelName,
+    displayTitle: level.name,
+    displayDescription: level.description || ''
+  })).sort((a, b) => (a.sort_order || a.id) - (b.sort_order || b.id));
+    
+  console.log('EducationLevelSelector: Final display levels:', displayLevels);
 
   if (displayLevels.length === 0) {
     return (
