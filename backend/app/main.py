@@ -5,6 +5,10 @@ from app.api import users, subjects, performance, agents, auth, exam, education
 from app.admin import routes as admin_routes
 from app.database import engine, Base
 from app.core.config import settings
+import asyncio
+
+# Set timeout for long-running operations
+asyncio.get_event_loop().set_debug(True)
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -57,6 +61,24 @@ app = FastAPI(
         }
     }
 )
+
+# Request timeout middleware - sadece agent endpoint'leri için
+@app.middleware("http")
+async def timeout_middleware(request, call_next):
+    # Agent istekleri için timeout uygulama
+    if "/agents/" in str(request.url.path):
+        try:
+            response = await asyncio.wait_for(call_next(request), timeout=60.0)
+            return response
+        except asyncio.TimeoutError:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=504,
+                content={"detail": "AI agent request timeout - please try again"}
+            )
+    else:
+        # Diğer istekler için normal timeout
+        return await call_next(request)
 
 # CORS middleware for frontend communication
 app.add_middleware(

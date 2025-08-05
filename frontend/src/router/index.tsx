@@ -34,8 +34,8 @@ const PerformanceAnalysisPage = React.lazy(() =>
     /* webpackChunkName: "performance" */ '../pages/PerformanceAnalysis'
   ).then(module => ({ default: module.PerformanceAnalysisPage }))
 );
-const RecommendationsDemo = React.lazy(
-  () => import(/* webpackChunkName: "demo" */ '../pages/RecommendationsDemo')
+const Recommendations = React.lazy(
+  () => import(/* webpackChunkName: "recommendations" */ '../pages/Recommendations')
 );
 const ResponsiveDemo = React.lazy(
   () => import(/* webpackChunkName: "demo" */ '../pages/ResponsiveDemo')
@@ -187,7 +187,7 @@ export const router = createBrowserRouter([
         path: 'recommendations',
         element: (
           <LazyWrapper>
-            <RecommendationsDemo />
+            <Recommendations />
           </LazyWrapper>
         ),
       },

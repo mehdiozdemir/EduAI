@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
@@ -8,10 +8,110 @@ from app.schemas.exam import (
     PracticeExamCreate, PracticeExamResult
 )
 from app.models import exam as exam_models
+from app.models.performance import PerformanceAnalysis, ResourceRecommendation
 from app.core.auth_deps import get_current_user
 from app.models.user import User
 
 router = APIRouter()
+
+async def save_recommendations_to_db(db: Session, user_id: int, parallel_results: dict, exam_result: dict):
+    """Sınav sonrası önerileri database'e kaydet"""
+    try:
+        # Performance analysis oluştur
+        performance_analysis = PerformanceAnalysis(
+            user_id=user_id,
+            total_questions=exam_result.get("total_questions", 0),
+            correct_answers=exam_result.get("correct_answers", 0),
+            accuracy=exam_result.get("percentage", 0.0),
+            weakness_level=5  # Default
+        )
+        
+        # Analysis data varsa weakness_level'ı güncelle
+        if "analysis_agent" in parallel_results:
+            analysis_data = parallel_results["analysis_agent"]
+            if analysis_data.get("status") == "success":
+                agent_data = analysis_data.get("data", {})
+                if "data" in agent_data:
+                    agent_data = agent_data["data"]
+                performance_analysis.weakness_level = agent_data.get("weakness_level", 5)
+        
+        db.add(performance_analysis)
+        db.commit()
+        db.refresh(performance_analysis)
+        
+        # YouTube önerilerini kaydet
+        if "youtube_agent" in parallel_results:
+            youtube_data = parallel_results["youtube_agent"]
+            if youtube_data.get("status") == "success":
+                data_content = youtube_data.get("data", {})
+                if "data" in data_content:
+                    data_content = data_content["data"]
+                youtube_recs = data_content.get("recommendations", [])
+                for video in youtube_recs:
+                    rec = ResourceRecommendation(
+                        user_id=user_id,
+                        performance_analysis_id=performance_analysis.id,
+                        resource_type="youtube",
+                        title=video.get("title", ""),
+                        url=video.get("video_url", video.get("url", "")),
+                        description=video.get("why_recommended", video.get("description", "")),
+                        relevance_score=8.0,
+                        category="video"
+                    )
+                    db.add(rec)
+        
+        # Kitap önerilerini kaydet
+        if "book_agent" in parallel_results:
+            book_data = parallel_results["book_agent"]
+            if book_data.get("status") == "success":
+                data_content = book_data.get("data", {})
+                if "data" in data_content:
+                    data_content = data_content["data"]
+                book_recs = data_content.get("recommendations", [])
+                for book in book_recs:
+                    book_url = book.get("url", "")
+                    if hasattr(book_url, '__str__'):
+                        book_url = str(book_url)
+                    rec = ResourceRecommendation(
+                        user_id=user_id,
+                        performance_analysis_id=performance_analysis.id,
+                        resource_type="book",
+                        title=book.get("title", ""),
+                        url=book_url,
+                        description=book.get("description", ""),
+                        relevance_score=float(book.get("relevance_score", 7.0)),
+                        category="books"
+                    )
+                    db.add(rec)
+        
+        # AI Analysis önerilerini kaydet
+        if "analysis_agent" in parallel_results:
+            analysis_data = parallel_results["analysis_agent"]
+            if analysis_data.get("status") == "success":
+                agent_data = analysis_data.get("data", {})
+                if "data" in agent_data:
+                    agent_data = agent_data["data"]
+                
+                ai_recommendations = agent_data.get("recommendations", [])
+                for idx, recommendation in enumerate(ai_recommendations):
+                    rec = ResourceRecommendation(
+                        user_id=user_id,
+                        performance_analysis_id=performance_analysis.id,
+                        resource_type="ai_advice",
+                        title=f"AI Önerisi {idx + 1}",
+                        url="",
+                        description=str(recommendation),
+                        relevance_score=9.0,
+                        category="ai_tips"
+                    )
+                    db.add(rec)
+        
+        db.commit()
+        print(f"✅ Recommendations saved for performance analysis {performance_analysis.id}")
+        
+    except Exception as e:
+        print(f"❌ Error saving recommendations to DB: {e}")
+        db.rollback()
 
 # ========== EXAM SYSTEM ==========
 @router.get("/exam-types", response_model=List[dict])
@@ -104,6 +204,9 @@ async def submit_practice_exam(
                 result["book_recommendations"] = book_data.get("data", {}) if book_data.get("status") == "success" else None
                 result["book_status"] = book_data.get("status", "error")
             
+            # Önerileri database'e kaydet
+            await save_recommendations_to_db(db, current_user.id, parallel_results, result)
+            
             # Paralel işlem bilgilerini ekle
             result["parallel_processing"] = {
                 "enabled": True,
@@ -149,9 +252,69 @@ async def get_exam_results(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Sınav sonuçlarını getir"""
-    exam_agent = ExamAgent()
-    return exam_agent.get_exam_results(db, exam_id, current_user.id)
+    """Sınav sonuçlarını getir - analiz verileriyle birlikte"""
+    try:
+        exam_agent = ExamAgent()
+        result = exam_agent.get_exam_results(db, exam_id, current_user.id)
+        
+        # Eğer mevcut analiz yoksa, parallel agent service'ten kontrol et
+        if not result.get("analysis") or not result.get("analysis_status"):
+            try:
+                from app.services.parallel_agent_service import parallel_agent_service
+                
+                # Paralel servisten existing results'ı kontrol et
+                existing_data = await parallel_agent_service.get_existing_analysis(
+                    db=db,
+                    user_id=current_user.id,
+                    exam_id=exam_id
+                )
+                
+                if existing_data and existing_data.get("status") == "success":
+                    results = existing_data.get("results", {})
+                    
+                    # Analiz verilerini result'a ekle
+                    if "analysis_agent" in results:
+                        analysis_result = results["analysis_agent"]
+                        if analysis_result.get("status") == "success":
+                            result["analysis"] = analysis_result.get("data", {})
+                            result["analysis_status"] = "success"
+                    
+                    # YouTube ve Book önerilerini ekle
+                    if "youtube_agent" in results:
+                        youtube_data = results["youtube_agent"]
+                        if youtube_data.get("status") == "success":
+                            result["youtube_recommendations"] = youtube_data.get("data", {})
+                            result["youtube_status"] = "success"
+                    
+                    if "book_agent" in results:
+                        book_data = results["book_agent"]
+                        if book_data.get("status") == "success":
+                            result["book_recommendations"] = book_data.get("data", {})
+                            result["book_status"] = "success"
+                    
+                    # Parallel processing info ekle
+                    if any(key in results for key in ["analysis_agent", "youtube_agent", "book_agent"]):
+                        result["parallel_processing"] = {
+                            "enabled": True,
+                            "execution_summary": {
+                                "total_agents": len(results),
+                                "successful_agents": len([r for r in results.values() if r.get("status") == "success"]),
+                                "failed_agents": len([r for r in results.values() if r.get("status") != "success"])
+                            }
+                        }
+                        
+            except Exception as e:
+                print(f"🚨 Error fetching existing analysis: {e}")
+                # Hata olursa normal result'ı döndür
+                pass
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching exam results: {str(e)}"
+        )
 
 @router.get("/user/practice-exams", response_model=List[dict])
 async def get_user_exams(

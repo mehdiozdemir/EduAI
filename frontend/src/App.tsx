@@ -13,6 +13,7 @@ import { registerSW } from './utils/serviceWorker';
 import { performanceMonitor } from './utils/performanceMonitoring';
 //import { useRenderPerformance } from './hooks/usePerfance';
 import { ToastProvider } from './components/ui';
+import './utils/authDebug'; // Load auth debug tools
 
 function App() {
   // Temporarily disable performance monitoring to fix React hook errors
