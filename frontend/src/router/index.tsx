@@ -67,6 +67,15 @@ const PracticeExamResultsPage = React.lazy(() =>
 const PracticeExamHistoryPage = React.lazy(() =>
   import(/* webpackChunkName: "practice-exam" */ '../pages/PracticeExamHistoryPage').then(module => ({ default: module.default }))
 );
+const TopicSelectionPage = React.lazy(() =>
+  import(/* webpackChunkName: "education" */ '../pages/TopicSelectionPage').then(module => ({ default: module.TopicSelectionPage }))
+);
+const QuizConfigurationPage = React.lazy(() =>
+  import(/* webpackChunkName: "education" */ '../pages/QuizConfigurationPage').then(module => ({ default: module.QuizConfigurationPage }))
+);
+const QuizPage = React.lazy(() =>
+  import(/* webpackChunkName: "education" */ '../pages/QuizPage').then(module => ({ default: module.QuizPage }))
+);
 const NotFoundPage = React.lazy(() =>
   import(/* webpackChunkName: "error" */ '../pages/NotFoundPage').then(
     module => ({ default: module.NotFoundPage })
@@ -191,7 +200,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'quiz',
+        path: 'quiz-setup',
         element: (
           <LazyWrapper>
             <QuizSetupPage />
@@ -251,6 +260,31 @@ export const router = createBrowserRouter([
         element: (
           <LazyWrapper>
             <PracticeExamHistoryPage />
+          </LazyWrapper>
+        ),
+      },
+      // New education system routes
+      {
+        path: 'courses/:courseId/topics',
+        element: (
+          <LazyWrapper>
+            <TopicSelectionPage />
+          </LazyWrapper>
+        ),
+      },
+      {
+        path: 'courses/:courseId/quiz-config',
+        element: (
+          <LazyWrapper>
+            <QuizConfigurationPage />
+          </LazyWrapper>
+        ),
+      },
+      {
+        path: 'quiz',
+        element: (
+          <LazyWrapper>
+            <QuizPage />
           </LazyWrapper>
         ),
       },

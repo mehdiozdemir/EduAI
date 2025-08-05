@@ -64,5 +64,44 @@ export interface CourseListResponse {
   per_page: number;
 }
 
+// Quiz configuration types
+export interface QuizConfiguration {
+  courseId: number;
+  topicIds: number[];
+  difficulty: 'kolay' | 'orta' | 'zor';
+  questionCount: 5 | 10 | 15 | 20;
+}
+
+// Navigation state types for topic selection flow
+export interface TopicSelectionNavigationState {
+  course: CourseWithEducationLevel;
+  educationLevel: EducationLevelData;
+}
+
+export interface QuizConfigurationNavigationState {
+  course: CourseWithEducationLevel;
+  selectedTopics: CourseTopic[];
+  educationLevel: EducationLevelData;
+}
+
+// Topic selection state management types
+export interface TopicSelectionState {
+  course: CourseWithEducationLevel | null;
+  topics: CourseTopic[];
+  selectedTopics: CourseTopic[];
+  loading: boolean;
+  error: string | null;
+}
+
+export interface QuizConfigurationState {
+  selectedTopics: CourseTopic[];
+  course: CourseWithEducationLevel;
+  difficulty: 'kolay' | 'orta' | 'zor';
+  questionCount: 5 | 10 | 15 | 20;
+  isSubmitting: boolean;
+}
+
 // Type aliases for convenience
 export type EducationLevelName = 'ilkokul' | 'ortaokul' | 'lise';
+export type DifficultyLevelTurkish = 'kolay' | 'orta' | 'zor';
+export type QuestionCountOption = 5 | 10 | 15 | 20;

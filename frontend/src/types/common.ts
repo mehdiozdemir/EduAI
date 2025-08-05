@@ -11,6 +11,7 @@ export interface LoadingStatus {
 }
 
 export type DifficultyLevel = 'easy' | 'medium' | 'hard';
+export type DifficultyLevelTurkish = 'kolay' | 'orta' | 'zor';
 export type EducationLevel = 'middle' | 'high' | 'university';
 export type ResourceType = 'youtube' | 'book' | 'website' | 'article';
 

@@ -167,6 +167,18 @@ export class EducationService extends BaseApiService {
   async getEducationSystemOverview(): Promise<EducationSystemOverview> {
     return await this.get<EducationSystemOverview>('/api/v1/education-system/overview');
   }
+
+  /**
+   * Generate quiz questions
+   */
+  async generateQuiz(request: {
+    course_id: number;
+    topic_ids: number[];
+    difficulty: string;
+    question_count: number;
+  }): Promise<any> {
+    return await this.post<any>('/api/v1/generate-quiz', request);
+  }
 }
 
 // Create and export singleton instance

@@ -12,17 +12,17 @@ interface EducationLevelSelectorProps {
 
 // Education level configuration mapping API data to display data
 const EDUCATION_LEVEL_CONFIG = {
-  'İlkokul': {
+  'ilkokul': {
     key: 'ilkokul' as EducationLevelName,
     title: 'İlkokul',
     description: '1-4. Sınıf'
   },
-  'Ortaokul': {
+  'ortaokul': {
     key: 'ortaokul' as EducationLevelName,
     title: 'Ortaokul',
     description: '5-8. Sınıf'
   },
-  'Lise': {
+  'lise': {
     key: 'lise' as EducationLevelName,
     title: 'Lise',
     description: '9-12. Sınıf'

@@ -9,6 +9,8 @@ from app.schemas.education_level import (
     CourseTopic, CourseTopicWithCourse,
     EducationSystemOverview, CourseListResponse, TopicListResponse
 )
+from app.agents.question_agent import QuestionAgent
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -151,3 +153,95 @@ async def get_education_system_overview(db: Session = Depends(get_db)):
         total_courses=total_courses,
         total_topics=total_topics
     )
+
+# ========== QUIZ GENERATION ==========
+class QuizGenerationRequest(BaseModel):
+    course_id: int
+    topic_ids: List[int]
+    difficulty: str  # 'kolay', 'orta', 'zor'
+    question_count: int
+
+@router.post("/generate-quiz")
+async def generate_quiz(
+    request: QuizGenerationRequest,
+    db: Session = Depends(get_db)
+):
+    """Quiz sorularını oluştur"""
+    try:
+        # Ders kontrolü
+        course = CourseService.get_by_id(db, request.course_id)
+        if not course:
+            raise HTTPException(status_code=404, detail="Ders bulunamadı")
+        
+        # Konu kontrolü
+        topics = []
+        for topic_id in request.topic_ids:
+            topic = CourseTopicService.get_by_id(db, topic_id)
+            if not topic:
+                raise HTTPException(status_code=404, detail=f"Konu bulunamadı: {topic_id}")
+            if topic.course_id != request.course_id:
+                raise HTTPException(status_code=400, detail=f"Konu {topic_id} bu derse ait değil")
+            topics.append(topic)
+        
+        # Zorluk seviyesi çevirisi
+        difficulty_map = {
+            'kolay': 'easy',
+            'orta': 'medium', 
+            'zor': 'hard'
+        }
+        difficulty_en = difficulty_map.get(request.difficulty, 'medium')
+        
+        # Question agent ile sorular oluştur
+        question_agent = QuestionAgent()
+        
+        # Her konu için soru sayısını dağıt
+        questions_per_topic = request.question_count // len(topics)
+        remaining_questions = request.question_count % len(topics)
+        
+        all_questions = []
+        
+        for i, topic in enumerate(topics):
+            topic_question_count = questions_per_topic
+            if i < remaining_questions:
+                topic_question_count += 1
+            
+            if topic_question_count > 0:
+                input_data = {
+                    "subject": course.name,
+                    "topic": topic.name,
+                    "difficulty": difficulty_en,
+                    "count": topic_question_count,
+                    "education_level": course.education_level.name.lower()
+                }
+                
+                result = await question_agent.process(input_data)
+                
+                if result["status"] == "success":
+                    topic_questions = result["data"]["questions"]
+                    # Her soruya topic bilgisini ekle
+                    for question in topic_questions:
+                        question["topic_id"] = topic.id
+                        question["topic_name"] = topic.name
+                    all_questions.extend(topic_questions)
+                else:
+                    raise HTTPException(status_code=500, detail=f"Soru oluşturma hatası: {result.get('error', 'Bilinmeyen hata')}")
+        
+        return {
+            "status": "success",
+            "quiz": {
+                "course": {
+                    "id": course.id,
+                    "name": course.name,
+                    "education_level": course.education_level.name
+                },
+                "topics": [{"id": t.id, "name": t.name} for t in topics],
+                "difficulty": request.difficulty,
+                "question_count": len(all_questions),
+                "questions": all_questions
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Quiz oluşturma hatası: {str(e)}")

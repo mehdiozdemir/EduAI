@@ -105,6 +105,97 @@ const mockRecommendations: ResourceRecommendation[] = [
   },
 ];
 
+// Mock education data
+const mockEducationLevels = [
+  {
+    id: 1,
+    name: 'İlkokul',
+    description: 'İlkokul seviyesi eğitim',
+    sort_order: 1,
+    grade_range: '1-4. Sınıf',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 2,
+    name: 'Ortaokul',
+    description: 'Ortaokul seviyesi eğitim',
+    sort_order: 2,
+    grade_range: '5-8. Sınıf',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 3,
+    name: 'Lise',
+    description: 'Lise seviyesi eğitim',
+    sort_order: 3,
+    grade_range: '9-12. Sınıf',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  },
+];
+
+const mockCourses = [
+  {
+    id: 3,
+    name: 'Matematik',
+    description: 'İlkokul matematik dersi',
+    education_level_id: 1,
+    code: 'MAT_ILK',
+    color: '#3B82F6',
+    icon: null,
+    is_active: 1,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    education_level: {
+      id: 1,
+      name: 'İlkokul',
+      description: 'İlkokul seviyesi eğitim',
+      sort_order: 1,
+      grade_range: '1-4. Sınıf',
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    },
+  },
+  {
+    id: 4,
+    name: 'Türkçe',
+    description: 'Lise türkçe dersi',
+    education_level_id: 3,
+    code: 'TUR_LIS',
+    color: '#EF4444',
+    icon: null,
+    is_active: 1,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    education_level: {
+      id: 3,
+      name: 'Lise',
+      description: 'Lise seviyesi eğitim',
+      sort_order: 3,
+      grade_range: '9-12. Sınıf',
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    },
+  },
+];
+
+const mockCourseTopics = [
+  {
+    id: 2,
+    name: 'Dört İşlem',
+    description: 'Toplama, çıkarma, çarpma, bölme işlemleri',
+    course_id: 3,
+    sort_order: 1,
+    difficulty_level: 1,
+    estimated_duration: 60,
+    is_active: 1,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  },
+];
+
 export const handlers = [
   // Auth endpoints
   http.post('http://localhost:8000/auth/login', async ({ request }) => {
@@ -260,5 +351,91 @@ export const handlers = [
   http.get('http://localhost:8000/test/slow', async () => {
     await new Promise(resolve => setTimeout(resolve, 2000));
     return HttpResponse.json({ message: 'Slow response' });
+  }),
+
+  // Education system endpoints
+  http.get('http://localhost:8000/api/v1/education-levels', () => {
+    return HttpResponse.json(mockEducationLevels);
+  }),
+
+  http.get('http://localhost:8000/api/v1/education-levels/:id', ({ params }) => {
+    const id = parseInt(params.id as string);
+    const level = mockEducationLevels.find(l => l.id === id);
+    
+    if (level) {
+      return HttpResponse.json(level);
+    }
+    
+    return HttpResponse.json(
+      { detail: 'Education level not found' },
+      { status: 404 }
+    );
+  }),
+
+  http.get('http://localhost:8000/api/v1/education-levels/:id/courses', ({ params }) => {
+    const levelId = parseInt(params.id as string);
+    const courses = mockCourses.filter(c => c.education_level_id === levelId);
+    
+    return HttpResponse.json(courses);
+  }),
+
+  http.get('http://localhost:8000/api/v1/courses', () => {
+    return HttpResponse.json({
+      courses: mockCourses,
+      total: mockCourses.length,
+      page: 1,
+      per_page: 10,
+    });
+  }),
+
+  http.get('http://localhost:8000/api/v1/courses/:id', ({ params }) => {
+    const id = parseInt(params.id as string);
+    const course = mockCourses.find(c => c.id === id);
+    
+    if (course) {
+      return HttpResponse.json(course);
+    }
+    
+    return HttpResponse.json(
+      { detail: 'Course not found' },
+      { status: 404 }
+    );
+  }),
+
+  http.get('http://localhost:8000/api/v1/courses/:id/topics', ({ params }) => {
+    const courseId = parseInt(params.id as string);
+    const topics = mockCourseTopics.filter(t => t.course_id === courseId);
+    
+    return HttpResponse.json(topics);
+  }),
+
+  http.get('http://localhost:8000/api/v1/courses/:id/with-topics', ({ params }) => {
+    const id = parseInt(params.id as string);
+    const course = mockCourses.find(c => c.id === id);
+    
+    if (course) {
+      const topics = mockCourseTopics.filter(t => t.course_id === id);
+      return HttpResponse.json({
+        ...course,
+        topics,
+      });
+    }
+    
+    return HttpResponse.json(
+      { detail: 'Course not found' },
+      { status: 404 }
+    );
+  }),
+
+  http.get('http://localhost:8000/api/v1/education-system/overview', () => {
+    return HttpResponse.json({
+      education_levels: mockEducationLevels.map(level => ({
+        ...level,
+        courses: mockCourses.filter(c => c.education_level_id === level.id),
+      })),
+      total_levels: mockEducationLevels.length,
+      total_courses: mockCourses.length,
+      total_topics: mockCourseTopics.length,
+    });
   }),
 ];
