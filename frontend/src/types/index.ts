@@ -8,6 +8,14 @@ export * from './subject';
 
 // Education level and course types
 export * from './education';
+export type {
+    QuizConfiguration,
+    TopicSelectionNavigationState,
+    QuizConfigurationNavigationState,
+    TopicSelectionState,
+    QuizConfigurationState,
+    QuestionCountOption,
+} from './education';
 
 // Question generation and evaluation types
 export * from './question';
@@ -21,3 +29,4 @@ export type { ApiError, ApiErrorResponse, ValidationError, ApiResponse, Paginate
 
 // Common utility types
 export * from './common';
+export type { DifficultyLevelTurkish } from './common';

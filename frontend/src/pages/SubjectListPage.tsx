@@ -50,9 +50,9 @@ export const SubjectListPage: React.FC = () => {
 
   // Education level name to API data mapping
   const EDUCATION_LEVEL_MAPPING = {
-    'ilkokul': 'İlkokul',
-    'ortaokul': 'Ortaokul', 
-    'lise': 'Lise'
+    'ilkokul': 'ilkokul',
+    'ortaokul': 'ortaokul', 
+    'lise': 'lise'
   } as const;
 
   const loadCoursesByEducationLevel = async (levelId: number) => {
@@ -261,7 +261,17 @@ export const SubjectListPage: React.FC = () => {
                       {filteredCourses.map((course) => (
                         <div
                           key={course.id}
-                          onClick={() => navigate(`/courses/${course.id}`)}
+                          onClick={() => {
+                            // Create navigation state for topic selection
+                            const navigationState = {
+                              course: {
+                                ...course,
+                                education_level: selectedEducationLevelData!
+                              },
+                              educationLevel: selectedEducationLevelData!
+                            };
+                            navigate(`/app/courses/${course.id}/topics`, { state: navigationState });
+                          }}
                           className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
                         >
                           <h4 className="font-semibold text-gray-900 mb-2">{course.name}</h4>
