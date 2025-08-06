@@ -179,6 +179,66 @@ export class EducationService extends BaseApiService {
   }): Promise<any> {
     return await this.post<any>('/api/v1/generate-quiz', request);
   }
+
+  /**
+   * Save quiz result
+   */
+  async saveQuizResult(request: {
+    course_id: number;
+    topic_ids: number[];
+    difficulty: string;
+    question_count: number;
+    correct_answers: number;
+    wrong_answers: number;
+    blank_answers: number;
+    percentage: number;
+    time_spent: number;
+    questions_data: any[];
+  }): Promise<any> {
+    return await this.post<any>('/api/v1/quiz-results', request);
+  }
+
+  /**
+   * Get quiz results
+   */
+  async getQuizResults(params?: {
+    skip?: number;
+    limit?: number;
+    course_id?: number;
+    difficulty?: string;
+  }): Promise<any[]> {
+    const queryParams = new URLSearchParams();
+    
+    if (params?.skip) {
+      queryParams.append('skip', params.skip.toString());
+    }
+    if (params?.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
+    if (params?.course_id) {
+      queryParams.append('course_id', params.course_id.toString());
+    }
+    if (params?.difficulty) {
+      queryParams.append('difficulty', params.difficulty);
+    }
+
+    const url = `/api/v1/quiz-results${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return await this.get<any[]>(url);
+  }
+
+  /**
+   * Get quiz result detail
+   */
+  async getQuizResultDetail(resultId: number): Promise<any> {
+    return await this.get<any>(`/api/v1/quiz-results/${resultId}`);
+  }
+
+  /**
+   * Get performance statistics
+   */
+  async getPerformanceStats(): Promise<any> {
+    return await this.get<any>('/api/v1/performance-stats');
+  }
 }
 
 // Create and export singleton instance
