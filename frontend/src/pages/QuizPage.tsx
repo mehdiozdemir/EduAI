@@ -54,6 +54,7 @@ export const QuizPage: React.FC = () => {
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
   const [showResults, setShowResults] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  const [quizStartTime, setQuizStartTime] = useState<number>(0);
 
   const quizState = location.state as QuizState | null;
 
@@ -100,6 +101,7 @@ export const QuizPage: React.FC = () => {
         setQuizData(data.quiz);
         // Quiz süresi: soru başına 90 saniye
         setTimeRemaining(data.quiz.questions.length * 90);
+        setQuizStartTime(Date.now());
       } else {
         throw new Error(data.error || 'Quiz oluşturulamadı');
       }
@@ -131,28 +133,75 @@ export const QuizPage: React.FC = () => {
     }
   };
 
-  const handleFinishQuiz = () => {
+  const handleFinishQuiz = async () => {
+    await saveQuizResult();
     setShowResults(true);
   };
 
-  const handleTimeUp = () => {
+  const handleTimeUp = async () => {
+    await saveQuizResult();
     setShowResults(true);
+  };
+
+  const saveQuizResult = async () => {
+    if (!quizData || !quizState?.configuration) return;
+
+    try {
+      const results = calculateResults();
+      const timeSpent = Math.floor((Date.now() - quizStartTime) / 1000);
+      
+      // Soru detaylarını hazırla
+      const questionsData = quizData.questions.map((question, index) => ({
+        question: question.question,
+        options: question.options,
+        correct_answer: question.correct_answer,
+        user_answer: selectedAnswers[index] || null,
+        explanation: question.explanation,
+        topic_name: question.topic_name
+      }));
+
+      await educationService.saveQuizResult({
+        course_id: quizState.configuration.courseId,
+        topic_ids: quizState.configuration.topicIds,
+        difficulty: quizState.configuration.difficulty,
+        question_count: quizData.questions.length,
+        correct_answers: results.score,
+        wrong_answers: results.wrong,
+        blank_answers: results.blank,
+        percentage: results.percentage,
+        time_spent: timeSpent,
+        questions_data: questionsData
+      });
+    } catch (error) {
+      console.error('Quiz result save error:', error);
+      // Hata durumunda da sonuçları göster
+    }
   };
 
   const calculateResults = () => {
-    if (!quizData) return { score: 0, total: 0, percentage: 0 };
+    if (!quizData) return { score: 0, total: 0, percentage: 0, wrong: 0, blank: 0 };
     
     let correct = 0;
+    let wrong = 0;
+    let blank = 0;
+    
     quizData.questions.forEach((question, index) => {
-      if (selectedAnswers[index] === question.correct_answer) {
+      const userAnswer = selectedAnswers[index];
+      if (!userAnswer) {
+        blank++;
+      } else if (userAnswer === question.correct_answer) {
         correct++;
+      } else {
+        wrong++;
       }
     });
 
     return {
       score: correct,
       total: quizData.questions.length,
-      percentage: Math.round((correct / quizData.questions.length) * 100)
+      percentage: Math.round((correct / quizData.questions.length) * 100),
+      wrong,
+      blank
     };
   };
 
@@ -224,7 +273,7 @@ export const QuizPage: React.FC = () => {
 
         <div className="container mx-auto px-4 py-8 max-w-6xl">
           {/* Score Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-lg shadow-sm border p-6 text-center">
               <div className={`text-4xl font-bold mb-2 ${
                 results.percentage >= 70 ? 'text-green-600' : results.percentage >= 50 ? 'text-yellow-600' : 'text-red-600'
@@ -235,17 +284,24 @@ export const QuizPage: React.FC = () => {
             </div>
             
             <div className="bg-white rounded-lg shadow-sm border p-6 text-center">
-              <div className="text-4xl font-bold text-blue-600 mb-2">
+              <div className="text-4xl font-bold text-green-600 mb-2">
                 {results.score}
               </div>
               <p className="text-gray-600">Doğru Cevap</p>
             </div>
             
             <div className="bg-white rounded-lg shadow-sm border p-6 text-center">
-              <div className="text-4xl font-bold text-gray-600 mb-2">
-                {results.total - results.score}
+              <div className="text-4xl font-bold text-red-600 mb-2">
+                {results.wrong}
               </div>
               <p className="text-gray-600">Yanlış Cevap</p>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow-sm border p-6 text-center">
+              <div className="text-4xl font-bold text-orange-600 mb-2">
+                {results.blank}
+              </div>
+              <p className="text-gray-600">Boş Bırakıldı</p>
             </div>
           </div>
 
@@ -290,6 +346,7 @@ export const QuizPage: React.FC = () => {
               {quizData.questions.map((question, index) => {
                 const userAnswer = selectedAnswers[index];
                 const isCorrect = userAnswer === question.correct_answer;
+                const isBlank = !userAnswer;
                 
                 return (
                   <div key={index} className="p-6">
@@ -304,17 +361,44 @@ export const QuizPage: React.FC = () => {
                           <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
                             {question.topic_name}
                           </span>
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                            isCorrect ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                            isCorrect 
+                              ? 'bg-green-100 text-green-600' 
+                              : isBlank 
+                              ? 'bg-orange-100 text-orange-600' 
+                              : 'bg-red-100 text-red-600'
                           }`}>
-                            {isCorrect ? '✓' : '✗'}
+                            {isCorrect ? '✓' : isBlank ? '−' : '✗'}
                           </div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded ${
+                            isCorrect 
+                              ? 'bg-green-100 text-green-800' 
+                              : isBlank 
+                              ? 'bg-orange-100 text-orange-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {isCorrect ? 'Doğru' : isBlank ? 'Boş Bırakıldı' : 'Yanlış'}
+                          </span>
                         </div>
                         <h3 className="font-medium text-gray-900 mb-3">{question.question}</h3>
                       </div>
                     </div>
 
                     <div className="ml-14 space-y-3">
+                      {/* User Answer Status */}
+                      {isBlank && (
+                        <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center">
+                              <span className="text-orange-600 text-xs font-bold">!</span>
+                            </div>
+                            <span className="text-orange-800 text-sm font-medium">
+                              Bu soruyu boş bıraktınız
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Options */}
                       <div className="space-y-2">
                         {question.options.map((option) => {
@@ -382,6 +466,12 @@ export const QuizPage: React.FC = () => {
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 mt-8 justify-center">
+            <button
+              onClick={() => navigate('/app/performance')}
+              className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+            >
+              Performans Takibi
+            </button>
             <button
               onClick={() => navigate('/app/subjects')}
               className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
@@ -584,7 +674,7 @@ export const QuizPage: React.FC = () => {
                           ? 'bg-green-100 text-green-700 hover:bg-green-200'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
-                      title={`Soru ${index + 1}${selectedAnswers[index] ? ' (Cevaplanmış)' : ''}`}
+                      title={`Soru ${index + 1}${selectedAnswers[index] ? ' (Cevaplanmış)' : ' (Boş)'}`}
                     >
                       {index + 1}
                     </button>
@@ -603,7 +693,7 @@ export const QuizPage: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-2 text-xs">
                     <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
-                    <span className="text-gray-600">Cevaplanmamış</span>
+                    <span className="text-gray-600">Boş</span>
                   </div>
                 </div>
               </div>
