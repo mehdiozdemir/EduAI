@@ -54,9 +54,9 @@ class ParallelAgentService:
             # Sonuçları organize et
             organized_results = {"analysis_agent": analysis_result}
             
-            # Zayıf konuları belirle
-            weak_topics = exam_result.get("weak_topics", [])
-            print(f"🔍 Exam result'tan gelen zayıf konular: {weak_topics}")
+            # Zayıf konuları belirle - wrong_topics'i weak_topics olarak kullan
+            weak_topics = exam_result.get("wrong_topics", [])
+            print(f"🔍 Exam result'tan gelen zayıf konular (wrong_topics): {weak_topics}")
             
             # Analiz sonucundan da zayıf konuları al
             if analysis_result.get("status") == "success":

@@ -6,6 +6,7 @@ from app.core.auth_deps import get_current_user
 from app.models.user import User
 from app.models.performance import PerformanceAnalysis, ResourceRecommendation, RecommendationStatus
 from app.agents.master_agent import MasterAgent, AgentAction
+from app.services.ai_guidance_service import ai_guidance_service
 
 router = APIRouter(
     prefix="/performance",
@@ -262,6 +263,47 @@ async def analyze_exam_performance(
                 print(f"❌ Error saving recommendations: {e}")
                 analysis_data["recommendations_saved"] = False
                 analysis_data["save_error"] = str(e)
+            
+            # Sınav sonucunu memory'e kaydet
+            try:
+                # Zayıflık analizi için memory kaydı
+                await ai_guidance_service.memory_service.store_weakness_analysis(
+                    user_id=str(user_id),
+                    analysis_data={
+                        "subject": exam_section.name if exam_section else "Genel",
+                        "topic": exam_type.name if exam_type else "Deneme Sınavı",
+                        "weakness_level": analysis_data.get("weakness_level", 5),
+                        "weak_topics": analysis_data.get("weak_topics", []),
+                        "strong_topics": analysis_data.get("strong_topics", []),
+                        "recommendations": analysis_data.get("recommendations", []),
+                        "detailed_analysis": analysis_data.get("detailed_analysis", "")
+                    }
+                )
+                
+                # Öğrenme seansı için memory kaydı
+                session_data = {
+                    "subject": exam_section.name if exam_section else "Genel", 
+                    "topic": exam_type.name if exam_type else "Deneme Sınavı",
+                    "education_level": "lise",
+                    "accuracy": practice_exam.score,
+                    "total_questions": practice_exam.total_questions,
+                    "correct_answers": practice_exam.correct_answers,
+                    "wrong_answers": practice_exam.wrong_answers,
+                    "empty_answers": practice_exam.empty_answers,
+                    "timestamp": practice_exam.end_time.isoformat() if practice_exam.end_time else None
+                }
+                
+                await ai_guidance_service.memory_service.store_learning_session(
+                    user_id=str(user_id),
+                    session_data=session_data
+                )
+                
+                analysis_data["memory_stored"] = True
+                
+            except Exception as e:
+                print(f"❌ Error storing to memory: {e}")
+                analysis_data["memory_stored"] = False
+                analysis_data["memory_error"] = str(e)
             
             return {
                 "status": "success",

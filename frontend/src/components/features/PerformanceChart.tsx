@@ -89,13 +89,22 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
       };
     }
 
-    // For line and bar charts, show accuracy over time
+    // For line and bar charts, show accuracy over time or by category
     const labels = data.map((item) => {
-      const date = new Date(item.date);
-      return date.toLocaleDateString('tr-TR', {
-        month: 'short',
-        day: 'numeric',
-      });
+      // Check if date is a valid date string or just a category label
+      const dateTest = new Date(item.date);
+      const isValidDate = !isNaN(dateTest.getTime());
+      
+      if (isValidDate) {
+        // If it's a valid date, format it properly
+        return dateTest.toLocaleDateString('tr-TR', {
+          month: 'short',
+          day: 'numeric',
+        });
+      } else {
+        // If it's not a date (like subject names), use as is
+        return item.date;
+      }
     });
 
     // Group by subject for multiple datasets

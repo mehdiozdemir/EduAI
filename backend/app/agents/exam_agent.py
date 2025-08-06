@@ -188,7 +188,7 @@ class ExamAgent(BaseAgent):
             # İlk denemede model bazen eksik döndüğü için, eksik kadar istemek mantıklı.
             # İkinci/sonraki denemelerde de sadece kalan kadar iste.
             print(f"🔄 AI çağrısı (deneme {attempt + 1}/{max_attempts}) - istenen: {request_count}")
-            ai_resp = await self._generate_questions_with_ai(section.name, exam_type_name, request_count)
+            ai_resp = await self._generate_questions_with_ai(section.name, exam_type_name, request_count, db, exam_section_id)
 
             if not ai_resp or not getattr(ai_resp, "questions", None):
                 print("⚠️  AI boş döndü, bir sonraki denemeye geçiliyor")
@@ -246,7 +246,7 @@ class ExamAgent(BaseAgent):
         print(f"🎯 Nihai üretilen soru sayısı: {len(generated_questions)} (hedef: {target_count})")
         return generated_questions
 
-    async def _generate_questions_with_ai(self, section_name: str, exam_type: str, count: int) -> ExamQuestionGenerationResponse:
+    async def _generate_questions_with_ai(self, section_name: str, exam_type: str, count: int, db=None, exam_section_id=None) -> ExamQuestionGenerationResponse:
         """Gemini AI ile soru üret - 2 parça halinde güvenli üretim ile farklı sorular garantili"""
         
         # 6'dan fazla soru için 2 parçaya böl (JSON parsing hatalarını azaltmak için)
@@ -260,7 +260,8 @@ class ExamAgent(BaseAgent):
             part1 = await self._generate_question_batch_internal(
                 section_name, exam_type, part1_count, 
                 batch_type="first_half", 
-                avoid_keywords=set()
+                avoid_keywords=set(),
+                db=db, exam_section_id=exam_section_id
             )
             
             # İkinci parça için kullanılan anahtar kelimeleri topla
@@ -274,7 +275,8 @@ class ExamAgent(BaseAgent):
             part2 = await self._generate_question_batch_internal(
                 section_name, exam_type, part2_count, 
                 batch_type="second_half",
-                avoid_keywords=used_keywords
+                avoid_keywords=used_keywords,
+                db=db, exam_section_id=exam_section_id
             )
             
             # Birleştir ve duplikasyon kontrolü
@@ -298,9 +300,9 @@ class ExamAgent(BaseAgent):
             )
         else:
             # Küçük setler tek seferde
-            return await self._generate_question_batch_internal(section_name, exam_type, count, "single", set())
+            return await self._generate_question_batch_internal(section_name, exam_type, count, "single", set(), db, exam_section_id)
     
-    async def _generate_question_batch_internal(self, section_name: str, exam_type: str, count: int, batch_type: str, avoid_keywords: set) -> ExamQuestionGenerationResponse:
+    async def _generate_question_batch_internal(self, section_name: str, exam_type: str, count: int, batch_type: str, avoid_keywords: set, db=None, exam_section_id=None) -> ExamQuestionGenerationResponse:
         """İç batch üretim fonksiyonu - Konu bazlı detaylı prompt sistemi + sağlamlaştırılmış parsing/onarım"""
         parser = PydanticOutputParser(pydantic_object=ExamQuestionGenerationResponse)
         format_instructions = parser.get_format_instructions()
@@ -343,16 +345,51 @@ class ExamAgent(BaseAgent):
         # Batch type'a göre özel instructions
         batch_instructions = self._get_batch_instructions(batch_type, count, avoid_keywords)
 
+        # Önceki soruları almak için veritabanından kontrol et
+        existing_questions = self._get_existing_question_texts(db, exam_section_id) if db and exam_section_id else []
+        avoid_questions_prompt = ""
+        if existing_questions:
+            avoid_questions_prompt = (
+                f"\n\nÖNEMLİ: Aşağıdaki sorulara benzer sorular üretme, tamamen farklı sorular oluştur:\n"
+                f"Kaçınılacak sorular: {', '.join(existing_questions[:5])}...\n"  # İlk 5'ini göster
+            )
+
+        # Rastgele yaratıcılık ve çeşitlilik talimatları ekleyelim
+        import random
+        creativity_prompts = [
+            "YARATICILIK TALİMATI: Her soru TAMAMEN ÖZGÜN ve benzersiz olmalı. Klişe sorulardan, basmakalıp ifadelerden kaçın. Gerçek hayattan örnekler, güncel konular ve yaratıcı bakış açıları kullan.",
+            "ÖZGÜNLÜK TALİMATI: Hiçbir soru birbirine benzememeli. Farklı açılardan yaklaş, değişik örnekler kullan, yenilikçi soru kalıpları oluştur.",
+            "ÇEŞİTLİLİK TALİMATI: Her soru farklı bir perspektiften olsun. Değişik hikayeler, senaryolar, örnekler kullan. Monotonluktan kaçın.",
+            "İNNOVASYON TALİMATI: Geleneksel soru kalıplarından uzaklaş. Modern örnekler, güncel olaylar, yaratıcı senaryolar kullan.",
+            "BENZERSİZLİK TALİMATI: Her soru unique olmalı. Aynı sözcükleri, benzer cümle yapılarını, tekrarlayan ifadeleri kullanma."
+        ]
+        
+        creativity_instruction = random.choice(creativity_prompts)
+        
         system_msg = (
             f"Sen bir {section_name} uzmanısın ve {education_level} seviyesinde "
             f"{exam_type} sınav soruları oluşturuyorsun. Türkiye'deki resmi sınav formatına uygun sorular hazırla.\n\n"
+            f"{creativity_instruction}\n\n"
             f"KONU DAĞILIMI VE GEREKSİNİMLER:\n{detailed_requirements}\n\n"
             f"{strict_format_requirements}"
         )
 
+        # Rastgele vurgu cümleleri ekle
+        emphasis_phrases = [
+            "🚨 TEKRAR UYARI: Her soru TAMAMEN FARKLI olmalı!",
+            "⚡ HATIRLATMA: Aynı kalıpları, benzer ifadeleri kullanma!",
+            "🎯 HEDEF: Maksimum çeşitlilik ve özgünlük!",
+            "🔥 ZORUNLULUK: Her soru benzersiz ve yaratıcı olmalı!",
+            "💡 TALİMAT: Monotonluktan kaçın, farklı yaklaşımlar kullanın!"
+        ]
+        
+        unique_emphasis = random.choice(emphasis_phrases)
+        
         human_msg = (
             f"{exam_type} sınavı için {section_name} alanında {count} adet soru oluştur.\n\n"
             f"{batch_instructions}\n\n"
+            f"{avoid_questions_prompt}\n\n"  # Önceki sorulardan kaçınma talimatı
+            f"{unique_emphasis}\n\n"  # Rastgele vurgu
             "Soru gereksinimleri:\n"
             f"1. Türkiye'deki resmi {exam_type} sınav formatına uygun olmalı\n"
             "2. Tam olarak 4 çoktan seçmeli seçenek (A, B, C, D) olmalı\n"
@@ -363,7 +400,8 @@ class ExamAgent(BaseAgent):
             "7. Zorluk seviyesi 1 (kolay), 2 (orta), 3 (zor) olmalı\n"
             "8. Türkçe dilbilgisi kurallarına uygun olmalı\n"
             "9. Gerçek sınav seviyesinde olmalı\n"
-            "10. Her soru için topic_name alanında hangi konuyla ilgili olduğunu belirt\n\n"
+            "10. Her soru için topic_name alanında hangi konuyla ilgili olduğunu belirt\n"
+            "11. YARATICILIK: Her soru özgün ve benzersiz olmalı, tekrarlardan kaçın\n\n"
             "FORMAT HATIRLATICI:\\n"
             "- Sadece JSON döndür\\n"
             "- options tam 4 madde olmalı ve letter alanları 'A','B','C','D' olmalı\\n"
@@ -379,9 +417,11 @@ class ExamAgent(BaseAgent):
             ("human", human_msg),
         ])
 
-        # Temperature'ı artır çeşitlilik için
+        # Temperature'ı sabit değerde tut - Çeşitlilik için yeterli
         original_temp = self.temperature
-        self.temperature = 0.0
+        # Sabit yüksek temperature - çeşitlilik için
+        self.temperature = 0.3  # Sabit değer
+        print(f"🌡️ Temperature ayarlandı: {self.temperature}")
 
         # Yardımcı: LLM metninden JSON'ı çıkar
         def _extract_json(text: str) -> str:
@@ -488,28 +528,125 @@ class ExamAgent(BaseAgent):
 
         # JSON sanitize: BOM/null, code-fence artıkları ve yaygın trailing virgüllerini temizle
         def _sanitize_json(s: str) -> str:
-            s2 = (s or "").replace("\ufeff", "").replace("\x00", "")
+            if not s:
+                return s
+                
+            s2 = str(s).replace("\ufeff", "").replace("\x00", "")
             s2 = s2.replace("END_OF_JSON", "").strip()
-            # Yaygın trailing comma hatalarını basitçe düzelt
+            
+            # Code fence'leri temizle
+            if "```json" in s2:
+                s2 = s2.split("```json", 1)[1]
+            if "```" in s2:
+                s2 = s2.split("```")[0]
+            
+            # Başlangıç ve bitiş kontrolü
+            if not s2.startswith("{"):
+                # İlk { karakterini bul
+                start_idx = s2.find("{")
+                if start_idx != -1:
+                    s2 = s2[start_idx:]
+            
+            if not s2.endswith("}"):
+                # Son } karakterini bul
+                end_idx = s2.rfind("}")
+                if end_idx != -1:
+                    s2 = s2[:end_idx + 1]
+            
+            # Yaygın JSON hatalarını düzelt
             s2 = s2.replace(",]", "]").replace(",}", "}")
-            return s2
+            s2 = s2.replace(",,", ",")  # Çifte virgül
+            s2 = s2.replace("}\n{", "},\n{")  # Eksik virgül objeler arası
+            s2 = s2.replace("}{", "},{")  # Eksik virgül bitişik objeler
+            
+            # Trailing comma'ları agresif temizle
+            import re
+            s2 = re.sub(r',\s*}', '}', s2)
+            s2 = re.sub(r',\s*]', ']', s2)
+            
+            # Eksik tırnak işaretlerini düzelt
+            s2 = re.sub(r'(\w+):', r'"\1":', s2)  # key'leri tırnakla
+            s2 = re.sub(r':\s*([A-Za-z][A-Za-z0-9_]*)\s*([,}])', r': "\1"\2', s2)  # Tırnak içinde olmayan string değerleri
+            
+            # Yanlış kaçış karakterlerini düzelt
+            s2 = s2.replace('\\"', '"').replace("\\'", "'")
+            
+            # Eksik virgülleri bul ve düzelt (temel pattern matching)
+            # "text" } veya "text" ] durumlarını "text", } veya "text", ] yap
+            s2 = re.sub(r'"\s*([}\]])', r'",\1', s2)
+            # } { durumlarını }, { yap
+            s2 = re.sub(r'}\s*{', '},{', s2)
+            
+            return s2.strip()
 
-        # 3 deneme hakkı ver
-        max_retries = 3
+        # Güçlendirilmiş JSON parsing sistemi
+        def _attempt_json_parse(json_str: str) -> tuple[bool, any, str]:
+            """JSON parse'ı dene ve sonucu döndür"""
+            if not json_str.strip():
+                return False, None, "Boş JSON string"
+            
+            # 1. Direkt parse
+            try:
+                result = _json.loads(json_str)
+                return True, result, ""
+            except Exception as e:
+                pass
+            
+            # 2. Sanitize sonrası parse
+            try:
+                sanitized = _sanitize_json(json_str)
+                result = _json.loads(sanitized)
+                return True, result, ""
+            except Exception as e:
+                pass
+            
+            # 3. Çift tırnak düzeltmesi
+            try:
+                fixed_quotes = json_str.replace("'", '"')
+                result = _json.loads(fixed_quotes)
+                return True, result, ""
+            except Exception as e:
+                pass
+                
+            # 4. Newline temizliği
+            try:
+                no_newlines = ' '.join(json_str.split())
+                result = _json.loads(no_newlines)
+                return True, result, ""
+            except Exception as e:
+                pass
+            
+            # 5. Ast.literal_eval deneme (güvenli eval)
+            try:
+                import ast
+                # JSON'u Python dict formatına çevir
+                python_str = json_str.replace('true', 'True').replace('false', 'False').replace('null', 'None')
+                result = ast.literal_eval(python_str)
+                return True, result, ""
+            except Exception as e:
+                pass
+            
+            return False, None, f"Tüm parsing yöntemleri başarısız: {str(e)[:100]}"
+
+        # 5 deneme hakkı ver, güçlendirilmiş parsing sistemi ile
+        max_retries = 5
         last_error = None
         for attempt in range(max_retries):
             try:
-                print(f"🔄 AI soru üretimi denemesi {attempt + 1}/{max_retries}")
+                # Temperature sabit kalsın - artırmaya gerek yok
+                print(f"🔄 AI soru üretimi denemesi {attempt + 1}/{max_retries} (temp: {self.temperature})")
                 raw_text_msg = await chain.ainvoke({})  # ham metin veya mesaj
-                # Her denemede sıcaklığı eski haline getir
-                self.temperature = original_temp
 
                 raw_text = raw_text_msg.content if hasattr(raw_text_msg, "content") else str(raw_text_msg)
                 raw_json_str = _extract_json(str(raw_text))
-                sanitized = _sanitize_json(raw_json_str)
-
-                data = _json.loads(sanitized)
-
+                
+                # Güçlendirilmiş JSON parsing sistemi
+                success, data, parse_error = _attempt_json_parse(raw_json_str)
+                
+                if not success:
+                    last_error = f"JSON parse başarısız: {parse_error}"
+                    print(f"❌ Deneme {attempt + 1} JSON parse hatası: {parse_error}")
+                    print(f"🔍 Raw JSON (ilk 300 karakter): {raw_json_str[:300]}...")
                 # Onarım ve normalizasyon
                 safe = _normalize_payload(data)
 
@@ -544,7 +681,7 @@ class ExamAgent(BaseAgent):
 
                 ok, reason = _is_valid_output(result)
                 if ok:
-                    print(f"✅ AI başarıyla {len(result.questions)} geçerli soru üretti!")
+                    print(f"✅ AI başarıyla {len(result.questions)} geçerli soru üretti! (deneme: {attempt + 1})")
                     return result
                 else:
                     last_error = f"Geçersiz çıktı: {reason}"
@@ -553,11 +690,62 @@ class ExamAgent(BaseAgent):
             except Exception as e:
                 last_error = f"{type(e).__name__}: {e}"
                 print(f"❌ AI deneme {attempt + 1} başarısız: {last_error}")
+                
+                # JSON parse hatalarında daha detaylı log
+                if "JSONDecodeError" in str(e) or "invalid syntax" in str(e):
+                    print(f"🔍 JSON hata detayı: {str(e)[:200]}")
+                    if 'raw_json_str' in locals():
+                        print(f"🔍 Problemli JSON: {raw_json_str[:300]}...")
+                
                 # Sonraki denemeye geç
+                continue
 
         # Son durumda temperature'ı garanti geri al
         self.temperature = original_temp
-        raise ValueError(f"AI soru üretimi {max_retries} denemede başarısız oldu: {last_error or 'bilinmeyen hata'}")
+        
+        # Eğer hiçbir deneme başarılı olmadıysa fallback soru üretimi
+        print(f"🚨 Tüm AI denemeleri başarısız! Fallback soru üretimi devreye giriyor...")
+        fallback_questions = self._generate_fallback_questions(section_name, exam_type, count)
+        
+        if fallback_questions and len(fallback_questions) > 0:
+            print(f"✅ Fallback ile {len(fallback_questions)} soru üretildi")
+            return ExamQuestionGenerationResponse(
+                section_name=section_name,
+                exam_type=exam_type,
+                questions=fallback_questions
+            )
+        
+        raise ValueError(f"AI soru üretimi ve fallback sistemi başarısız oldu: {last_error or 'bilinmeyen hata'}")
+
+    def _get_existing_question_texts(self, db, exam_section_id: int) -> List[str]:
+        """Mevcut soruların çeşitliliği artırmak için detaylı analiz"""
+        if not db or not exam_section_id:
+            return []
+        
+        try:
+            from app.models.exam import ExamQuestion
+            questions = db.query(ExamQuestion).filter(
+                ExamQuestion.exam_section_id == exam_section_id,
+                ExamQuestion.is_active == True
+            ).limit(50).all()  # Daha fazla soru al - 50'ye çıkar
+            
+            # Sadece soru başlangıçları değil, anahtar kelimeler de topla
+            existing_data = []
+            for q in questions:
+                if q.question_text:
+                    # İlk 50 karakter
+                    existing_data.append(q.question_text[:50])
+                    
+                    # Önemli anahtar kelimeleri çıkar
+                    words = q.question_text.lower().split()
+                    key_words = [w for w in words if len(w) > 4 and w not in ['sorusu', 'aşağıda', 'hangisi', 'şekil', 'grafik']]
+                    existing_data.extend(key_words[:3])  # İlk 3 anahtar kelimeyi ekle
+                    
+            print(f"📊 Çeşitlilik kontrolü: {len(questions)} mevcut soru, {len(existing_data)} karşılaştırma verisi")
+            return existing_data
+        except Exception as e:
+            print(f"⚠️ Mevcut sorular alınamadı: {e}")
+            return []
 
     def get_topic_distribution(self, exam_type: str, section_name: str, total_count: int) -> Dict:
         """Belirtilen bölüm için konu dağılımını al ve toplamı tam olarak total_count yap.
@@ -674,16 +862,54 @@ class ExamAgent(BaseAgent):
                 print(f"♻️  Kullanıcının mevcut sınavı bulundu: {existing_user_exam.name} (ID: {existing_user_exam.id})")
                 return existing_user_exam
         
-        # Force_new ise veya havuzda yeterli soru yoksa yeni AI soruları üret
+        # Force_new mantığını değiştir: Her zaman yeni AI soruları üret
         available_count = db.query(ExamQuestion).filter(
             ExamQuestion.exam_section_id == exam_data.exam_section_id,
             ExamQuestion.is_active == True
         ).count()
         
         if force_new:
-            # Yeni sınav üretimi zorlandıysa her zaman AI ile yeni sorular üret
-            print("✨ Yeni sınav üretimi istendi, AI ile fresh sorular üretiliyor...")
+            # Force_new ise DAIMA yeni AI soruları üret (havuz durumu önemli değil)
+            print(f"🚀 Force_new: DAIMA yeni AI soruları üretiliyor (mevcut havuz: {available_count})...")
             questions = self.generate_questions(db, exam_data.exam_section_id, question_count)
+            
+            # Force_new ise benzersiz isim ile YENİ exam kaydı oluştur
+            current_time = datetime.now()
+            unique_name = f"{exam_type.name} {exam_section.name} Denemesi - {current_time.strftime('%H:%M:%S')}"
+            
+            practice_exam = PracticeExam(
+                name=unique_name,
+                exam_type_id=exam_section.exam_type_id,
+                exam_section_id=exam_data.exam_section_id,
+                user_id=user_id,
+                total_questions=len(questions),
+                duration_minutes=exam_type.duration_minutes or 60,
+                status="not_started",
+                start_time=datetime.utcnow()
+            )
+            
+            db.add(practice_exam)
+            db.commit()
+            db.refresh(practice_exam)
+            print(f"🎯 Force_new: YENİ exam oluşturuldu - ID: {practice_exam.id}, İsim: {unique_name}")
+            
+            # ✨ YENİ: Bu exam için kullanılacak soruların ID'lerini kaydet
+            # PracticeQuestionResult tablosunu kullanarak exam-soru ilişkisini kuralım
+            for question in questions:
+                # Her soru için boş bir result kaydı oluştur (henüz cevap verilmemiş)
+                question_result = PracticeQuestionResult(
+                    practice_exam_id=practice_exam.id,
+                    question_id=question.id,
+                    user_answer=None,  # Henüz cevaplanmamış
+                    is_correct=None,   # Henüz değerlendirilmemiş
+                    time_spent_seconds=0
+                )
+                db.add(question_result)
+            
+            db.commit()
+            print(f"🔗 Force_new: {len(questions)} soru exam ile ilişkilendirildi")
+            return practice_exam
+            
         elif available_count >= question_count:
             # Havuz yeterli ise AI üretimine gerek yok; sadece exam kaydı oluştur
             print(f"📚 Mevcut soru havuzu yeterli ({available_count} >= {question_count}), yeni exam kaydı oluşturuluyor.")
@@ -706,7 +932,7 @@ class ExamAgent(BaseAgent):
             print("🤖 Mevcut soru havuzu yetersiz, yeni AI soruları üretiliyor...")
             questions = self.generate_questions(db, exam_data.exam_section_id, question_count)
         
-        # Practice exam oluştur
+        # Practice exam oluştur (normal durum için)
         practice_exam = PracticeExam(
             name=f"{exam_type.name} {exam_section.name} Denemesi",
             exam_type_id=exam_section.exam_type_id,
@@ -816,17 +1042,26 @@ class ExamAgent(BaseAgent):
                 ExamType.id == exam_section.exam_type_id
             ).first()
         
-        # Soruları al
-        questions = db.query(ExamQuestion).filter(
-            ExamQuestion.id.in_(practice_exam.questions if hasattr(practice_exam, 'questions') and practice_exam.questions else [])
+        # Soruları al - 🔥 Force_new için exam-specific sorular önce
+        exam_question_results = db.query(PracticeQuestionResult).filter(
+            PracticeQuestionResult.practice_exam_id == exam_id
         ).all()
         
-        if not questions:
-            # Fallback: exam_section_id'den sorular al
+        if exam_question_results:
+            # Exam ile ilişkilendirilmiş özel soruları kullan (force_new mantığı)
+            question_ids = [qr.question_id for qr in exam_question_results]
+            questions = db.query(ExamQuestion).filter(
+                ExamQuestion.id.in_(question_ids),
+                ExamQuestion.is_active == True
+            ).order_by(ExamQuestion.id.asc()).all()
+            print(f"🎯 Submit: Exam {exam_id} ile ilişkilendirilmiş {len(questions)} özel soru kullanıldı")
+        else:
+            # Fallback: exam_section_id'den sorular al (eski mantık)
             questions = db.query(ExamQuestion).filter(
                 ExamQuestion.exam_section_id == practice_exam.exam_section_id,
                 ExamQuestion.is_active == True
             ).limit(practice_exam.total_questions).all()
+            print(f"🔄 Submit: Exam {exam_id} için fallback - genel havuzdan {len(questions)} soru kullanıldı")
         
         # Cevapları değerlendir ve sonuçları kaydet
         total_questions = len(questions)
@@ -1023,22 +1258,38 @@ class ExamAgent(BaseAgent):
         
         # Soruları getir
         if force_new:
-            # Force_new ise en son üretilen AI sorularını kullan (en yeni olan)
-            questions = db.query(ExamQuestion).filter(
-                ExamQuestion.exam_section_id == exam_data.exam_section_id,  
-                ExamQuestion.is_active == True,
-                ExamQuestion.created_by == "AI_EXAM_AGENT"
-            ).order_by(ExamQuestion.id.desc()).limit(question_count).all()
-            print(f"✨ Force_new: En son üretilen {len(questions)} AI sorusu kullanılıyor")
+            # Force_new ise o exam ile ilişkilendirilmiş soruları kullan
+            exam_question_results = db.query(PracticeQuestionResult).filter(
+                PracticeQuestionResult.practice_exam_id == practice_exam.id
+            ).all()
+            
+            if exam_question_results:
+                # Exam ile ilişkilendirilmiş soruları al
+                question_ids = [qr.question_id for qr in exam_question_results]
+                questions = db.query(ExamQuestion).filter(
+                    ExamQuestion.id.in_(question_ids),
+                    ExamQuestion.is_active == True
+                ).all()
+                print(f"🎯 Force_new: Exam ile ilişkilendirilmiş {len(questions)} soru kullanılıyor")
+            else:
+                # Fallback: En son üretilen AI sorularını kullan
+                from sqlalchemy import text
+                questions = db.query(ExamQuestion).filter(
+                    ExamQuestion.exam_section_id == exam_data.exam_section_id,  
+                    ExamQuestion.is_active == True,
+                    ExamQuestion.created_by == "AI_EXAM_AGENT"
+                ).order_by(ExamQuestion.id.desc()).limit(question_count).all()
+                print(f"🚀 Force_new: Fallback - En son üretilen {len(questions)} AI sorusu kullanılıyor")
         elif not use_existing:
-            # Yeni oluşturulan exam için en son eklenen AI sorularını getir
+            # Yeni oluşturulan exam için rastgele sorular getir
+            from sqlalchemy import text
             questions = db.query(ExamQuestion).filter(
                 ExamQuestion.exam_section_id == exam_data.exam_section_id,  
-                ExamQuestion.is_active == True,
-                ExamQuestion.created_by == "AI_EXAM_AGENT"
-            ).order_by(ExamQuestion.id.asc()).limit(question_count).all()
+                ExamQuestion.is_active == True
+            ).order_by(text("RANDOM()")).limit(question_count).all()
         else:
             # Mevcut examlardan geliyorsa, rastgele sorular al (status bağımsız, soru havuzundan)
+            from sqlalchemy import text
             questions = db.query(ExamQuestion).filter(
                 ExamQuestion.exam_section_id == exam_data.exam_section_id,
                 ExamQuestion.is_active == True
@@ -1197,7 +1448,6 @@ class ExamAgent(BaseAgent):
         
         # Performance analysis var mı kontrol et
         # Son 7 gün içinde aynı kullanıcı için benzer skorlarda analiz var mı bak
-        from datetime import datetime, timedelta
         week_ago = datetime.now() - timedelta(days=7)
         
         performance_analysis = db.query(PerformanceAnalysis).filter(
@@ -1588,7 +1838,7 @@ class ExamAgent(BaseAgent):
         return result
     
     def get_practice_exam_questions(self, db: Session, exam_id: int, user_id: int = None, include_answers: bool = False) -> List[Dict]:
-        """Belirli bir sınavın sorularını getir"""
+        """Belirli bir sınavın sorularını getir - Force_new için exam-specific sorular"""
         query = db.query(PracticeExam).filter(PracticeExam.id == exam_id)
         
         if user_id:
@@ -1598,15 +1848,29 @@ class ExamAgent(BaseAgent):
         if not exam:
             raise ValueError("Sınav bulunamadı veya erişim izniniz yok")
         
-        # Sınavda kullanılan soruları al
-        # Önce AI soruları, sonra diğerleri
-        questions = db.query(ExamQuestion).filter(
-            ExamQuestion.exam_section_id == exam.exam_section_id,
-            ExamQuestion.is_active == True
-        ).order_by(
-            ExamQuestion.created_by.desc(),  # AI_EXAM_AGENT önce gelsin
-            ExamQuestion.id.asc()
-        ).limit(exam.total_questions).all()
+        # 🔥 ÖNCE: Bu exam ile ilişkilendirilmiş özel soruları kontrol et (force_new için)
+        exam_question_results = db.query(PracticeQuestionResult).filter(
+            PracticeQuestionResult.practice_exam_id == exam_id
+        ).all()
+        
+        if exam_question_results:
+            # Exam ile ilişkilendirilmiş özel soruları kullan
+            question_ids = [qr.question_id for qr in exam_question_results]
+            questions = db.query(ExamQuestion).filter(
+                ExamQuestion.id.in_(question_ids),
+                ExamQuestion.is_active == True
+            ).order_by(ExamQuestion.id.asc()).all()
+            print(f"🎯 get_practice_exam_questions: Exam {exam_id} ile ilişkilendirilmiş {len(questions)} özel soru döndürüldü")
+        else:
+            # Fallback: Genel havuzdan al (eski mantık)
+            questions = db.query(ExamQuestion).filter(
+                ExamQuestion.exam_section_id == exam.exam_section_id,
+                ExamQuestion.is_active == True
+            ).order_by(
+                ExamQuestion.created_by.desc(),  # AI_EXAM_AGENT önce gelsin
+                ExamQuestion.id.asc()
+            ).limit(exam.total_questions).all()
+            print(f"🔄 get_practice_exam_questions: Exam {exam_id} için fallback - genel havuzdan {len(questions)} soru döndürüldü")
         
         result = []
         for i, q in enumerate(questions):
@@ -1875,7 +2139,8 @@ class ExamAgent(BaseAgent):
     # Template sistemi tamamen kaldırıldı - Sadece AI üretimi!
     
     def _get_batch_instructions(self, batch_type: str, count: int, avoid_keywords: set) -> str:
-        """Batch tipine göre farklı soru üretim talimatları"""
+        """Batch tipine göre farklı soru üretim talimatları - Dinamik çeşitlilik"""
+        import random
         
         avoid_instruction = ""
         if avoid_keywords:
@@ -1883,13 +2148,25 @@ class ExamAgent(BaseAgent):
             keywords_str = ", ".join(list(avoid_keywords)[:10])  # İlk 10 kelime
             avoid_instruction = f"\n⚠️ ÖNEMLI: Bu kelimelerle AYNI soruları üretme: {keywords_str}\n"
         
+        # Rastgele çeşitlilik vurguları
+        variety_emphasis = [
+            "🎲 HER SORU FARKLI OLMALI: Aynı kalıpları, benzer ifadeleri kullanmayın!",
+            "🌟 ÖZGÜNLÜK ZORUNLU: Monotonluk yasak, her soru unique!",
+            "🚀 YARATICI OLUN: Standart soru formatlarından kaçının!",
+            "💎 BENZERSİZLİK: Her soru yepyeni bir yaklaşım!",
+            "🔥 ÇEŞİTLİLİK: Repetisyon yasak, inovasyon şart!"
+        ]
+        
+        random_emphasis = random.choice(variety_emphasis)
+        
         if batch_type == "first_half":
             return (
                 f"🎯 BU İLK PARÇA: {count} soru - TEMEL VE ORTA SEVİYE odaklı\n"
                 "ZORLUK DAĞILIMI: Çoğunlukla zorluk 1-2, az sayıda zorluk 3\n"
                 "SORU TİPLERİ: Temel kavram soruları, standart formül uygulamaları, basit hesaplamalar\n"
                 "YAKLAŞIM: Tanım soruları, doğrudan hesap, temel analiz, kolay örnekler\n"
-                "ANAHTAR KELİMELER: basit, temel, direkt, kolay, standart, normal"
+                "ANAHTAR KELİMELER: basit, temel, direkt, kolay, standart, normal\n"
+                f"{random_emphasis}"
                 f"{avoid_instruction}"
             )
         elif batch_type == "second_half":
@@ -1898,7 +2175,8 @@ class ExamAgent(BaseAgent):
                 "ZORLUK DAĞILIMI: Çoğunlukla zorluk 2-3, az sayıda zorluk 1\n"  
                 "SORU TİPLERİ: Karmaşık analiz, çok aşamalı çözüm, eleştirel düşünme\n"
                 "YAKLAŞIM: Sentez soruları, problem çözme, derinlemesine analiz, karşılaştırma\n"
-                "ANAHTAR KELİMELER: karmaşık, detaylı, analiz, sentez, ileri, zorlu"
+                "ANAHTAR KELİMELER: karmaşık, detaylı, analiz, sentez, ileri, zorlu\n"
+                f"{random_emphasis}"
                 f"{avoid_instruction}"
             )
         else:  # single
@@ -1906,7 +2184,8 @@ class ExamAgent(BaseAgent):
                 f"🎯 TEK PARÇA ÜRETIM: {count} soru - DENGELİ DAĞILIM\n"
                 "ZORLUK DAĞILIMI: Eşit oranda zorluk 1, 2, 3\n"
                 "SORU TİPLERİ: Çeşitli zorluk seviyelerinde kapsamlı soru seti\n"
-                "YAKLAŞIM: Temel'den ileri seviyeye dengeli dağılım"
+                "YAKLAŞIM: Temel'den ileri seviyeye dengeli dağılım\n"
+                f"{random_emphasis}"
                 f"{avoid_instruction}"
             )
     

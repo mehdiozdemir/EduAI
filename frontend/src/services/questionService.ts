@@ -27,6 +27,23 @@ export class QuestionService extends BaseApiService {
   }
 
   /**
+   * Store question result to memory for AI guidance
+   */
+  async storeQuestionResult(params: {
+    question: string;
+    user_answer: string;
+    correct_answer: string;
+    is_correct: boolean;
+    subject: string;
+    topic: string;
+    difficulty?: string;
+    education_level?: string;
+  }): Promise<{ status: string; message: string }> {
+    const response = await this.post<{ status: string; message: string }>('/questions/store-result', params);
+    return response;
+  }
+
+  /**
    * Batch evaluate multiple answers
    */
   async evaluateAnswers(requests: EvaluateRequest[]): Promise<AnswerEvaluation[]> {

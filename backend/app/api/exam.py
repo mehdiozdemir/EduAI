@@ -164,7 +164,8 @@ async def submit_practice_exam(
         parallel_result = await parallel_agent_service.process_exam_results_parallel(
             db=db,
             exam_id=exam_id,
-            user_id=current_user.id
+            user_id=current_user.id,
+            exam_result=result
         )
         
         # Sonuçları birleştir
@@ -174,35 +175,45 @@ async def submit_practice_exam(
             # Analiz sonucunu ekle
             if "analysis_agent" in parallel_results:
                 analysis_data = parallel_results["analysis_agent"]
-                analysis_result = analysis_data.get("data", {}) if analysis_data.get("status") == "success" else {}
+                if analysis_data.get("status") == "success":
+                    # Nested data structure'ı düzelt
+                    analysis_raw = analysis_data.get("data", {})
+                    if "data" in analysis_raw:
+                        analysis_result = analysis_raw["data"]  # Inner data'yı al
+                    else:
+                        analysis_result = analysis_raw
+                    
+                    # Debug log
+                    print(f"🔍 Analysis result being sent to frontend: {analysis_result}")
+                else:
+                    analysis_result = {}
                 
                 # YouTube önerilerini analiz verisine ekle
                 if "youtube_agent" in parallel_results:
                     youtube_data = parallel_results["youtube_agent"]
                     if youtube_data.get("status") == "success":
-                        analysis_result["youtube_recommendations"] = youtube_data.get("data", {})
+                        youtube_raw = youtube_data.get("data", {})
+                        if "data" in youtube_raw:
+                            analysis_result["youtube_recommendations"] = youtube_raw["data"]
+                        else:
+                            analysis_result["youtube_recommendations"] = youtube_raw
                 
                 # Kitap önerilerini analiz verisine ekle
                 if "book_agent" in parallel_results:
                     book_data = parallel_results["book_agent"]
                     if book_data.get("status") == "success":
-                        analysis_result["book_recommendations"] = book_data.get("data", {})
+                        book_raw = book_data.get("data", {})
+                        if "data" in book_raw:
+                            analysis_result["book_recommendations"] = book_raw["data"]
+                        else:
+                            analysis_result["book_recommendations"] = book_raw
                 
                 result["analysis"] = analysis_result
                 result["analysis_status"] = analysis_data.get("status", "error")
                 if analysis_data.get("status") == "error":
                     result["analysis_error"] = analysis_data.get("error", "Bilinmeyen hata")
             
-            # Ayrıca backward compatibility için ayrı alanlar da ekle
-            if "youtube_agent" in parallel_results:
-                youtube_data = parallel_results["youtube_agent"]
-                result["youtube_recommendations"] = youtube_data.get("data", {}) if youtube_data.get("status") == "success" else None
-                result["youtube_status"] = youtube_data.get("status", "error")
-            
-            if "book_agent" in parallel_results:
-                book_data = parallel_results["book_agent"]
-                result["book_recommendations"] = book_data.get("data", {}) if book_data.get("status") == "success" else None
-                result["book_status"] = book_data.get("status", "error")
+            # NOT: Backward compatibility alanları kaldırıldı - sadece analysis içinde tutuluyor
             
             # Önerileri database'e kaydet
             await save_recommendations_to_db(db, current_user.id, parallel_results, result)
@@ -279,18 +290,7 @@ async def get_exam_results(
                             result["analysis"] = analysis_result.get("data", {})
                             result["analysis_status"] = "success"
                     
-                    # YouTube ve Book önerilerini ekle
-                    if "youtube_agent" in results:
-                        youtube_data = results["youtube_agent"]
-                        if youtube_data.get("status") == "success":
-                            result["youtube_recommendations"] = youtube_data.get("data", {})
-                            result["youtube_status"] = "success"
-                    
-                    if "book_agent" in results:
-                        book_data = results["book_agent"]
-                        if book_data.get("status") == "success":
-                            result["book_recommendations"] = book_data.get("data", {})
-                            result["book_status"] = "success"
+                    # YouTube ve Book önerileri zaten analysis objesinde mevcut
                     
                     # Parallel processing info ekle
                     if any(key in results for key in ["analysis_agent", "youtube_agent", "book_agent"]):

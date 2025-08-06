@@ -130,7 +130,10 @@ class AnalysisAgent(BaseAgent):
         prompt_template = ChatPromptTemplate.from_messages([
             ("system", """Sen bir yapay zeka destekli eğitim uzmanısın. 
             Öğrencinin mevcut performansını analiz ederken, geçmiş öğrenme verilerini de dikkate alıyorsun.
-            Kişiselleştirilmiş ve gelişime odaklı analizler yapıyorsun."""),
+            Kişiselleştirilmiş ve gelişime odaklı analizler yapıyorsun.
+            
+            ÖNEMLİ: Zayıf konuları belirlerken mümkün olduğunca spesifik ve detaylı konu adları kullan.
+            Genel kategoriler yerine (örn: "Temel Matematik") spesifik konuları tercih et (örn: "İkinci Derece Denklemler", "Mutlak Değer", "Fonksiyon Türleri")."""),
             ("human", """
 Öğrenci performansını kişiselleştirilmiş şekilde analiz et:
 
@@ -155,7 +158,9 @@ Detaylı Sorular ve Cevaplar:
 Bu verilere dayanarak kişiselleştirilmiş analiz yap:
 
 1. Mevcut zayıflık seviyesini belirle (0-10, 10 en zayıf)
-2. Zayıf ve güçlü konuları tespit et
+2. Zayıf ve güçlü konuları tespit et - SADECE spesifik konu adları kullan:
+   - ✅ DOĞRU: "İkinci Derece Denklemler", "Mutlak Değer", "Trigonometrik Özdeşlikler", "Fonksiyon İşlemleri"
+   - ❌ YANLIŞ: "Temel Matematik", "TYT Matematik", "Genel Konular"
 3. Geçmiş performansla karşılaştırma yap
 4. Kişiselleştirilmiş öneriler sun
 5. Öğrenme trendini değerlendir (gelişiyor/sabit/geriliyor)

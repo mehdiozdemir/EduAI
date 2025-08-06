@@ -81,6 +81,11 @@ const NotFoundPage = React.lazy(() =>
     module => ({ default: module.NotFoundPage })
   )
 );
+const AIGuidancePage = React.lazy(() =>
+  import(/* webpackChunkName: "ai-guidance" */ '../pages/AIGuidancePage').then(
+    module => ({ default: module.default })
+  )
+);
 
 // Wrapper component for lazy loaded routes
 const LazyWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -188,6 +193,14 @@ export const router = createBrowserRouter([
         element: (
           <LazyWrapper>
             <Recommendations />
+          </LazyWrapper>
+        ),
+      },
+      {
+        path: 'ai-guidance',
+        element: (
+          <LazyWrapper>
+            <AIGuidancePage />
           </LazyWrapper>
         ),
       },

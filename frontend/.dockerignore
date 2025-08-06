@@ -1,0 +1,18 @@
+# Docker ignore patterns
+node_modules
+dist
+build
+.git
+.gitignore
+*.md
+Dockerfile*
+docker-compose*
+.dockerignore
+.env*
+.DS_Store
+*.log
+coverage
+.nyc_output
+.eslintcache
+.vscode
+.idea

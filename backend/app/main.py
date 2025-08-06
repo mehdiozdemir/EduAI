@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
-from app.api import users, subjects, performance, agents, auth, exam, education
+from app.api import users, subjects, performance, agents, auth, exam, education, questions, guidance
 from app.admin import routes as admin_routes
 from app.database import engine, Base
 from app.core.config import settings
@@ -50,6 +50,14 @@ app = FastAPI(
         {
             "name": "admin",
             "description": "Admin panel operations. **Requires admin access - login with admin account first!**",
+        },
+        {
+            "name": "questions",
+            "description": "Question generation and evaluation operations.",
+        },
+        {
+            "name": "ai-guidance", 
+            "description": "AI Guidance and personalized recommendations based on memory.",
         },
     ],
     # JWT Bearer token authentication for Swagger
@@ -130,6 +138,8 @@ app.include_router(performance.router, prefix="/api/v1", tags=["performance"])
 app.include_router(agents.router)
 app.include_router(exam.router, prefix="/api/v1", tags=["exams"])
 app.include_router(education.router, prefix="/api/v1", tags=["education"])
+app.include_router(questions.router, prefix="/api/v1", tags=["questions"])
+app.include_router(guidance.router, prefix="/api/v1", tags=["ai-guidance"])
 app.include_router(admin_routes.router, prefix="/api/v1", tags=["admin"])
 
 @app.get("/")
