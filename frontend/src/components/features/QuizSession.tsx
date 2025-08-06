@@ -7,6 +7,7 @@ import Card, { CardHeader, CardTitle, CardContent } from '../ui/Card';
 import Button from '../ui/Button';
 import { Loading } from '../ui/Loading';
 import { questionService } from '../../services/questionService';
+import { aiGuidanceService } from '../../services/aiGuidanceService';
 import { cn } from '../../utils';
 import type { GeneratedQuestion, AnswerEvaluation, QuizResults as QuizResultsType, EvaluateRequest } from '../../types';
 
@@ -14,6 +15,10 @@ interface QuizSessionProps {
   questions: GeneratedQuestion[];
   onComplete: (results: QuizResultsType) => void;
   onExit?: () => void;
+  subject?: string;
+  topic?: string;
+  difficulty?: string;
+  educationLevel?: string;
 }
 
 interface QuestionState {
@@ -26,7 +31,11 @@ interface QuestionState {
 const QuizSession: React.FC<QuizSessionProps> = ({
   questions,
   onComplete,
-  onExit
+  onExit,
+  subject = "Genel",
+  topic = "Karma",
+  difficulty = "orta",
+  educationLevel = "lise"
 }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questionStates, setQuestionStates] = useState<QuestionState[]>(() =>
@@ -86,6 +95,23 @@ const QuizSession: React.FC<QuizSessionProps> = ({
       ));
 
       setShowResult(true);
+
+      // Store question result to memory for AI guidance
+      try {
+        await aiGuidanceService.storeQuestionResult({
+          question: currentQuestion.question.content,
+          user_answer: answer,
+          correct_answer: currentQuestion.question.correct_answer,
+          is_correct: evaluation.is_correct,
+          subject,
+          topic,
+          difficulty,
+          education_level: educationLevel
+        });
+      } catch (memoryError) {
+        console.error('Error storing question result to memory:', memoryError);
+        // Don't block the quiz flow if memory storage fails
+      }
 
       // Show success/failure toast notification
       if (evaluation.is_correct) {

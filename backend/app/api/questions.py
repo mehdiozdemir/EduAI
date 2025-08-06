@@ -4,6 +4,9 @@ from app import schemas, models
 from app.database import get_db
 # from app.core.langchain_integration import langchain_integration  # Removed
 from app.agents.question_agent import QuestionAgent
+from app.core.auth_deps import get_current_user
+from app.models.user import User
+from app.services.ai_guidance_service import ai_guidance_service
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -12,6 +15,17 @@ class EvaluateRequest(BaseModel):
     question: str
     correct_answer: str
     user_answer: str
+
+# Question result model for memory storage
+class QuestionResultRequest(BaseModel):
+    question: str
+    user_answer: str
+    correct_answer: str
+    is_correct: bool
+    subject: str
+    topic: str
+    difficulty: Optional[str] = "orta"
+    education_level: Optional[str] = "lise"
 
 router = APIRouter(
     prefix="/questions",
@@ -102,4 +116,40 @@ async def evaluate_answer(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error evaluating answer: {str(e)}"
+        )
+
+@router.post("/store-result", response_model=dict)
+async def store_question_result(
+    request: QuestionResultRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Soru çözüm sonucunu memory'e kaydet
+    """
+    try:
+        question_data = {
+            "question": request.question,
+            "correct_answer": request.correct_answer,
+            "difficulty": request.difficulty,
+            "education_level": request.education_level
+        }
+        
+        await ai_guidance_service.store_question_result(
+            user_id=str(current_user.id),
+            question_data=question_data,
+            user_answer=request.user_answer,
+            is_correct=request.is_correct,
+            subject=request.subject,
+            topic=request.topic
+        )
+        
+        return {
+            "status": "success",
+            "message": "Soru sonucu başarıyla memory'e kaydedildi"
+        }
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Soru sonucu kaydedilemedi: {str(e)}"
         )

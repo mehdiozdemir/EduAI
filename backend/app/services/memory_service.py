@@ -59,7 +59,7 @@ class PersonalizedMemoryService:
             "llm": {
                 "provider": "gemini",
                 "config": {
-                    "model": "gemini-2.0-flash-001",
+                    "model": "gemini-2.0-flash",
                     "api_key": api_key,
                     "temperature": 0.2,
                     "max_tokens": 2000,
@@ -69,7 +69,7 @@ class PersonalizedMemoryService:
             "embedder": {
                 "provider": "gemini",
                 "config": {
-                    "model": "text-embedding-004",
+                    "model": "models/text-embedding-004",
                     "api_key": api_key
                 }
             },
@@ -77,10 +77,15 @@ class PersonalizedMemoryService:
         }
         
         try:
-            self.memory = Memory.from_config(self.config)
-            logger.info("Mem0 Memory initialized successfully with Gemini")
+            # Memory'yi lazy loading ile initialize et
+            self.memory = Memory.from_config(self.config) if MEM0_AVAILABLE else None
+            if self.memory:
+                logger.info("Mem0 Memory initialized successfully with Gemini")
+            else:
+                logger.warning("Mem0 not available, memory features disabled")
         except Exception as e:
             logger.error(f"Failed to initialize Mem0 Memory: {e}")
+            logger.warning("Memory features will be disabled")
             self.memory = None
     
     def health_check(self) -> Dict[str, Any]:
@@ -345,7 +350,39 @@ class PersonalizedMemoryService:
                 "personalization_score": 0.0,
                 "memory_count": 0
             }
-
+    
+    async def generate_ai_response(self, prompt: str) -> Optional[str]:
+        """
+        Question agent ile AI yanıt oluştur
+        """
+        try:
+            # Question agent'ı kullan (concrete implementation)
+            from app.agents.question_agent import QuestionAgent
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            from app.core.config import settings
+            
+            # Direkt ChatGoogleGenerativeAI kullan
+            llm = ChatGoogleGenerativeAI(
+                model="gemini-2.0-flash",
+                google_api_key=settings.GEMINI_API_KEY,
+                temperature=0.7
+            )
+            
+            # Prompt'u invoke et
+            response = await llm.ainvoke(prompt)
+            
+            if response and hasattr(response, 'content'):
+                return response.content
+            elif isinstance(response, str):
+                return response
+            else:
+                logger.warning("No valid response generated from AI model")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error generating AI response: {e}")
+            return None
+    
     def _normalize_memory_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Ensure every memory record has a `memory` key that contains the text content so that
         downstream agents can rely on it safely, regardless of Mem0's exact output schema."""

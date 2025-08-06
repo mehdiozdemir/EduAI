@@ -24,17 +24,17 @@ class BookAgent(BaseAgent):
         # Tavily search tool – ensure API key is supplied
         from app.core.config import settings
 
-        if not settings.TAVILY_API_KEY:
-            raise ValueError(
-                "TAVILY_API_KEY is not set. Add it to your .env or environment variables "
-                "so BookAgent can perform web searches."
+        self._api_key_available = bool(settings.TAVILY_API_KEY)
+        
+        if self._api_key_available:
+            self._search_tool = TavilySearch(
+                max_results=35,  # Daha fazla sonuç al
+                topic="general",
+                tavily_api_key=settings.TAVILY_API_KEY,
             )
-
-        self._search_tool = TavilySearch(
-            max_results=35,  # Daha fazla sonuç al
-            topic="general",
-            tavily_api_key=settings.TAVILY_API_KEY,
-        )
+        else:
+            print("⚠️ TAVILY_API_KEY bulunamadı. BookAgent mock modda çalışacak.")
+            self._search_tool = None
 
     async def process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Return book recommendations structured as BookRecommendationList.
@@ -49,6 +49,10 @@ class BookAgent(BaseAgent):
         education_level: str = input_data.get("education_level", "lise")
 
         try:
+            # API key yoksa mock data döndür
+            if not self._api_key_available:
+                return self._get_mock_book_recommendations(weak_topics, education_level)
+            
             # -----------------------------
             # 1. Build multiple search queries for better coverage
             # -----------------------------

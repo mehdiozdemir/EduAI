@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Loading } from '../components/ui/Loading';
 import { useErrorHandler } from '../components/ui/ErrorBoundaryProvider';
 import { educationService } from '../services/educationService';
+import QuizResultSaver from '../components/features/QuizResultSaver';
 
 interface QuizQuestion {
   question: string;
@@ -334,6 +335,15 @@ export const QuizPage: React.FC = () => {
               </p>
             </div>
           </div>
+
+          {/* Quiz Result Saver */}
+          <QuizResultSaver 
+            subjectName={quizData.course.name}
+            topicName={quizData.topics?.map(t => t.name).join(', ') || 'Karma'}
+            totalQuestions={results.total}
+            correctAnswers={results.score}
+            accuracy={results.percentage}
+          />
 
           {/* Detailed Results */}
           <div className="bg-white rounded-lg shadow-sm border">

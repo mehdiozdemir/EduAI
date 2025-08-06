@@ -381,6 +381,92 @@ export class PerformanceService extends BaseApiService {
   }> {
     return await this.get(`${this.baseUrl}/performance/recommendations/stats`);
   }
+
+  /**
+   * Get exam performance data
+   */
+  async getExamPerformanceData(
+    userId?: number,
+    params?: {
+      skip?: number;
+      limit?: number;
+      exam_type_id?: number;
+      exam_section_id?: number;
+      date_from?: string;
+      date_to?: string;
+    }
+  ): Promise<Array<{
+    id: number;
+    name: string;
+    exam_type_name: string;
+    exam_section_name: string;
+    score: number;
+    correct_answers: number;
+    wrong_answers: number;
+    empty_answers: number;
+    total_questions: number;
+    duration_minutes?: number;
+    created_at: string;
+    status: string;
+  }>> {
+    const queryParams = new URLSearchParams();
+
+    if (userId) {
+      queryParams.append('user_id', userId.toString());
+    }
+    if (params?.skip) {
+      queryParams.append('skip', params.skip.toString());
+    }
+    if (params?.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
+    if (params?.exam_type_id) {
+      queryParams.append('exam_type_id', params.exam_type_id.toString());
+    }
+    if (params?.exam_section_id) {
+      queryParams.append('exam_section_id', params.exam_section_id.toString());
+    }
+    if (params?.date_from) {
+      queryParams.append('date_from', params.date_from);
+    }
+    if (params?.date_to) {
+      queryParams.append('date_to', params.date_to);
+    }
+
+    const url = `${this.baseUrl}/user/practice-exams${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return await this.get(url);
+  }
+
+  /**
+   * Get exam performance statistics
+   */
+  async getExamStatistics(userId?: number): Promise<{
+    total_exams: number;
+    completed_exams: number;
+    average_score: number;
+    best_score: number;
+    recent_exams: Array<{
+      id: number;
+      name: string;
+      score: number;
+      created_at: string;
+    }>;
+    performance_by_type: {
+      [key: string]: {
+        exam_count: number;
+        average_score: number;
+      };
+    };
+  }> {
+    const queryParams = new URLSearchParams();
+
+    if (userId) {
+      queryParams.append('user_id', userId.toString());
+    }
+
+    const url = `${this.baseUrl}/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return await this.get(url);
+  }
 }
 
 // Create and export singleton instance
