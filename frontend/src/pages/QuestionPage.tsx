@@ -80,7 +80,6 @@ export const QuestionPage: React.FC = () => {
 
   const handleQuizComplete = (results: QuizResults) => {
     // Here you could save the results to the backend
-    console.log('Quiz completed:', results);
     
     // For now, just reset to generator
     setPageState('generator');

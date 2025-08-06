@@ -132,7 +132,6 @@ export class PerformanceService extends BaseApiService {
       throw new Error('User ID is required for dashboard data');
     }
 
-    console.log('PerformanceService.getDashboardData called with userId:', userId);
     try {
       const result = await this.get(`${this.baseUrl}/performance/dashboard/${userId}`) as {
         overall_stats: {
@@ -155,7 +154,6 @@ export class PerformanceService extends BaseApiService {
         }>;
         progress_chart: PerformanceData[];
       };
-      console.log('PerformanceService.getDashboardData response:', result);
       return result;
     } catch (error) {
       console.error('PerformanceService.getDashboardData error:', error);
@@ -579,8 +577,6 @@ class PerformanceMonitor {
     renderFn();
     const endTime = performance.now();
     
-    console.log(`${componentName} render time: ${endTime - startTime}ms`);
-    
     // Send to analytics service if needed
     this.sendMetric('component-render', {
       component: componentName,
@@ -628,14 +624,12 @@ class PerformanceMonitor {
   private sendMetric(type: string, data: Record<string, unknown>) {
     // Send to analytics service
     if (process.env.NODE_ENV === 'production') {
-      // Example: send to analytics service
-      console.log(`Performance metric [${type}]:`, data);
-      
       // You could send to services like:
       // - Google Analytics
-      // - DataDog
+      // - DataDog  
       // - New Relic
       // - Custom analytics endpoint
+      // Example: analytics.track(type, data);
     }
   }
 

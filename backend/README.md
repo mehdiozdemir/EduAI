@@ -1,118 +1,145 @@
 # EduAI Backend
 
-## Project Structure
+Bu, EduAI platformunun backend API'sidir. FastAPI kullanılarak geliştirilmiştir.
 
-````
+## 🚀 Hızlı Başlangıç
+
+### Kurulum
+
+1. Python 3.8+ yüklendiğinden emin olun
+2. Proje dizinine gidin:
+   ```bash
+   cd backend
+   ```
+
+3. Sanal ortam oluşturun ve aktifleştirin:
+   ```bash
+   python -m venv venv
+   # Windows'ta:
+   venv\Scripts\activate
+   # Linux/Mac'te:
+   source venv/bin/activate
+   ```
+
+4. Gerekli paketleri yükleyin:
+   ```bash
+   pip install -e .
+   # veya
+   pip install -r requirements.txt
+   ```
+
+5. Environment dosyasını yapılandırın:
+   ```bash
+   cp .env.example .env
+   # .env dosyasını düzenleyin ve API anahtarlarınızı ekleyin
+   ```
+
+6. Uygulamayı çalıştırın:
+   ```bash
+   python -m app.main
+   # veya
+   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+
+## 👨‍💼 Varsayılan Admin Hesabı
+
+Uygulama ilk çalıştırıldığında otomatik olarak bir admin hesabı oluşturulur:
+
+- **Kullanıcı Adı:** `admin`
+- **E-posta:** `admin@eduai.com`
+- **Şifre:** `admin123` (production'da değiştirin!)
+
+### Admin Şifresini Değiştirme
+
+Admin şifresini değiştirmek için:
+
+1. `.env` dosyasında `DEFAULT_ADMIN_PASSWORD` değerini değiştirin
+2. Veritabanını sıfırlayın (isteğe bağlı):
+   ```bash
+   rm eduai.db
+   ```
+3. Uygulamayı yeniden başlatın
+
+## 📚 API Dokümantasyonu
+
+Uygulama çalışırken API dokümantasyonuna şu adreslerden ulaşabilirsiniz:
+
+- **Swagger UI:** http://localhost:8000/docs
+- **ReDoc:** http://localhost:8000/redoc
+
+### Swagger UI'da Authentication
+
+1. `/auth/login` endpoint'ini kullanarak login olun
+2. "Authorize" butonuna tıklayın
+3. Aldığınız JWT token'ı `Bearer {token}` formatında girin
+4. Artık korumalı endpoint'leri kullanabilirsiniz
+
+## 🏗️ Proje Yapısı
+
+```
 backend/
-│
 ├── app/
-│   ├── api/                  # FastAPI route modules
-│   │   ├── agents.py
-│   │   ├── users.py
-│   │   ├── subjects.py
-│   │   ├── questions.py
-│   │   └── performance.py
-│   │
-│   ├── agents/               # 🤖 LangChain agents (Gemini/Tavily)
-│   │   ├── base_agent.py
-│   │   ├── question_agent.py
-│   │   ├── analysis_agent.py
-│   │   ├── youtube_agent.py
-│   │   ├── book_agent.py
-│   │   └── master_agent.py
-│   │
-│   ├── core/                 # Settings & shared logic
-│   │   ├── config.py
-│   │   └── langchain_integration.py
-│   │
-│   ├── models/               # DB/Pydantic models
-│   ├── schemas/              # Request/response schemas
-│   ├── main.py               # FastAPI application entrypoint
-│   └── database.py           # SQLAlchemy engine & Base
-│
-├── tests/                    # Pytest unit/integration tests (if any)
-├── pyproject.toml            # Poetry/uv metadata & dependencies
-└── README.md                 # (this file)
-````
+│   ├── admin/          # Admin panel routes
+│   ├── api/            # API endpoints
+│   ├── agents/         # AI agents
+│   ├── core/           # Core configuration
+│   ├── models/         # Database models
+│   ├── schemas/        # Pydantic schemas
+│   ├── services/       # Business logic
+│   ├── utils/          # Utility functions
+│   ├── data/           # Static data files
+│   ├── database.py     # Database configuration
+│   └── main.py         # Application entry point
+├── tests/              # Test files
+├── pyproject.toml      # Project configuration
+└── .env.example        # Environment variables template
+```
 
-## Setup
+## 🗄️ Veritabanı
 
-1. Install uv (if not already installed):
-   ```bash
-   # On Windows
-   pip install uv
-   
-   # On macOS and Linux
-   curl -LsSf https://astral.sh/uv/install.sh | sh
-   ```
+Uygulama SQLite kullanır ve aşağıdaki tablolar otomatik oluşturulur:
 
-2. Create a virtual environment and install dependencies:
-   ```bash
-   uv venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   uv pip install -e .
-   ```
+- `users` - Kullanıcı bilgileri
+- `subjects` - Dersler
+- `topics` - Konular
+- `questions` - Sorular
+- `user_answers` - Kullanıcı cevapları
+- `performance_analyses` - Performans analizleri
+- `resource_recommendations` - Kaynak önerileri
+- `education_levels` - Eğitim seviyeleri
+- `exam_types` - Sınav türleri
+- `exam_sections` - Sınav bölümleri
+- `practice_exams` - Deneme sınavları
 
-3. Create a `.env` file in the backend directory with the following content:
-   ```env
-   # Gemini (Google Generative AI)
-   GEMINI_API_KEY=your_gemini_api_key_here
+### Örnek Veriler
 
-   # Tavily Search (required for BookAgent)
-   TAVILY_API_KEY=your_tavily_api_key_here
+İlk çalıştırmada şu örnek veriler oluşturulur:
 
-   # (Optional) YouTube Data API – for video recommendations
-   YOUTUBE_API_KEY=your_youtube_api_key_here
-   ```
+- Eğitim seviyeleri (İlkokul, Ortaokul, Lise, Üniversite)
+- Temel dersler (Matematik, Türkçe, Fen Bilgisi, Sosyal Bilgiler, İngilizce)
+- Her ders için örnek konular
+- Sınav türleri (LGS, YKS, Genel Deneme)
+- Her sınav türü için bölümler
 
-4. Run the application:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
+## 🔧 Geliştirme
 
-## API Endpoints
+### Yeni API Endpoint Ekleme
 
-### Users
-- `POST /users/` - Create a new user
-- `GET /users/{user_id}` - Get user by ID
-- `PUT /users/{user_id}` - Update user by ID
+1. `app/api/` altında uygun dosyaya route ekleyin
+2. Gerekiyorsa `app/schemas/` altında Pydantic modeli oluşturun
+3. Business logic'i `app/services/` altına ekleyin
+4. `app/main.py`'de router'ı include edin
 
-### Subjects
-- `POST /subjects/` - Create a new subject
-- `GET /subjects/` - Get all subjects
-- `GET /subjects/{subject_id}` - Get subject by ID
-- `POST /subjects/{subject_id}/topics` - Create a new topic for a subject
-- `GET /subjects/{subject_id}/topics` - Get all topics for a subject
+### Yeni Database Modeli Ekleme
 
-### Questions
-- `POST /questions/generate` - Generate a question using LangChain
-- `POST /questions/` - Create a new question
-- `GET /questions/{question_id}` - Get question by ID
-- `POST /questions/evaluate` - Evaluate user's answer using LangChain
+1. `app/models/` altında model dosyası oluşturun
+2. `app/models/__init__.py`'da export edin
+3. Database migration gerekiyorsa Alembic kullanın
 
-### Performance
-- `POST /performance/analyze` - Analyze user performance using LangChain
-- `POST /performance/` - Create a new performance analysis
-- `GET /performance/{analysis_id}` - Get performance analysis by ID
-- `GET /performance/user/{user_id}` - Get all performance analyses for a user
-- `POST /performance/{analysis_id}/recommendations` - Create a new resource recommendation
-- `GET /performance/{analysis_id}/recommendations` - Get all resource recommendations for an analysis
+## 📝 Notlar
 
-### Agents (Orchestration)
-
-- `POST /agents/recommend/books` - Get book recommendations via **BookAgent** (Gemini ✕ Tavily)
-- `POST /agents/recommend/youtube` - Get YouTube video recommendations
-- `POST /agents/process` - MasterAgent entry point (questions, analysis, etc.)
-
-## Database
-
-The application uses SQLite as the database. The database file will be created automatically when the application starts.
-
-## LangChain Integration
-
-The application integrates with Google's Gemini API through LangChain for:
-- Question generation
-- Answer evaluation
-- Performance analysis
-
-Make sure to set the `GEMINI_API_KEY` environment variable with your actual Gemini API key.
+- Production'da mutlaka `.env` dosyasındaki varsayılan değerleri değiştirin
+- API anahtarlarını güvenli bir şekilde saklayın
+- Admin hesabı şifresini değiştirin
+- Database backup'larını düzenli alın
+- CORS ayarlarını production environment'a göre düzenleyin

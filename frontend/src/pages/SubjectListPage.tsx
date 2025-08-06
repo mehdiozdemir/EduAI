@@ -22,11 +22,9 @@ export const SubjectListPage: React.FC = () => {
   const [coursesLoading, setCoursesLoading] = useState(false);
 
   const loadSubjects = async () => {
-    console.log('SubjectListPage.loadSubjects called');
     setLoading(true);
     try {
       const data = await subjectService.getSubjects();
-      console.log('SubjectListPage received data:', data);
       setSubjects(data);
     } catch (error: any) {
       console.error('SubjectListPage error:', error);
@@ -37,10 +35,8 @@ export const SubjectListPage: React.FC = () => {
   };
 
   const loadEducationLevels = async () => {
-    console.log('SubjectListPage.loadEducationLevels called');
     try {
       const data = await educationService.getEducationLevels();
-      console.log('SubjectListPage received education levels:', data);
       setEducationLevels(data);
     } catch (error: any) {
       console.error('SubjectListPage education levels error:', error);
@@ -49,11 +45,9 @@ export const SubjectListPage: React.FC = () => {
   };
 
   const loadCoursesByEducationLevel = async (levelId: number) => {
-    console.log('SubjectListPage.loadCoursesByEducationLevel called with levelId:', levelId);
     setCoursesLoading(true);
     try {
       const data = await educationService.getCoursesByEducationLevel(levelId);
-      console.log('SubjectListPage received courses:', data);
       setCourses(data);
     } catch (error: any) {
       console.error('SubjectListPage courses error:', error);
@@ -65,7 +59,6 @@ export const SubjectListPage: React.FC = () => {
   };
 
   const handleEducationLevelSelect = async (level: EducationLevelName) => {
-    console.log('SubjectListPage.handleEducationLevelSelect called with level:', level);
     setSelectedEducationLevel(level);
     
     // Find the corresponding education level data - case insensitive search
@@ -78,7 +71,6 @@ export const SubjectListPage: React.FC = () => {
       await loadCoursesByEducationLevel(levelData.id);
     } else {
       console.error('Education level data not found for:', level);
-      console.log('Available education levels:', educationLevels.map(el => el.name));
       setSelectedEducationLevelData(null);
       setCourses([]);
     }

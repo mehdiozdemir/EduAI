@@ -47,17 +47,45 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
   // Prepare chart data based on type
   const prepareChartData = () => {
     if (!data || data.length === 0) {
-      return { labels: [], datasets: [] };
+      // Return meaningful empty data for charts
+      if (type === 'doughnut') {
+        return {
+          labels: ['Veri Yok'],
+          datasets: [
+            {
+              label: 'Henüz veri yok',
+              data: [1],
+              backgroundColor: ['#e5e7eb'],
+              borderWidth: 0,
+            },
+          ],
+        };
+      } else {
+        return {
+          labels: ['Veri Yok'],
+          datasets: [
+            {
+              label: 'Henüz veri yok',
+              data: [0],
+              borderColor: '#e5e7eb',
+              backgroundColor: '#f3f4f6',
+              tension: type === 'line' ? 0.4 : undefined,
+              fill: false,
+            },
+          ],
+        };
+      }
     }
 
     if (type === 'doughnut') {
       // For doughnut chart, group by subject and show average accuracy
       const subjectData = data.reduce((acc, item) => {
-        if (!acc[item.subject]) {
-          acc[item.subject] = { total: 0, count: 0 };
+        const subject = item?.subject || 'Bilinmiyor';
+        if (!acc[subject]) {
+          acc[subject] = { total: 0, count: 0 };
         }
-        acc[item.subject].total += item.accuracy;
-        acc[item.subject].count += 1;
+        acc[subject].total += item?.accuracy || 0;
+        acc[subject].count += 1;
         return acc;
       }, {} as Record<string, { total: number; count: number }>);
 
@@ -70,7 +98,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
         labels: subjects,
         datasets: [
           {
-            label: 'Average Accuracy (%)',
+            label: 'Ortalama Doğruluk (%)',
             data: accuracies,
             backgroundColor: [
               '#3b82f6',
@@ -92,8 +120,8 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
     // For line and bar charts, show accuracy over time or by category
     const labels = data.map((item) => {
       // Check if date is a valid date string or just a category label
-      const dateTest = new Date(item.date);
-      const isValidDate = !isNaN(dateTest.getTime());
+      const dateTest = new Date(item?.date || '');
+      const isValidDate = !isNaN(dateTest.getTime()) && item?.date;
       
       if (isValidDate) {
         // If it's a valid date, format it properly
@@ -102,17 +130,18 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
           day: 'numeric',
         });
       } else {
-        // If it's not a date (like subject names), use as is
-        return item.date;
+        // If it's not a date (like subject names), use as is or fallback
+        return item?.date || item?.subject || 'Bilinmiyor';
       }
     });
 
     // Group by subject for multiple datasets
     const subjectGroups = data.reduce((acc, item) => {
-      if (!acc[item.subject]) {
-        acc[item.subject] = [];
+      const subject = item?.subject || 'Bilinmiyor';
+      if (!acc[subject]) {
+        acc[subject] = [];
       }
-      acc[item.subject].push(item);
+      acc[subject].push(item);
       return acc;
     }, {} as Record<string, PerformanceData[]>);
 
@@ -129,7 +158,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
 
     const datasets = Object.keys(subjectGroups).map((subject, index) => ({
       label: subject,
-      data: subjectGroups[subject].map((item) => item.accuracy),
+      data: subjectGroups[subject].map((item) => item?.accuracy || 0),
       borderColor: colors[index % colors.length],
       backgroundColor:
         type === 'bar'
@@ -154,6 +183,12 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
       legend: {
         display: showLegend,
         position: 'top' as const,
+        labels: {
+          filter: function(legendItem: any) {
+            // Don't show legend for empty data
+            return legendItem.text !== 'Henüz veri yok' && legendItem.text !== 'Veri Yok';
+          }
+        }
       },
       title: {
         display: !!title,
@@ -164,6 +199,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
         },
       },
       tooltip: {
+        enabled: data && data.length > 0, // Disable tooltips for empty data
         callbacks: {
           label: (context: any) => {
             if (type === 'doughnut') {
@@ -175,7 +211,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
       },
     },
     scales:
-      type !== 'doughnut'
+      type !== 'doughnut' && data && data.length > 0
         ? {
             y: {
               beginAtZero: true,
@@ -185,13 +221,13 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
               },
               title: {
                 display: true,
-                text: 'Accuracy (%)',
+                text: 'Doğruluk (%)',
               },
             },
             x: {
               title: {
                 display: true,
-                text: 'Date',
+                text: 'Tarih',
               },
             },
           }
@@ -211,15 +247,19 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
     }
   };
 
-  if (!data || data.length === 0) {
+  // Show empty state when data is truly empty (but still render charts with "no data" when there's structure but no content)
+  const shouldShowEmptyState = !data || data.length === 0;
+
+  if (shouldShowEmptyState) {
     return (
       <div
         className={`flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 ${className}`}
         style={{ height }}
       >
         <div className="text-center">
-          <div className="text-gray-400 text-lg mb-2">📊</div>
-          <p className="text-gray-500 text-sm">No performance data available</p>
+          <div className="text-gray-400 text-4xl mb-3">📊</div>
+          <p className="text-gray-600 font-medium mb-1">Henüz veri yok</p>
+          <p className="text-gray-500 text-sm">Quiz çözmeye başladığınızda grafikler burada görünecek</p>
         </div>
       </div>
     );

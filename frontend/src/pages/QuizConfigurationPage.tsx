@@ -160,8 +160,6 @@ export const QuizConfigurationPage: React.FC = () => {
         questionCount: state.questionCount
       };
 
-      console.log('Quiz configuration:', quizConfig);
-
       // Clear navigation states as we're moving to quiz
       clearNavigationState('QUIZ_CONFIG_STATE');
       clearNavigationState('TOPIC_SELECTION_STATE');

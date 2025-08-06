@@ -62,19 +62,11 @@ const PracticeExamSelectionPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      console.log('🚀 Starting exam with params:', {
-        exam_section_id: selectedSection.id,
-        use_existing: !forceNew,
-        force_new: forceNew
-      });
-
       const result = await examService.startPracticeExam(
         { exam_section_id: selectedSection.id },
         !forceNew, // use_existing: mevcut sınavları kullan (force_new'in tersi)
         forceNew   // force_new: yeni sınav zorla üret
       );
-
-      console.log('✅ Exam started:', result);
 
       // Navigate to the exam page
       navigate(`/app/practice-exam/${result.exam_id}`, {

@@ -33,8 +33,6 @@ export class AuthService extends BaseApiService {
       // Store user data
       this.currentUser = response.user;
       
-      console.log('Login successful for user:', response.user);
-      
       return response.user;
     } catch (error: any) {
       // Handle specific error messages from backend
@@ -121,7 +119,6 @@ export class AuthService extends BaseApiService {
   async getProfile(): Promise<User> {
     try {
       const user = await this.get<User>('/auth/me');
-      console.log('Profile fetched for user:', user);
       this.currentUser = user;
       return user;
     } catch (error: any) {

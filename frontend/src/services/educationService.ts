@@ -20,7 +20,6 @@ export class EducationService extends BaseApiService {
    * Get all education levels
    */
   async getEducationLevels(params?: PaginationParams): Promise<EducationLevelData[]> {
-    console.log('EducationService.getEducationLevels called with params:', params);
     const queryParams = new URLSearchParams();
     
     if (params?.page) {
@@ -31,11 +30,9 @@ export class EducationService extends BaseApiService {
     }
 
     const url = `/api/v1/education-levels${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    console.log('Making API request to:', url);
     
     try {
       const response = await this.get<EducationLevelData[]>(url);
-      console.log('API response received:', response);
       return response;
     } catch (error) {
       console.error('Error in getEducationLevels:', error);
@@ -61,11 +58,8 @@ export class EducationService extends BaseApiService {
    * Get courses by education level
    */
   async getCoursesByEducationLevel(levelId: number): Promise<Course[]> {
-    console.log('EducationService.getCoursesByEducationLevel called with levelId:', levelId);
-    
     try {
       const response = await this.get<Course[]>(`/api/v1/education-levels/${levelId}/courses`);
-      console.log('API response received:', response);
       return response;
     } catch (error) {
       console.error('Error in getCoursesByEducationLevel:', error);

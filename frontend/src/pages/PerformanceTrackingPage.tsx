@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loading } from '../components/ui/Loading';
 import { useErrorHandler } from '../components/ui/ErrorBoundaryProvider';
 import { educationService } from '../services/educationService';
+import { examService } from '../services/examService';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -46,6 +47,7 @@ interface QuizResult {
 }
 
 interface PerformanceStats {
+  // Quiz stats
   total_quizzes: number;
   average_percentage: number;
   best_percentage: number;
@@ -55,6 +57,12 @@ interface PerformanceStats {
   total_blank: number;
   favorite_difficulty: string;
   most_studied_course: string;
+  
+  // Exam stats
+  total_exams: number;
+  exam_average_score: number;
+  exam_best_score: number;
+  completed_exams: number;
 }
 
 export const PerformanceTrackingPage: React.FC = () => {
@@ -75,16 +83,26 @@ export const PerformanceTrackingPage: React.FC = () => {
     try {
       setLoading(true);
       
-      const [resultsResponse, statsResponse] = await Promise.all([
+      const [resultsResponse, statsResponse, examStatsResponse] = await Promise.all([
         educationService.getQuizResults({
           difficulty: selectedFilter === 'all' ? undefined : selectedFilter,
           course_id: selectedCourse || undefined
         }),
-        educationService.getPerformanceStats()
+        educationService.getPerformanceStats(),
+        examService.getExamStatistics()
       ]);
       
+      // Combine quiz and exam stats
+      const combinedStats = {
+        ...statsResponse,
+        total_exams: examStatsResponse.total_exams || 0,
+        exam_average_score: examStatsResponse.average_score || 0,
+        exam_best_score: examStatsResponse.max_score || 0,
+        completed_exams: examStatsResponse.completed_exams || 0,
+      };
+      
       setQuizResults(resultsResponse);
-      setPerformanceStats(statsResponse);
+      setPerformanceStats(combinedStats);
     } catch (error: any) {
       console.error('Performance data loading error:', error);
       handleError(error);
@@ -244,7 +262,7 @@ export const PerformanceTrackingPage: React.FC = () => {
               <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 📊 Performans Takibi
               </h1>
-              <p className="text-gray-600 mt-1">Sınav sonuçlarınızı analiz edin ve gelişiminizi takip edin</p>
+              <p className="text-gray-600 mt-1">Quiz ve sınav sonuçlarınızı analiz edin, gelişiminizi takip edin</p>
             </div>
             <button
               onClick={() => navigate('/app/subjects')}
@@ -320,6 +338,88 @@ export const PerformanceTrackingPage: React.FC = () => {
                   <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                     {performanceStats.total_questions}
                   </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Exam Performance Stats */}
+        {performanceStats && performanceStats.total_exams > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center mb-6">
+              <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg mr-3">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                🎯 Sınav Performansı
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                <div className="flex items-center">
+                  <div className="p-4 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl shadow-lg">
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">📋 Toplam Sınav</p>
+                    <p className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                      {performanceStats.total_exams}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                <div className="flex items-center">
+                  <div className="p-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl shadow-lg">
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">✅ Tamamlanan</p>
+                    <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                      {performanceStats.completed_exams}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                <div className="flex items-center">
+                  <div className="p-4 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl shadow-lg">
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">📊 Ortalama Puan</p>
+                    <p className="text-3xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                      {performanceStats.exam_average_score.toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                <div className="flex items-center">
+                  <div className="p-4 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl shadow-lg">
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                    </svg>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">🏆 En İyi Puan</p>
+                    <p className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                      {performanceStats.exam_best_score.toFixed(1)}%
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
+    # Default Admin User
+    DEFAULT_ADMIN_PASSWORD: str = "admin123"
+    
     # CORS
     BACKEND_CORS_ORIGINS: list = ["*"]
     

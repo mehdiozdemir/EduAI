@@ -5,13 +5,26 @@ from app.api import users, subjects, performance, agents, auth, exam, education,
 from app.admin import routes as admin_routes
 from app.database import engine, Base
 from app.core.config import settings
+from app.utils.startup import initialize_application
 import asyncio
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Set timeout for long-running operations
 asyncio.get_event_loop().set_debug(True)
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
+
+# Initialize application with default data
+try:
+    initialize_application()
+except Exception as e:
+    logger.error(f"Failed to initialize application: {str(e)}")
+    # Continue anyway - the app can still work without sample data
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

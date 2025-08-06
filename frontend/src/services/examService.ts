@@ -169,10 +169,12 @@ class ExamService {
   async getExamStatistics(): Promise<{
     total_exams: number;
     completed_exams: number;
+    in_progress_exams: number;
+    cancelled_exams: number;
+    completion_rate: number;
     average_score: number;
-    best_score: number;
-    recent_exams: PracticeExam[];
-    performance_by_type: any;
+    max_score: number;
+    exam_type_statistics: any;
   }> {
     const response = await apiClient.get(`${this.baseUrl}/statistics`);
     return response.data;

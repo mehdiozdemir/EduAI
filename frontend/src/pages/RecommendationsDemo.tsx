@@ -77,24 +77,16 @@ const RecommendationsDemo: React.FC = () => {
   // });
 
   const handleResourceClick = (url: string) => {
-    console.log('Opening resource:', url);
     // Custom handling for resource clicks
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleRate = async (recommendationId: number, rating: number) => {
-    console.log(
-      'Rating recommendation:',
-      recommendationId,
-      'with rating:',
-      rating
-    );
     // In real app, this would call the API
     alert(`Kaynak ${recommendationId} için ${rating} yıldız verdiniz!`);
   };
 
   const handleMarkUsed = async (recommendationId: number) => {
-    console.log('Marking recommendation as used:', recommendationId);
     // In real app, this would call the API
   };
 

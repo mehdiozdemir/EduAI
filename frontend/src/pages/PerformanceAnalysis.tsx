@@ -21,16 +21,11 @@ interface FilterParams {
 
 export const PerformanceAnalysisPage: React.FC = () => {
   const { user } = useAuth();
-  const [performanceData, setPerformanceData] = useState<PerformanceAnalysis[]>([]);
-  const [trendsData, setTrendsData] = useState<PerformanceData[]>([]);
-  const [examData, setExamData] = useState<any[]>([]);
-  const [examStats, setExamStats] = useState<any>({});
   const [quizResults, setQuizResults] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'exams'>('general');
   const [filters, setFilters] = useState<FilterParams>({});
   const [sortParams, setSortParams] = useState<SortParams>({
     sort_by: 'created_at',
@@ -52,6 +47,11 @@ export const PerformanceAnalysisPage: React.FC = () => {
     };
   }>({});
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+
+  // Simplified: keep only quiz results section
+  const activeTab: string = 'exams'; // Constant tab
+  const performanceData: any[] = []; // Placeholder to satisfy references
+  const trendsData: any[] = []; // Placeholder to satisfy references
 
   useEffect(() => {
     const fetchData = async () => {
@@ -78,42 +78,10 @@ export const PerformanceAnalysisPage: React.FC = () => {
           }
         }
 
-        if (activeTab === 'general') {
-          // Fetch general performance data
-          const performanceParams = {
-            ...filters,
-            ...sortParams,
-            ...pagination,
-          };
-          const performance = await performanceService.getUserPerformance(user?.id, performanceParams);
-          setPerformanceData(performance);
-
-          // Fetch trends data
-          const trends = await performanceService.getPerformanceTrends(user?.id, {
-            period: timePeriod,
-            subject_id: filters.subject_id,
-            topic_id: filters.topic_id,
-          });
-          setTrendsData(trends);
-        } else {
-          // Fetch exam performance data
-          const examPerformanceData = await performanceService.getExamPerformanceData(user?.id, {
-            skip: (pagination.page - 1) * pagination.per_page,
-            limit: pagination.per_page,
-            date_from: filters.date_from,
-            date_to: filters.date_to,
-          });
-          setExamData(examPerformanceData);
-
-          // Fetch exam statistics
-          const statistics = await performanceService.getExamStatistics(user?.id);
-          setExamStats(statistics);
-        }
-
-        // Fetch quiz results for both tabs
+        // Fetch quiz results
         const quizResultsData = await educationService.getQuizResults({
-          skip: 0,
-          limit: 50,
+          skip: (pagination.page - 1) * pagination.per_page,
+          limit: pagination.per_page,
           course_id: filters.subject_id,
         });
         setQuizResults(quizResultsData);
@@ -129,7 +97,7 @@ export const PerformanceAnalysisPage: React.FC = () => {
     if (user) {
       fetchData();
     }
-  }, [user, filters, sortParams, pagination, timePeriod, activeTab]);
+  }, [user, filters, sortParams, pagination, timePeriod]);
 
   const handleFilterChange = (key: keyof FilterParams, value: string | number | undefined) => {
     setFilters(prev => ({
@@ -545,167 +513,72 @@ export const PerformanceAnalysisPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Performance Type Tabs */}
-          <div className="flex space-x-1 bg-gray-100/50 backdrop-blur-sm rounded-xl p-2">
-            <button
-              onClick={() => setActiveTab('general')}
-              className={`flex-1 px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
-                activeTab === 'general'
-                  ? 'bg-white shadow-md text-blue-600 transform scale-105'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-white/50'
-              }`}
-            >
-              <div className="flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 mr-2" />
-                Genel Performans
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('exams')}
-              className={`flex-1 px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
-                activeTab === 'exams'
-                  ? 'bg-white shadow-md text-blue-600 transform scale-105'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-white/50'
-              }`}
-            >
-              <div className="flex items-center justify-center">
-                <Award className="w-5 h-5 mr-2" />
-                Quiz Sonuçları
-              </div>
-            </button>
-          </div>
+
         </div>
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {activeTab === 'general' ? (
-            <>
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <div className="flex items-center">
-                  <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg">
-                    <BarChart3 className="w-8 h-8 text-white" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">📚 Toplam Analiz</p>
-                    <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                      {performanceData.length}
-                    </p>
-                  </div>
-                </div>
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+            <div className="flex items-center">
+              <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg">
+                <BookOpen className="w-8 h-8 text-white" />
               </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">📋 Toplam Quiz</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  {quizResults.length || 0}
+                </p>
+              </div>
+            </div>
+          </div>
 
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <div className="flex items-center">
-                  <div className="p-4 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg">
-                    <Award className="w-8 h-8 text-white" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">🎯 Ortalama Başarı</p>
-                    <p className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                      {performanceData.length > 0 
-                        ? (performanceData.reduce((sum, p) => sum + p.accuracy, 0) / performanceData.length).toFixed(1)
-                        : 0
-                      }%
-                    </p>
-                  </div>
-                </div>
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+            <div className="flex items-center">
+              <div className="p-4 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg">
+                <Award className="w-8 h-8 text-white" />
               </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">🏆 Ortalama Başarı</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                  {quizResults.length > 0 
+                    ? (quizResults.reduce((sum, q) => sum + (q.percentage || 0), 0) / quizResults.length).toFixed(1)
+                    : '0.0'
+                  }%
+                </p>
+              </div>
+            </div>
+          </div>
 
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <div className="flex items-center">
-                  <div className="p-4 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-lg">
-                    <User className="w-8 h-8 text-white" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">👤 Aktif Kullanıcı</p>
-                    <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                      {user?.first_name || 'Kullanıcı'}
-                    </p>
-                  </div>
-                </div>
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+            <div className="flex items-center">
+              <div className="p-4 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-lg">
+                <Star className="w-8 h-8 text-white" />
               </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">⭐ En Yüksek Skor</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  {quizResults.length > 0 
+                    ? Math.max(...quizResults.map(q => q.percentage || 0)).toFixed(1)
+                    : '0.0'
+                  }%
+                </p>
+              </div>
+            </div>
+          </div>
 
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <div className="flex items-center">
-                  <div className="p-4 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl shadow-lg">
-                    <Calendar className="w-8 h-8 text-white" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">📅 Zaman Aralığı</p>
-                    <p className="text-lg font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
-                      {timePeriod === 'week' ? 'Haftalık' : 
-                       timePeriod === 'month' ? 'Aylık' : 
-                       timePeriod === 'quarter' ? '3 Aylık' : 'Yıllık'}
-                    </p>
-                  </div>
-                </div>
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+            <div className="flex items-center">
+              <div className="p-4 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl shadow-lg">
+                <Check className="w-8 h-8 text-white" />
               </div>
-            </>
-          ) : (
-            <>
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <div className="flex items-center">
-                  <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg">
-                    <BookOpen className="w-8 h-8 text-white" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">📋 Toplam Quiz</p>
-                    <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                      {quizResults.length || 0}
-                    </p>
-                  </div>
-                </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">✅ Toplam Doğru</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+                  {quizResults.reduce((sum, q) => sum + (q.correct_answers || 0), 0)}
+                </p>
               </div>
-
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <div className="flex items-center">
-                  <div className="p-4 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg">
-                    <Award className="w-8 h-8 text-white" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">🏆 Ortalama Başarı</p>
-                    <p className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                      {quizResults.length > 0 
-                        ? (quizResults.reduce((sum, q) => sum + (q.percentage || 0), 0) / quizResults.length).toFixed(1)
-                        : '0.0'
-                      }%
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <div className="flex items-center">
-                  <div className="p-4 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-lg">
-                    <Star className="w-8 h-8 text-white" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">⭐ En Yüksek Skor</p>
-                    <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                      {quizResults.length > 0 
-                        ? Math.max(...quizResults.map(q => q.percentage || 0)).toFixed(1)
-                        : '0.0'
-                      }%
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <div className="flex items-center">
-                  <div className="p-4 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl shadow-lg">
-                    <Check className="w-8 h-8 text-white" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">✅ Toplam Doğru</p>
-                    <p className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
-                      {quizResults.reduce((sum, q) => sum + (q.correct_answers || 0), 0)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
+            </div>
+          </div>
         </div>
 
         {/* Filters */}
@@ -849,20 +722,11 @@ export const PerformanceAnalysisPage: React.FC = () => {
               <BarChart3 className="w-7 h-7 text-white" />
             </div>
             <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              📊 {activeTab === 'general' ? 'Performans Trendi' : 'Konu Bazında Performans'}
+              📊 Quiz Sonuçları Performansı
             </h3>
           </div>
           
-          {activeTab === 'general' ? (
-            <PerformanceChart
-              data={trendsData}
-              type={chartType}
-              height={400}
-              showLegend={true}
-              title={`Performance Over Time (${timePeriod})`}
-            />
-          ) : (
-            getQuizChartData().length > 0 ? (
+          {getQuizChartData().length > 0 ? (
               <>
                 <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                   <p className="text-green-700 text-sm">
@@ -898,7 +762,6 @@ export const PerformanceAnalysisPage: React.FC = () => {
                   )}
                 </div>
               </div>
-            )
           )}
         </div>
 

@@ -89,26 +89,13 @@ const PracticeExamResultsPage: React.FC = () => {
     // Also check if we don't have analysis data in results already
     const hasExistingAnalysis = results && (results as any).analysis;
     
-    console.log('🔍 Auto-analysis check:', {
-      results: !!results,
-      analysisData: !!analysisData,
-      autoAnalysisRunning,
-      analysisLoading,
-      isFreshExamResult,
-      hasExistingAnalysis
-    });
-    
     if (results && !analysisData && !autoAnalysisRunning && !analysisLoading && isFreshExamResult && !hasExistingAnalysis) {
-      console.log('🚀 Starting auto-analysis...');
       startAutoAnalysis();
     }
   }, [results]);
 
   // Process exam results - sadece analiz verilerini işle
   const processExamResults = (backendResults: any) => {
-    console.log('🔍 Backend results received:', backendResults);
-    console.log('🔍 Analysis data:', backendResults.analysis);
-    
     // Handle parallel processing info (sadece bilgi amaçlı)
     if (backendResults.parallel_processing) {
       setParallelProcessing(backendResults.parallel_processing);
@@ -118,14 +105,10 @@ const PracticeExamResultsPage: React.FC = () => {
     if (backendResults.analysis && backendResults.analysis_status === 'success') {
       setAnalysisData(backendResults.analysis);
       setShowAnalysis(true);
-      console.log('🧠 Analysis data set successfully');
     } else if (backendResults.analysis) {
       // If there's analysis data but no status, it might be existing data
       setAnalysisData(backendResults.analysis);
       setShowAnalysis(true);
-      console.log('🧠 Existing analysis data loaded');
-    } else {
-      console.log('🧠 Analysis data not available:', backendResults.analysis_status);
     }
     
     // Transform backend response to expected frontend format

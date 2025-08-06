@@ -8,7 +8,6 @@ export class SubjectService extends BaseApiService {
    * Get all subjects
    */
   async getSubjects(params?: PaginationParams & SortParams): Promise<Subject[]> {
-    console.log('SubjectService.getSubjects called with params:', params);
     const queryParams = new URLSearchParams();
     
     if (params?.page) {
@@ -26,12 +25,10 @@ export class SubjectService extends BaseApiService {
 
     const basePath = '/subjects/';
     const url = `${basePath}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    console.log('Making API request to:', url);
     
     try {
       // Check if response is paginated or direct array
       const response = await this.get<Subject[] | PaginatedResponse<Subject>>(url);
-      console.log('API response received:', response);
       
       // Handle both paginated and direct array responses
       if (Array.isArray(response)) {

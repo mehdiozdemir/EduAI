@@ -61,11 +61,21 @@ export const Dashboard: React.FC = () => {
   const fetchDashboardData = async () => {
     if (!user?.id) return;
 
-    console.log('Dashboard.fetchDashboardData called');
     setLoading(true);
     try {
       const [dashboardData, statsData] = await Promise.all([
-        performanceService.getDashboardData(user.id),
+        performanceService.getDashboardData(user.id).catch(() => ({
+          overall_stats: {
+            total_questions: 0,
+            total_correct: 0,
+            overall_accuracy: 0,
+            total_sessions: 0
+          },
+          recent_performance: [],
+          subject_breakdown: [],
+          weakness_areas: [],
+          progress_chart: []
+        })),
         performanceService.getRecommendationStats().catch(() => ({
           status: 'success',
           data: {
@@ -77,14 +87,59 @@ export const Dashboard: React.FC = () => {
         }))
       ]);
       
-      console.log('Dashboard received data:', dashboardData);
-      console.log('Recommendation stats:', statsData);
+      // Ensure we always have valid data structures
+      const safeDashboardData = {
+        overall_stats: {
+          total_questions: dashboardData?.overall_stats?.total_questions || 0,
+          total_correct: dashboardData?.overall_stats?.total_correct || 0,
+          overall_accuracy: Number(dashboardData?.overall_stats?.overall_accuracy) || 0,
+          total_sessions: dashboardData?.overall_stats?.total_sessions || 0
+        },
+        recent_performance: Array.isArray(dashboardData?.recent_performance) ? 
+          dashboardData.recent_performance.filter(p => p && typeof p === 'object') : [],
+        subject_breakdown: Array.isArray(dashboardData?.subject_breakdown) ? 
+          dashboardData.subject_breakdown.filter(s => s && typeof s === 'object' && s.subject_name) : [],
+        weakness_areas: Array.isArray(dashboardData?.weakness_areas) ? 
+          dashboardData.weakness_areas.filter(w => w && typeof w === 'object' && w.topic_name) : [],
+        progress_chart: Array.isArray(dashboardData?.progress_chart) ? 
+          dashboardData.progress_chart.filter(p => p && typeof p === 'object' && 
+            (p.subject || p.date) && typeof p.accuracy === 'number') : []
+      };
       
-      setDashboardData(dashboardData);
-      setRecommendationStats(statsData.data);
+      setDashboardData(safeDashboardData);
+      
+      // Safe recommendation stats processing
+      const safeRecommendationStats = statsData?.data ? {
+        total_active: Number(statsData.data.total_active) || 0,
+        by_status: {
+          active: Number(statsData.data.by_status?.active) || 0,
+          completed: Number(statsData.data.by_status?.completed) || 0,
+          deleted: Number(statsData.data.by_status?.deleted) || 0,
+          total: Number(statsData.data.by_status?.total) || 0
+        },
+        by_category: (typeof statsData.data.by_category === 'object' && statsData.data.by_category !== null ? 
+          statsData.data.by_category : {}) as { [key: string]: number },
+        completion_rate: Number(statsData.data.completion_rate) || 0
+      } : null;
+      
+      setRecommendationStats(safeRecommendationStats);
     } catch (error: any) {
       console.error('Dashboard error:', error);
       handleError(error);
+      
+      // Set fallback data even on error to prevent broken UI
+      setDashboardData({
+        overall_stats: {
+          total_questions: 0,
+          total_correct: 0,
+          overall_accuracy: 0,
+          total_sessions: 0
+        },
+        recent_performance: [],
+        subject_breakdown: [],
+        weakness_areas: [],
+        progress_chart: []
+      });
     } finally {
       setLoading(false);
     }
@@ -109,13 +164,13 @@ export const Dashboard: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center">
         <Card className="p-8 text-center">
           <div className="text-gray-400 text-lg mb-4">📊</div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">No Data Available</h2>
-          <p className="text-gray-600 mb-4">Start taking quizzes to see your performance data.</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Henüz Veri Yok</h2>
+          <p className="text-gray-600 mb-4">Performans verilerinizi görmek için quiz çözmeye başlayın.</p>
           <Link
             to="/subjects"
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Browse Subjects
+            Derslere Göz At
           </Link>
         </Card>
       </div>
@@ -165,7 +220,37 @@ const DashboardContent: React.FC<{
   user: any;
   isMobile: boolean;
 }> = ({ dashboardData, recommendationStats, user, isMobile }) => {
-  const { overall_stats, recent_performance, subject_breakdown, weakness_areas, progress_chart } = dashboardData;
+  // Safely extract data with defaults
+  const { 
+    overall_stats = {
+      total_questions: 0,
+      total_correct: 0,
+      overall_accuracy: 0,
+      total_sessions: 0
+    }, 
+    recent_performance = [], 
+    subject_breakdown = [], 
+    weakness_areas = [], 
+    progress_chart = [] 
+  } = dashboardData || {};
+
+  // Safe recommendation stats with defaults
+  const safeRecommendationStats = recommendationStats ? {
+    total_active: recommendationStats.total_active || 0,
+    by_status: {
+      active: recommendationStats.by_status?.active || 0,
+      completed: recommendationStats.by_status?.completed || 0,
+      deleted: recommendationStats.by_status?.deleted || 0,
+      total: recommendationStats.by_status?.total || 0
+    },
+    by_category: recommendationStats.by_category || {},
+    completion_rate: recommendationStats.completion_rate || 0
+  } : {
+    total_active: 0,
+    by_status: { active: 0, completed: 0, deleted: 0, total: 0 },
+    by_category: {},
+    completion_rate: 0
+  };
 
   return (
     <div className="space-y-6">
@@ -196,7 +281,7 @@ const DashboardContent: React.FC<{
               </div>
               <div className="ml-4 min-w-0">
                 <p className="text-sm font-medium text-gray-600">Toplam Soru</p>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{overall_stats.total_questions}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{overall_stats?.total_questions || 0}</p>
               </div>
             </div>
           </Card>
@@ -208,7 +293,7 @@ const DashboardContent: React.FC<{
               </div>
               <div className="ml-4 min-w-0">
                 <p className="text-sm font-medium text-gray-600">Doğru Cevaplar</p>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{overall_stats.total_correct}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{overall_stats?.total_correct || 0}</p>
               </div>
             </div>
           </Card>
@@ -220,7 +305,7 @@ const DashboardContent: React.FC<{
               </div>
               <div className="ml-4 min-w-0">
                 <p className="text-sm font-medium text-gray-600">Doğruluk Oranı</p>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{overall_stats.overall_accuracy.toFixed(1)}%</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{(overall_stats?.overall_accuracy || 0).toFixed(1)}%</p>
               </div>
             </div>
           </Card>
@@ -232,7 +317,7 @@ const DashboardContent: React.FC<{
               </div>
               <div className="ml-4 min-w-0">
                 <p className="text-sm font-medium text-gray-600">Toplam Oturum</p>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{overall_stats.total_sessions}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{overall_stats?.total_sessions || 0}</p>
               </div>
             </div>
           </Card>
@@ -320,7 +405,7 @@ const DashboardContent: React.FC<{
       </ErrorBoundarySection>
 
       {/* Personalized Recommendations Section */}
-      {recommendationStats && recommendationStats.total_active > 0 && (
+      {safeRecommendationStats && safeRecommendationStats.total_active > 0 && (
         <ErrorBoundarySection>
           <Card className="p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -343,19 +428,19 @@ const DashboardContent: React.FC<{
               className="mb-6"
             >
               <div className="bg-gradient-to-br from-green-50 to-emerald-100 border border-green-200 rounded-lg p-3 text-center">
-                <div className="text-green-600 text-2xl font-bold">{recommendationStats.total_active}</div>
+                <div className="text-green-600 text-2xl font-bold">{safeRecommendationStats.total_active}</div>
                 <div className="text-green-700 text-xs">Aktif Öneri</div>
               </div>
               <div className="bg-gradient-to-br from-blue-50 to-sky-100 border border-blue-200 rounded-lg p-3 text-center">
-                <div className="text-blue-600 text-2xl font-bold">{recommendationStats.by_status.completed}</div>
+                <div className="text-blue-600 text-2xl font-bold">{safeRecommendationStats.by_status.completed}</div>
                 <div className="text-blue-700 text-xs">Tamamlanan</div>
               </div>
               <div className="bg-gradient-to-br from-purple-50 to-violet-100 border border-purple-200 rounded-lg p-3 text-center">
-                <div className="text-purple-600 text-2xl font-bold">{recommendationStats.completion_rate}%</div>
+                <div className="text-purple-600 text-2xl font-bold">{safeRecommendationStats.completion_rate.toFixed(1)}%</div>
                 <div className="text-purple-700 text-xs">Tamamlama Oranı</div>
               </div>
               <div className="bg-gradient-to-br from-orange-50 to-amber-100 border border-orange-200 rounded-lg p-3 text-center">
-                <div className="text-orange-600 text-2xl font-bold">{Object.keys(recommendationStats.by_category).length}</div>
+                <div className="text-orange-600 text-2xl font-bold">{Object.keys(safeRecommendationStats.by_category).length}</div>
                 <div className="text-orange-700 text-xs">Kategori</div>
               </div>
             </ResponsiveGrid>
@@ -365,7 +450,7 @@ const DashboardContent: React.FC<{
               cols={{ default: 1, sm: 2, lg: 3 }}
               gap="md"
             >
-              {Object.entries(recommendationStats.by_category).map(([category, count]) => {
+              {Object.entries(safeRecommendationStats.by_category).map(([category, count]) => {
                 const getCategoryIcon = (cat: string) => {
                   switch (cat) {
                     case 'video': return <Play className="w-5 h-5 text-red-500" />;
@@ -426,95 +511,111 @@ const DashboardContent: React.FC<{
       )}
 
       {/* Charts Row */}
-      <ErrorBoundarySection>
-        <ResponsiveGrid
-          cols={{ default: 1, lg: 2 }}
-          gap="md"
-        >
-          {/* Progress Chart */}
-          <Card className="p-4 sm:p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performans</h3>
-            <div className="overflow-x-auto">
-              <PerformanceChart
-                data={progress_chart}
-                type="line"
-                height={isMobile ? 200 : 250}
-                showLegend={!isMobile}
-              />
-            </div>
-          </Card>
+      {progress_chart.length > 0 && (
+        <ErrorBoundarySection>
+          <ResponsiveGrid
+            cols={{ default: 1, lg: 2 }}
+            gap="md"
+          >
+            {/* Progress Chart */}
+            <Card className="p-4 sm:p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Performans</h3>
+              <div className="overflow-x-auto">
+                <PerformanceChart
+                  data={progress_chart}
+                  type="line"
+                  height={isMobile ? 200 : 250}
+                  showLegend={!isMobile}
+                />
+              </div>
+            </Card>
 
-          {/* Subject Breakdown */}
-          <Card className="p-4 sm:p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Ders Performansı</h3>
-            <div className="overflow-x-auto">
-              <PerformanceChart
-                data={progress_chart}
-                type="doughnut"
-                height={isMobile ? 200 : 250}
-                showLegend={!isMobile}
-              />
-            </div>
-          </Card>
-        </ResponsiveGrid>
-      </ErrorBoundarySection>
+            {/* Subject Breakdown */}
+            <Card className="p-4 sm:p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Ders Performansı</h3>
+              <div className="overflow-x-auto">
+                <PerformanceChart
+                  data={progress_chart}
+                  type="doughnut"
+                  height={isMobile ? 200 : 250}
+                  showLegend={!isMobile}
+                />
+              </div>
+            </Card>
+          </ResponsiveGrid>
+        </ErrorBoundarySection>
+      )}
 
       {/* Subject Breakdown Table */}
       <ErrorBoundarySection>
         <Card className="p-4 sm:p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Ders Dağılımı</h3>
-          <ResponsiveTable>
-            <ResponsiveTableHeader>
-              <ResponsiveTableRow>
-                <ResponsiveTableCell header>Konu</ResponsiveTableCell>
-                <ResponsiveTableCell header>Doğrular</ResponsiveTableCell>
-                <ResponsiveTableCell header hideOnMobile>Sorular</ResponsiveTableCell>
-                <ResponsiveTableCell header>Durum</ResponsiveTableCell>
-              </ResponsiveTableRow>
-            </ResponsiveTableHeader>
-            <ResponsiveTableBody>
-              {subject_breakdown.map((subject, index) => (
-                <ResponsiveTableRow key={index}>
-                  <ResponsiveTableCell mobileLabel="Subject">
-                    <div className="truncate max-w-[120px] sm:max-w-none font-medium">
-                      {subject.subject_name}
-                    </div>
-                  </ResponsiveTableCell>
-                  <ResponsiveTableCell mobileLabel="Accuracy">
-                    <div className="flex items-center">
-                      <div className="flex-1 bg-gray-200 rounded-full h-2 mr-2 min-w-[40px] sm:mr-3">
-                        <div
-                          className={`h-2 rounded-full ${subject.accuracy >= 80
-                              ? 'bg-green-500'
-                              : subject.accuracy >= 60
-                                ? 'bg-yellow-500'
-                                : 'bg-red-500'
-                            }`}
-                          style={{ width: `${subject.accuracy}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-xs sm:text-sm font-medium whitespace-nowrap">{subject.accuracy.toFixed(1)}%</span>
-                    </div>
-                  </ResponsiveTableCell>
-                  <ResponsiveTableCell mobileLabel="Questions" hideOnMobile>
-                    {subject.question_count}
-                  </ResponsiveTableCell>
-                  <ResponsiveTableCell mobileLabel="Status">
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${subject.accuracy >= 80
-                          ? 'bg-green-100 text-green-800'
-                          : subject.accuracy >= 60
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                    >
-                      {subject.accuracy >= 80 ? 'Excellent' : subject.accuracy >= 60 ? 'Good' : 'Needs Work'}
-                    </span>
-                  </ResponsiveTableCell>
+          {subject_breakdown.length > 0 ? (
+            <ResponsiveTable>
+              <ResponsiveTableHeader>
+                <ResponsiveTableRow>
+                  <ResponsiveTableCell header>Konu</ResponsiveTableCell>
+                  <ResponsiveTableCell header>Doğrular</ResponsiveTableCell>
+                  <ResponsiveTableCell header hideOnMobile>Sorular</ResponsiveTableCell>
+                  <ResponsiveTableCell header>Durum</ResponsiveTableCell>
                 </ResponsiveTableRow>
-              ))}
-            </ResponsiveTableBody>
-          </ResponsiveTable>
+              </ResponsiveTableHeader>
+              <ResponsiveTableBody>
+                {subject_breakdown.map((subject, index) => {
+                  const accuracy = subject?.accuracy || 0;
+                  const subjectName = subject?.subject_name || 'Bilinmiyor';
+                  const questionCount = subject?.question_count || 0;
+                  
+                  return (
+                    <ResponsiveTableRow key={index}>
+                      <ResponsiveTableCell mobileLabel="Subject">
+                        <div className="truncate max-w-[120px] sm:max-w-none font-medium">
+                          {subjectName}
+                        </div>
+                      </ResponsiveTableCell>
+                      <ResponsiveTableCell mobileLabel="Accuracy">
+                        <div className="flex items-center">
+                          <div className="flex-1 bg-gray-200 rounded-full h-2 mr-2 min-w-[40px] sm:mr-3">
+                            <div
+                              className={`h-2 rounded-full ${accuracy >= 80
+                                  ? 'bg-green-500'
+                                  : accuracy >= 60
+                                    ? 'bg-yellow-500'
+                                    : 'bg-red-500'
+                                }`}
+                              style={{ width: `${Math.min(Math.max(accuracy, 0), 100)}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xs sm:text-sm font-medium whitespace-nowrap">{accuracy.toFixed(1)}%</span>
+                        </div>
+                      </ResponsiveTableCell>
+                      <ResponsiveTableCell mobileLabel="Questions" hideOnMobile>
+                        {questionCount}
+                      </ResponsiveTableCell>
+                      <ResponsiveTableCell mobileLabel="Status">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${accuracy >= 80
+                              ? 'bg-green-100 text-green-800'
+                              : accuracy >= 60
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                        >
+                          {accuracy >= 80 ? 'Mükemmel' : accuracy >= 60 ? 'İyi' : 'Geliştirilmeli'}
+                        </span>
+                      </ResponsiveTableCell>
+                    </ResponsiveTableRow>
+                  );
+                })}
+              </ResponsiveTableBody>
+            </ResponsiveTable>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <div className="text-4xl mb-4">📚</div>
+              <p className="text-lg font-medium mb-2">Henüz ders verisi yok</p>
+              <p className="text-sm">Quiz çözmeye başladığınızda ders bazında performansınız burada görünecek.</p>
+            </div>
+          )}
         </Card>
       </ErrorBoundarySection>
 
@@ -522,25 +623,32 @@ const DashboardContent: React.FC<{
       {weakness_areas.length > 0 && (
         <ErrorBoundarySection>
           <Card className="p-4 sm:p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Areas for Improvement</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Geliştirilmesi Gereken Alanlar</h3>
             <ResponsiveGrid
               cols={{ default: 1, sm: 2, lg: 3 }}
               gap="sm"
             >
-              {weakness_areas.slice(0, 6).map((area, index) => (
-                <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 touch-manipulation">
-                  <h4 className="font-medium text-red-900 text-sm sm:text-base truncate">{area.topic_name}</h4>
-                  <p className="text-xs sm:text-sm text-red-700 mb-2 truncate">{area.subject_name}</p>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
-                    <span className="text-xs text-red-600">
-                      Weakness Level: {area.weakness_level}/10
-                    </span>
-                    <span className="text-xs text-red-600">
-                      {area.recommendation_count} recommendations
-                    </span>
+              {weakness_areas.slice(0, 6).map((area, index) => {
+                const topicName = area?.topic_name || 'Bilinmiyor';
+                const subjectName = area?.subject_name || 'Bilinmiyor';
+                const weaknessLevel = area?.weakness_level || 0;
+                const recommendationCount = area?.recommendation_count || 0;
+                
+                return (
+                  <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 touch-manipulation">
+                    <h4 className="font-medium text-red-900 text-sm sm:text-base truncate">{topicName}</h4>
+                    <p className="text-xs sm:text-sm text-red-700 mb-2 truncate">{subjectName}</p>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
+                      <span className="text-xs text-red-600">
+                        Zayıflık Seviyesi: {weaknessLevel}/10
+                      </span>
+                      <span className="text-xs text-red-600">
+                        {recommendationCount} öneri
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </ResponsiveGrid>
             {weakness_areas.length > 6 && (
               <div className="mt-4 text-center">
@@ -560,24 +668,31 @@ const DashboardContent: React.FC<{
       {recent_performance.length > 0 && (
         <ErrorBoundarySection>
           <Card className="p-4 sm:p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Performance</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Son Performans</h3>
             <div className="space-y-3">
-              {recent_performance.slice(0, 5).map((performance) => (
-                <div key={performance.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg touch-manipulation">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-gray-900 truncate">
-                      {performance.correct_answers}/{performance.total_questions} correct
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {new Date(performance.created_at).toLocaleDateString('tr-TR')}
-                    </p>
+              {recent_performance.slice(0, 5).map((performance) => {
+                const correctAnswers = performance?.correct_answers || 0;
+                const totalQuestions = performance?.total_questions || 0;
+                const accuracy = performance?.accuracy || 0;
+                const createdAt = performance?.created_at;
+                
+                return (
+                  <div key={performance?.id || Math.random()} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg touch-manipulation">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-gray-900 truncate">
+                        {correctAnswers}/{totalQuestions} doğru
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {createdAt ? new Date(createdAt).toLocaleDateString('tr-TR') : 'Tarih bilinmiyor'}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-4">
+                      <p className="font-semibold text-gray-900">{accuracy.toFixed(1)}%</p>
+                      <p className="text-xs text-gray-500">doğruluk</p>
+                    </div>
                   </div>
-                  <div className="text-right flex-shrink-0 ml-4">
-                    <p className="font-semibold text-gray-900">{performance.accuracy.toFixed(1)}%</p>
-                    <p className="text-xs text-gray-500">accuracy</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="mt-4 text-center">
               <Link
