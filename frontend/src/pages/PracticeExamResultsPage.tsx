@@ -40,17 +40,7 @@ interface ExamResults {
   grade: string;
 }
 
-interface ParallelProcessingResult {
-  enabled: boolean;
-  execution_summary?: {
-    total_agents: number;
-    successful_agents: number;
-    failed_agents: number;
-  };
-  processing_time?: string;
-  error?: string;
-  fallback?: boolean;
-}
+
 
 const PracticeExamResultsPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
@@ -73,8 +63,7 @@ const PracticeExamResultsPage: React.FC = () => {
   const [analysisStage, setAnalysisStage] = useState<'analyzing' | 'processing' | 'generating' | 'completed'>('analyzing');
   const [analysisProgress, setAnalysisProgress] = useState(0);
   
-  // Parallel processing info (sadece bilgi amaçlı)
-  const [parallelProcessing, setParallelProcessing] = useState<ParallelProcessingResult | null>(null);
+
 
   useEffect(() => {
     if (examId) {
@@ -96,11 +85,7 @@ const PracticeExamResultsPage: React.FC = () => {
 
   // Process exam results - sadece analiz verilerini işle
   const processExamResults = (backendResults: any) => {
-    // Handle parallel processing info (sadece bilgi amaçlı)
-    if (backendResults.parallel_processing) {
-      setParallelProcessing(backendResults.parallel_processing);
-    }
-    
+
     // Handle analysis data - YouTube/Book önerileri artık analysis içinde
     if (backendResults.analysis && backendResults.analysis_status === 'success') {
       setAnalysisData(backendResults.analysis);
@@ -597,20 +582,7 @@ const PracticeExamResultsPage: React.FC = () => {
         )}
 
         {/* Debug Panel (Temporary) */}
-        <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">🔍 Debug Bilgileri</h3>
-          <div className="space-y-2 text-sm">
-            <div>📊 Analysis Data: {analysisData ? '✅ Var' : '❌ Yok'}</div>
-            <div>⚡ Parallel Processing: {parallelProcessing ? '✅ Var' : '❌ Yok'}</div>
-            <div>👁️ Show Analysis: {showAnalysis ? '✅ Gösteriliyor' : '❌ Gizli'}</div>
-            <div>🎯 YouTube/Book önerileri artık analysis objesi içinde</div>
-            {state?.result && (
-              <div className="mt-2 p-2 bg-white rounded border">
-                <strong>State Result Keys:</strong> {Object.keys(state.result).join(', ')}
-              </div>
-            )}
-          </div>
-        </div>
+
 
         {/* Analysis Results */}
         {showAnalysis && analysisData && (

@@ -748,19 +748,7 @@ export const PerformanceAnalysisPage: React.FC = () => {
                 <p className="text-gray-500 text-lg">Quiz sonuçlarınız yüklendiğinde burada konu bazında performans grafiği görünecek.</p>
                 
                 {/* Debug information */}
-                <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-left max-w-2xl mx-auto">
-                  <h4 className="font-semibold text-yellow-800 mb-2">🔍 Debug Bilgileri:</h4>
-                  <p className="text-sm text-yellow-700">Quiz Results Sayısı: {quizResults?.length || 0}</p>
-                  <p className="text-sm text-yellow-700">Chart Data Sayısı: {getQuizChartData().length}</p>
-                  {quizResults && quizResults.length > 0 && (
-                    <div className="mt-2">
-                      <p className="text-sm text-yellow-700">İlk Quiz Örneği:</p>
-                      <pre className="text-xs text-yellow-600 bg-yellow-100 p-2 rounded mt-1 overflow-auto max-h-32">
-                        {JSON.stringify(quizResults[0], null, 2)}
-                      </pre>
-                    </div>
-                  )}
-                </div>
+
               </div>
           )}
         </div>

@@ -1,19 +1,19 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import AuthProvider from './contexts/AuthContext';
 import { ErrorBoundaryProvider, GlobalErrorDisplay } from './components/ui/ErrorBoundaryProvider';
 import { LoadingStateManager, GlobalLoadingIndicator } from './components/ui/LoadingStateManager';
-import { PerformanceDashboard } from './components/features/PerformanceDashboard';
+
 import { StylesLoadedProvider } from './providers/StylesLoadedProvider';
 import { queryClient } from './lib/queryClient';
 import { router } from './router';
 import { registerSW } from './utils/serviceWorker';
-import { performanceMonitor } from './utils/performanceMonitoring';
+
 //import { useRenderPerformance } from './hooks/usePerfance';
 import { ToastProvider } from './components/ui';
-import './utils/authDebug'; // Load auth debug tools
+
 
 function App() {
   // Temporarily disable performance monitoring to fix React hook errors
@@ -34,13 +34,7 @@ function App() {
       },
     });
 
-    // Initialize performance monitoring
-    console.log('Performance monitoring initialized');
 
-    // Cleanup performance monitor on unmount
-    return () => {
-      performanceMonitor.cleanup();
-    };
   }, []);
 
   return (
@@ -63,7 +57,7 @@ function App() {
                 <RouterProvider router={router} />
                 <GlobalErrorDisplay maxVisible={3} />
                 <GlobalLoadingIndicator />
-                <PerformanceDashboard />
+
               </ToastProvider>
             </AuthProvider>
           </LoadingStateManager>
