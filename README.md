@@ -1,13 +1,13 @@
-# 🎓 EduAI - Intelligent Learning Platform
+# 🎓 EduAI - Akıllı Öğrenme Platformu
 
 <div align="center">
 
-![EduAI Banner](https://img.shields.io/badge/EduAI-Intelligent%20Learning-blue?style=for-the-badge&logo=graduation-cap)
+![EduAI Banner](https://img.shields.io/badge/EduAI-Akıllı%20Öğrenme%20Platformu-brightgreen?style=for-the-badge&logo=graduation-cap)
 
-**AI-Powered Personalized Learning Platform**
+**Yapay Zeka Destekli Kişiselleştirilmiş Öğrenme Platformu**
 
 [![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=flat&logo=python)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi)](ht- **- - **📊 performance_analyses** - Performans takibi ve analitik verileri*📝 user_answers** - Öğrenci soru yanıtları courses** - Eğitim seviyesine göre ders konuları (Matematik, Türkçe, vb.)ps://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-19.1.0-61DAFB?style=flat&logo=react)](https://reactjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8.3-3178C6?style=flat&logo=typescript)](https://typescriptlang.org)
 [![Vite](https://img.shields.io/badge/Vite-7.0.4-646CFF?style=flat&logo=vite)](https://vitejs.dev)
@@ -19,7 +19,7 @@
 
 ## 📖 Proje Hakkında
 
-**EduAI**, yapay zeka destekli akıllı öğrenme platformudur. Google Gemini AI entegrasyonu ile öğrencilere kişiselleştirilmiş eğitim deneyimi sunar. Platform, adaptif soru üretimi, performans analizi, kaynak önerileri ve comprehensive sınav sistemi ile modern eğitim ihtiyaçlarını karşılar.
+**EduAI**, yapay zeka destekli akıllı öğrenme platformudur. Google Gemini AI entegrasyonu ile öğrencilere kişiselleştirilmiş eğitim deneyimi sunar. Platform, adaptif soru üretimi, performans analizi, kaynak önerileri ve kapsamlı sınav sistemi ile modern eğitim ihtiyaçlarını karşılar.
 
 ### 🎯 Vizyon
 Geleneksel eğitim yöntemlerini AI ile birleştirerek, her öğrencinin kendi hızında ve seviyesinde öğrenebileceği akıllı bir ekosistem yaratmak.
@@ -34,35 +34,38 @@ Geleneksel eğitim yöntemlerini AI ile birleştirerek, her öğrencinin kendi h
 
 ## ✨ Temel Özellikler
 
-### 🤖 AI-Powered Core Features
+### 🤖 Yapay Zeka Destekli Temel Özellikler
 - **Adaptif Soru Üretimi** - Gemini AI ile seviye bazlı kişiselleştirilmiş sorular
 - **Akıllı Performans Analizi** - Makine öğrenmesi destekli zayıf alan tespiti  
 - **Otomatik Kaynak Önerileri** - AI destekli kitap ve materyal önerileri
-- **Conversational AI Guidance** - Öğrenci rehberliği için konuşma botları
+- **AI Rehberlik Sistemi** - Mem0 AI ile kişiselleştirilmiş öğrenci mentörü
+- **Konuşmalı Öğrenme** - Doğal dil işleme ile etkileşimli öğrenme
+- **Hafıza Destekli AI** - Kullanıcı geçmişini hatırlayan akıllı asistan
+- **Kişiselleştirilmiş Çalışma Planları** - AI destekli özelleştirilmiş çalışma programları
 
-### 📊 Learning Analytics & Assessment
-- **Comprehensive Dashboard** - Real-time performans ve ilerleme göstergeleri
-- **Advanced Analytics** - Çoklu metrik destekli performans raporları
-- **Adaptive Testing** - Kullanıcı seviyesine göre ayarlanan sınav zorluğu
-- **Progress Tracking** - Zaman bazlı gelişim analizi ve hedef takibi
+### 📊 Öğrenme Analitiği ve Değerlendirme
+- **Kapsamlı Gösterge Paneli** - Gerçek zamanlı performans ve ilerleme göstergeleri
+- **Gelişmiş Analitik** - Çoklu metrik destekli performans raporları
+- **Uyarlanabilir Test** - Kullanıcı seviyesine göre ayarlanan sınav zorluğu
+- **İlerleme Takibi** - Zaman bazlı gelişim analizi ve hedef takibi
 
-### 🎯 Examination System
-- **Multiple Exam Formats** - LGS, YKS, ve özel deneme sınavları
-- **Real-time Evaluation** - Anlık değerlendirme ve detaylı feedback
-- **Performance Metrics** - Soru bazlı analiz ve kategori performansları
-- **Historical Data** - Geçmiş sınav sonuçları ve trend analizi
+### 🎯 Sınav Sistemi
+- **Çoklu Sınav Formatları** - LGS, TYT ve AYT
+- **Gerçek Zamanlı Değerlendirme** - Anlık değerlendirme ve detaylı geri bildirim
+- **Performans Metrikleri** - Soru bazlı analiz ve kategori performansları
+- **Geçmiş Veriler** - Geçmiş sınav sonuçları ve trend analizi
 
-### 👥 User Management & Administration
-- **Role-Based Access Control** - Admin, öğrenci ve eğitmen rolleri
-- **User Profile Management** - Kişisel profil ve tercih yönetimi  
-- **Admin Dashboard** - Sistem yönetimi ve kullanıcı kontrolü
-- **Multi-level Authentication** - JWT tabanlı güvenli authentication
+### 👥 Kullanıcı Yönetimi ve Yönetim
+- **Rol Tabanlı Erişim Kontrolü** - Admin ve öğrenci rolleri
+- **Kullanıcı Profil Yönetimi** - Kişisel profil ve tercih yönetimi  
+- **Yönetici Paneliü** - Sistem yönetimi ve kullanıcı kontrolü
+- **Çok Seviyeli Kimlik Doğrulama** - JWT tabanlı güvenli kimlik doğrulama
 
 ---
 
 ## 🏗️ Teknik Mimari
 
-### Backend Architecture (Python/FastAPI)
+### Backend Mimarisi (Python/FastAPI)
 ```
 backend/
 ├── 📁 app/
@@ -74,91 +77,164 @@ backend/
 │   │   ├── exam_agent.py       # Exam management
 │   │   └── youtube_agent.py    # Video content integration
 │   │
-│   ├── 🛠️ api/                 # REST API Endpoints
-│   │   ├── auth.py            # Authentication & authorization
-│   │   ├── users.py           # User management
-│   │   ├── subjects.py        # Subject & topic management
-│   │   ├── questions.py       # Question CRUD operations
-│   │   ├── exam.py            # Exam system
-│   │   ├── performance.py     # Analytics & reporting
-│   │   └── guidance.py        # AI guidance system
+│   ├── 🛠️ api/                 # REST API Uç Noktaları
+│   │   ├── auth.py            # Kimlik doğrulama ve yetkilendirme
+│   │   ├── users.py           # Kullanıcı yönetimi
+│   │   ├── subjects.py        # Ders ve konu yönetimi
+│   │   ├── questions.py       # Soru CRUD işlemleri
+│   │   ├── exam.py            # Sınav sistemi
+│   │   ├── performance.py     # Analitik ve raporlama
+│   │   └── guidance.py        # AI rehberlik ve hafıza sistemi
 │   │
-│   ├── 💾 models/              # Database Models (SQLAlchemy)
-│   │   ├── user.py            # User entity & authentication
-│   │   ├── subject.py         # Subjects & topics
-│   │   ├── question.py        # Questions & answers
-│   │   ├── exam.py            # Exam structure & results
-│   │   └── performance.py     # Analytics & recommendations
+│   ├── 💾 models/              # Veritabanı Modelleri (SQLAlchemy)
+│   │   ├── user.py            # Kullanıcı varlığı ve kimlik doğrulama
+│   │   ├── subject.py         # Dersler ve konular
+│   │   ├── question.py        # Sorular ve cevaplar
+│   │   ├── exam.py            # Sınav yapısı ve sonuçları
+│   │   └── performance.py     # Analitik ve öneriler
 │   │
-│   ├── 🔧 services/            # Business Logic Layer
-│   ├── 📋 schemas/             # Pydantic Models (API contracts)
-│   ├── ⚙️ core/               # Configuration & utilities
-│   └── 🗄️ data/               # Static data & AI prompts
+│   ├── 🔧 services/            # İş Mantığı Katmanı
+│   ├── 📋 schemas/             # Pydantic Modelleri (API sözleşmeleri)
+│   ├── ⚙️ core/               # Konfigürasyon ve yardımcı araçlar
+│   └── 🗄️ data/               # Statik veri ve AI komutları
 │
-├── 🧪 tests/                   # Comprehensive test suite
-└── 📊 chroma_db/              # Vector database for AI memory
+├── 🧪 tests/                   # Kapsamlı test paketi
+├── 📊 chroma_db/              # AI hafıza için vektör veritabanı
+└── 🧠 mem0_data/              # Mem0 AI kişiselleştirilmiş hafıza depolaması
 ```
 
-### Frontend Architecture (React/TypeScript)
+### Frontend Mimarisi (React/TypeScript)
 ```
 frontend/
 ├── 📁 src/
-│   ├── 🧩 components/          # Reusable UI Components
-│   │   ├── ui/                # Base UI components
-│   │   ├── features/          # Feature-specific components
-│   │   ├── layout/            # Layout components
-│   │   └── forms/             # Form components
+│   ├── 🧩 components/          # Yeniden Kullanılabilir UI Bileşenleri
+│   │   ├── ui/                # Temel UI bileşenleri
+│   │   ├── features/          # Özellik-özel bileşenler
+│   │   ├── layout/            # Düzen bileşenleri
+│   │   └── forms/             # Form bileşenleri
 │   │
-│   ├── 📄 pages/               # Page Components & Routing
-│   │   ├── Dashboard.tsx      # Main dashboard
-│   │   ├── QuestionPage.tsx   # Question interface
-│   │   ├── PracticeExam*.tsx  # Exam system pages
+│   ├── 📄 pages/               # Sayfa Bileşenleri ve Yönlendirme
+│   │   ├── Dashboard.tsx      # Ana gösterge paneli
+│   │   ├── QuestionPage.tsx   # Soru arayüzü
+│   │   ├── PracticeExam*.tsx  # Sınav sistemi sayfaları
 │   │   ├── PerformanceAnalysis.tsx
-│   │   └── AdminPanel.tsx     # Admin interface
+│   │   ├── AIGuidancePage.tsx # AI mentor ve rehberlik arayüzü
+│   │   └── AdminPanel.tsx     # Yönetici arayüzü
 │   │
-│   ├── 🔌 services/            # API Integration Layer
-│   │   ├── api.ts             # Base API service
-│   │   ├── authService.ts     # Authentication
-│   │   ├── questionService.ts # Question management
-│   │   ├── performanceService.ts # Analytics
-│   │   └── examService.ts     # Exam operations
+│   ├── 🔌 services/            # API Entegrasyon Katmanı
+│   │   ├── api.ts             # Temel API servisi
+│   │   ├── authService.ts     # Kimlik doğrulama
+│   │   ├── questionService.ts # Soru yönetimi
+│   │   ├── performanceService.ts # Analitik
+│   │   └── examService.ts     # Sınav işlemleri
 │   │
-│   ├── 🎣 hooks/               # Custom React Hooks
-│   ├── 🎨 styles/              # Tailwind CSS & styling
-│   ├── 🧪 test/                # Frontend tests
-│   └── 📱 utils/               # Utility functions
+│   ├── 🎣 hooks/               # Özel React Hook'ları
+│   ├── 🎨 styles/              # Tailwind CSS ve stil
+│   ├── 🧪 test/                # Frontend testleri
+│   └── 📱 utils/               # Yardımcı fonksiyonlar
 │
-├── 📦 public/                  # Static assets & PWA files
-└── 🛠️ scripts/                # Build & deployment scripts
+├── 📦 public/                  # Statik varlıklar ve PWA dosyaları
+└── 🛠️ scripts/                # Build ve deployment scriptleri
 ```
 
-### Technology Stack
+### Teknoloji Yığını
 
-#### Backend Technologies
-- **🐍 Python 3.8+** - Core programming language
-- **⚡ FastAPI** - Modern, high-performance web framework
-- **�️ SQLAlchemy** - Database ORM with SQLite
-- **� JWT Authentication** - Secure token-based auth
-- **🤖 Google Gemini AI** - Advanced language model integration
-- **🧠 LangChain** - AI application framework
-- **🌐 Tavily API** - Web search integration
-- **🎬 YouTube API** - Educational video integration
+#### Backend Teknolojileri
+- **🐍 Python 3.8+** - Temel programlama dili
+- **⚡ FastAPI** - Modern, yüksek performanslı web framework
+- **🗄️ SQLAlchemy** - SQLite ile veritabanı ORM
+- **🔐 JWT Kimlik Doğrulama** - Güvenli token tabanlı kimlik doğrulama
+- **🤖 Google Gemini AI** - Gelişmiş dil modeli entegrasyonu
+- **🧠 LangChain** - AI uygulama framework'ü
+- **💾 Mem0 AI** - AI ajanları için kişiselleştirilmiş hafıza katmanı
+- **🎯 ChromaDB** - AI hafıza depolaması için vektör veritabanı
+- **🌐 Tavily API** - Web arama entegrasyonu
+- **🎬 YouTube API** - Eğitim videosu entegrasyonu
 
-#### Frontend Technologies  
-- **⚛️ React 19.1.0** - Modern UI library
-- **📘 TypeScript 5.8.3** - Type-safe JavaScript
-- **⚡ Vite 7.0.4** - Lightning-fast build tool
-- **🎨 Tailwind CSS** - Utility-first CSS framework
-- **📊 Chart.js** - Interactive data visualization
-- **🔄 TanStack Query** - Powerful data fetching
-- **🧭 React Router** - Client-side routing
+#### Frontend Teknolojileri  
+- **⚛️ React 19.1.0** - Modern UI kütüphanesi
+- **📘 TypeScript 5.8.3** - Tip güvenli JavaScript
+- **⚡ Vite 7.0.4** - Şimşek hızında build aracı
+- **🎨 Tailwind CSS** - Yardımcı-öncelikli CSS framework
+- **📊 Chart.js** - Etkileşimli veri görselleştirme
+- **🔄 TanStack Query** - Güçlü veri getirme
+- **🧭 React Router** - İstemci tarafı yönlendirme
 
-#### Development & DevOps
-- **🧪 Vitest** - Unit testing framework
-- **🐳 Docker** - Containerization
-- **📝 ESLint + Prettier** - Code quality tools
+#### Geliştirme ve DevOps
+- **🧪 Vitest** - Birim test framework'ü
+- **🐳 Docker** - Konteynerleştirme
+- **📝 ESLint + Prettier** - Kod kalitesi araçları
 - **🔄 GitHub Actions** - CI/CD pipeline
-- **📊 Lighthouse** - Performance monitoring
+- **📊 Lighthouse** - Performans izleme
+
+---
+
+## 🧠 AI Rehberlik ve Hafıza Sistemi
+
+### 🎯 Mem0 AI Entegrasyonu
+
+EduAI, **Mem0 AI** teknolojisi ile gelişmiş kişiselleştirilmiş öğrenme deneyimi sunar:
+
+#### 💭 Personalized Memory Layer
+- **Kullanıcı Tercihleri Hatırlama** - Öğrenme stilini ve tercihlerini kaydetme
+- **Öğrenme Geçmişi Takibi** - Geçmiş performansı ve zayıf alanları hatırlama
+- **Contextual Recommendations** - Bağlamsal ve kişiselleştirilmiş öneriler
+- **Adaptive Learning Path** - Kullanıcının ilerleyişine göre öğrenme yolunu ayarlama
+
+#### 🤖 AI Mentor Özellikleri
+- **Konuşmalı Öğrenme** - Doğal dil ile etkileşimli öğrenme rehberliği
+- **Çalışma Planlama** - AI destekli kişiselleştirilmiş çalışma programları
+- **Motivasyon Desteği** - Motivasyon desteği ve ilerleme takibi
+- **Soru Yardımı** - Anlık soru yardımı ve açıklamalar
+
+#### 🔄 Hafıza Yönetimi
+- **Vektör Gömmeleri** - ChromaDB ile semantik hafıza depolama
+- **Bilgi Grafikleri** - Konular arası bağlantıları haritalama
+- **Öğrenme Analitiği** - Öğrenme modellerini sürekli iyileştirme
+- **Gizlilik Öncelikli** - Kullanıcı verilerini güvenli şekilde saklama
+
+### 💬 AI Guidance API Kullanımı
+
+```javascript
+// AI Rehber ile sohbet başlatma
+const guidanceResponse = await fetch('/api/v1/guidance/ask', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    question: "Matematik konusunda zorlanıyorum, yardım edebilir misin?"
+  })
+});
+
+// Soru sonucunu kaydetme ve hafızaya ekleme
+const resultResponse = await fetch('/api/v1/guidance/save-result', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    question: "2 + 2 = ?",
+    user_answer: "4",
+    correct_answer: "4",
+    is_correct: true,
+    subject: "Matematik",
+    topic: "Dört İşlem",
+    difficulty: "kolay",
+    education_level: "ilkokul"
+  })
+});
+
+// Kullanıcı hafızasını alma
+const memoryResponse = await fetch(`/api/v1/guidance/memory/${userId}`, {
+  method: 'GET',
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+});
+```
 
 ---
 
@@ -204,6 +280,7 @@ cp .env.example .env
 # GEMINI_API_KEY=your_gemini_api_key_here
 # YOUTUBE_API_KEY=your_youtube_api_key_here
 # TAVILY_API_KEY=your_tavily_api_key_here
+# MEM0_API_KEY=your_mem0_api_key_here (AI hafıza sistemi için)
 
 # Backend'i başlatın
 python -m app.main
@@ -279,19 +356,19 @@ Backend çalışırken interactive API dokümantasyonuna ulaşın:
 
 ```javascript
 // 1. Login yapın ve token alın
-const loginResponse = await fetch('/api/v1/auth/login', {
+const loginResponse = await fetch('/auth/login', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    username: 'admin',
+    email: 'admin@eduai.com',
     password: 'admin123'
   })
 });
 
-const { access_token, token_type } = await loginResponse.json();
+const { access_token, token_type, user } = await loginResponse.json();
 
 // 2. Protected endpoint'leri kullanın
-const protectedResponse = await fetch('/api/v1/users/me', {
+const protectedResponse = await fetch('/users/me', {
   headers: {
     'Authorization': `Bearer ${access_token}`
   }
@@ -301,268 +378,207 @@ const protectedResponse = await fetch('/api/v1/users/me', {
 ### 🔑 Ana API Endpoint'leri
 
 #### Authentication
-- `POST /api/v1/auth/login` - Kullanıcı girişi
-- `POST /api/v1/auth/register` - Yeni kullanıcı kaydı
-- `GET /api/v1/users/me` - Mevcut kullanıcı bilgileri
+- `POST /auth/login` - Kullanıcı girişi
+- `POST /auth/register` - Yeni kullanıcı kaydı
+- `GET /users/me` - Mevcut kullanıcı bilgileri
 
 #### AI Question Generation
-- `POST /api/v1/agents/generate-questions` - AI soru üretimi
-- `POST /api/v1/agents/evaluate-answer` - Cevap değerlendirmesi
-- `GET /api/v1/questions/user/{user_id}` - Kullanıcı soruları
+- `POST /agents/generate-questions` - AI soru üretimi
+- `POST /agents/evaluate-answer` - Cevap değerlendirmesi
+- `GET /agents/info` - AI agent bilgileri
+
+#### AI Guidance & Memory System
+- `POST /api/v1/guidance/ask` - AI rehberlik sohbeti
+- `POST /api/v1/guidance/save-result` - Soru sonucu kaydetme
+- `GET /api/v1/guidance/memory/{user_id}` - Kullanıcı hafızası
 
 #### Performance Analytics
 - `GET /api/v1/performance/dashboard/{user_id}` - Dashboard verileri
 - `POST /api/v1/performance/analyze` - Performans analizi
 - `GET /api/v1/performance/recommendations` - AI önerileri
+- `POST /api/v1/performance/analyze-exam` - Sınav analizi
 
 #### Exam System
 - `GET /api/v1/exam/types` - Sınav türleri listesi
+- `GET /api/v1/exam/sections/{exam_type_id}` - Sınav bölümleri
 - `POST /api/v1/exam/practice/start` - Deneme sınavı başlat
 - `POST /api/v1/exam/practice/submit` - Sınav sonuçları gönder
+- `GET /api/v1/exam/user/{user_id}/practice-exams` - Kullanıcı sınav geçmişi
 
----
 
-## 🧪 Test Etme
-
-### Backend Tests
-```bash
-cd backend
-
-# Tüm testleri çalıştır
-pytest tests/ -v
-
-# Coverage raporu ile
-pytest tests/ --cov=app --cov-report=html
-
-# Spesifik test dosyası
-pytest tests/test_agents.py -v
-```
-
-### Frontend Tests  
-```bash
-cd frontend
-
-# Unit testler
-npm run test
-
-# Integration testler
-npm run test:integration
-
-# Test coverage
-npm run test:coverage
-
-# Test UI (interactive)
-npm run test:ui
-```
-
-### API Integration Tests
-```bash
-# Backend çalışırken API testleri
-cd backend
-pytest tests/test_api_integration.py -v
-```
-
----
-
-## 📊 Performans ve Monitoring
-
-### Frontend Performance
-- **⚡ Lighthouse Score:** 95+ (Performance, Accessibility, Best Practices)
-- **📦 Bundle Size:** < 1MB gzipped
-- **🎯 Core Web Vitals:** Optimized for Google metrics
-- **📱 Responsive Design:** Mobile-first approach
-
-### Backend Performance
-- **🚀 Response Time:** < 200ms average
-- **⚖️ Load Balancing:** Horizontal scaling ready
-- **📈 Auto-scaling:** Docker container optimization
-- **🔍 API Monitoring:** Built-in request/response logging
-
-### Performance Monitoring Tools
-```bash
-# Frontend build analysis
-npm run build:analyze
-
-# Performance audit
-npm run health-check
-
-# Bundle size check
-npm run validate-build
-```
 
 ---
 
 ## 🔧 Development Guide
 
-### 🆕 Yeni Feature Ekleme
+### 🆕 Yeni Özellik Ekleme
 
-#### Backend - API Endpoint
+#### Backend - API Uç Noktası
 ```bash
 # 1. Model oluştur (app/models/)
 # 2. Schema tanımla (app/schemas/)  
-# 3. Service logic yaz (app/services/)
+# 3. Servis mantığı yaz (app/services/)
 # 4. Router ekle (app/api/)
 # 5. Main.py'de include et
 ```
 
-#### Frontend - Component
+#### Frontend - Bileşen
 ```bash
-# 1. Component oluştur (src/components/)
+# 1. Bileşen oluştur (src/components/)
 # 2. Hook yaz (src/hooks/)
-# 3. Service entegrasyonu (src/services/)
+# 3. Servis entegrasyonu (src/services/)
 # 4. Test yaz (src/test/)
 # 5. Router'a ekle (src/router/)
 ```
 
-### 🔄 Git Workflow
-```bash
-# Feature branch oluştur
-git checkout -b feature/new-awesome-feature
 
-# Değişiklikleri commit et
-git add .
-git commit -m "feat: add awesome new feature"
 
-# Push ve PR oluştur
-git push origin feature/new-awesome-feature
+## 🗄️ Veritabanı Şeması
+
+### 📊 SQL Veritabanı (SQLite/SQLAlchemy)
+
+#### Temel Tablolar
+- **👥 users** - Rolleri olan kullanıcı yönetimi ve kimlik doğrulama
+- **🎓 education_levels** - Eğitim seviyeleri (İlkokul, Ortaokul, Lise, Üniversite)
+- **� courses** - Course subjects per education level (Matematik, Türkçe, etc.)
+- **📝 course_topics** - Her ders içindeki detaylı konular
+- **📚 subjects** - Eski konu sistemi (uyumluluk için korunuyor)
+- **📋 topics** - Derslere bağlı eski konu sistemi
+- **❓ questions** - Temel AI üretimi sorular ve cevaplar
+- **� user_answers** - Student responses to questions
+- **�📊 performance_analyses** - Performance tracking & analytics data
+- **💡 resource_recommendations** - AI destekli çalışma önerileri
+- **📖 book_recommendations** - Kitap öneri veri modelleri (Pydantic)
+
+#### Sınav Sistemi Tabloları
+- **📋 exam_types** - Sınav formatları (LGS, TYT, AYT) metadata ile
+- **📑 exam_sections** - Sınav türüne göre bölümler (Matematik, Fen, vb.)
+- **❓ exam_questions** - Seçenekli kapsamlı sınav soruları
+- **🎯 practice_exams** - Öğrenci sınav oturumları ve sonuçları
+- **📊 practice_question_results** - Detaylı soru bazlı sonuçlar
+
+### 🧠 Vektör Veritabanı (ChromaDB)
+
+EduAI, **ChromaDB** vektör veritabanı kullanarak AI hafıza ve semantik arama özelliklerini destekler:
+
+#### 🎯 Vector Store Configuration
+```python
+vector_store: {
+    "provider": "chroma",
+    "config": {
+        "collection_name": "eduai_memory",
+        "path": "./chroma_db"
+    }
+}
 ```
 
-### 📋 Code Standards
-- **Python:** Black + Flake8 formatting
-- **TypeScript:** ESLint + Prettier formatting  
-- **Commits:** Conventional Commit format
-- **Documentation:** Comprehensive inline docs
+#### 📊 Vektör Veritabanı Özellikleri
+- **🔍 Semantik Arama** - Eğitim içeriğinde anlamsal arama
+- **🧠 AI Hafıza Depolaması** - Mem0 AI ile kişiselleştirilmiş hafıza
+- **📈 Gömme Depolaması** - Gemini text-embedding-004 modeli kullanımı
+- **🔄 Gerçek Zamanlı Güncellemeler** - Kullanıcı etkileşimlerini anlık kaydetme
+- **🎯 Bağlamsal Getirme** - Bağlamsal içerik getirme
 
----
+#### 🗂️ Vektör Koleksiyonları
+- **eduai_memory** - Ana hafıza koleksiyonu
+- **Kullanıcı Öğrenme Kalıpları** - Öğrenci öğrenme kalıpları
+- **Soru Gömmeleri** - Soru ve cevap vektörleri
+- **İçerik İlişkileri** - Konular arası semantik bağlantılar
 
-## 🚀 Deployment
-
-### 🌍 Production Deployment
-
-#### Backend Production
-```bash
-# Environment hazırla
-cp .env.example .env.production
-# Production values ile doldur
-
-# Dependencies yükle
-pip install -r requirements.txt
-
-# Database migrate
-python -m app.database
-
-# Gunicorn ile çalıştır
-gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker
+#### 💾 Vektör Depolama Yapısı
+```
+chroma_db/
+├── chroma.sqlite3              # ChromaDB metadata
+├── 072e2ca6-e5fa-4a66.../      # Koleksiyon verileri
+└── b2d4d81c-50d1-40c3.../      # Vektör gömmeleri
 ```
 
-#### Frontend Production
-```bash
-# Production build
-npm run build:production
-
-# Static files serve
-npm run preview:production
-
-# Server deployment
-npm run deploy:production
-```
-
-### 🐳 Docker Production
-```bash
-# Production containers
-docker-compose -f docker-compose.yml up -d
-
-# Scaling
-docker-compose up --scale backend=3 --scale frontend=2
-
-# Monitoring
-docker-compose logs -f
-```
-
-### 📊 Environment Configuration
-
-#### Production Checklist
-- [ ] ✅ Change default admin password
-- [ ] ✅ Set secure JWT secret key
-- [ ] ✅ Configure proper CORS origins
-- [ ] ✅ Set up SSL/TLS certificates
-- [ ] ✅ Configure production database
-- [ ] ✅ Set up monitoring and logging
-- [ ] ✅ Configure backup strategy
-
----
-
-## 🗄️ Database Schema
-
-### Core Tables
-- **👥 users** - User management & authentication
-- **📚 subjects** - Educational subjects & topics  
-- **❓ questions** - AI-generated questions & answers
-- **📊 performance_analyses** - Performance tracking data
-- **💡 resource_recommendations** - AI-powered recommendations
-- **🎯 practice_exams** - Exam results & analytics
-- **🎓 education_levels** - System education levels
-- **📋 exam_types** - Available exam formats
-
-### Sample Data
+### Örnek Veri
 Sistem ilk çalıştığında şu veriler otomatik oluşur:
 
-#### 🎓 Education Levels
-- İlkokul, Ortaokul, Lise, Üniversite
+#### 🎓 Eğitim Seviyeleri
+- İlkokul, Ortaokul, Lise
 
-#### 📚 Subjects & Topics
-- **Matematik:** Dört İşlem, Kesirler, Geometri
-- **Türkçe:** Okuma Anlama, Dilbilgisi, Yazım Kuralları  
-- **Fen Bilgisi:** Temel konular
-- **Sosyal Bilgiler:** Temel konular
-- **İngilizce:** Temel konular
+#### 📚 Dersler ve Konular (Kurs Sistemi)
+- **İlkokul Matematik:** Dört İşlem, Kesirler, Geometri Temelleri
+- **Ortaokul Matematik:** Cebir, Geometri, Olasılık
+- **Lise Matematik:** Fonksiyonlar, Trigonometri, İntegral
+- **Türkçe:** Okuma Anlama, Dilbilgisi, Yazım Kuralları, Kompozisyon
+- **Fen Bilgisi:** Fizik, Kimya, Biyoloji temelleri
+- **Sosyal Bilgiler:** Tarih, Coğrafya, Vatandaşlık
+- **İngilizce:** Grammar, Vocabulary, Reading, Writing
 
-#### 🎯 Exam Types
-- **LGS:** Türkçe, Matematik, Fen, Sosyal Bilgiler
-- **YKS:** TYT, AYT bölümleri
+#### 🎯 Sınav Türleri ve Bölümleri
+- **LGS:** 
+  - Türkçe (20 soru), Matematik (20 soru)
+  - Fen Bilimleri (20 soru), Sosyal Bilgiler (10 soru)
+- **YKS-TYT:** 
+  - Türkçe (40 soru), Matematik (40 soru)
+  - Fen Bilimleri (20 soru), Sosyal Bilimler (20 soru)
+- **YKS-AYT:**
+  - Matematik (40 soru), Fen Bilimleri (40 soru)
+  - Edebiyat (24 soru), Tarih (10 soru), Coğrafya (6 soru)
 - **Genel Deneme:** Özelleştirilebilir formatlar
+
+#### 🧠 Vektör Veritabanı Koleksiyonları
+- **eduai_memory** - Kullanıcı öğrenme hafızası (Mem0 AI)
+- **question_embeddings** - Soru ve cevap vektörleri
+- **content_similarity** - İçerik benzerlik matrisi
+- **learning_patterns** - Öğrenme kalıpları ve tercihler
+
+#### 📊 Veritabanı İlişkileri
+```
+users (1) ←→ (n) performance_analyses
+users (1) ←→ (n) practice_exams
+users (1) ←→ (n) user_answers
+education_levels (1) ←→ (n) courses
+courses (1) ←→ (n) course_topics
+exam_types (1) ←→ (n) exam_sections
+exam_sections (1) ←→ (n) exam_questions
+practice_exams (1) ←→ (n) practice_question_results
+```
 
 ---
 
 ## 🤝 Katkıda Bulunma
 
-### 🔄 Contribution Workflow
+### 🔄 Katkı İş Akışı
 
 1. **🍴 Fork** - Repository'yi fork edin
-2. **🌿 Branch** - Feature branch oluşturun
+2. **🌿 Branch** - Özellik branch'i oluşturun
    ```bash
    git checkout -b feature/amazing-new-feature
    ```
 3. **💻 Code** - Değişikliklerinizi yapın
 4. **🧪 Test** - Testleri yazın ve çalıştırın
-5. **📝 Commit** - Conventional commit format kullanın
+5. **📝 Commit** - Geleneksel commit format kullanın
    ```bash
    git commit -m "feat: add amazing new feature"
    ```
 6. **📤 Push** - Branch'inizi push edin
 7. **🔄 PR** - Pull Request oluşturun
 
-### 📋 Contribution Guidelines
+### 📋 Katkı Kuralları
 
-#### Code Quality Standards
-- ✅ Comprehensive unit tests
-- ✅ TypeScript strict mode compliance  
-- ✅ ESLint + Prettier formatting
-- ✅ Meaningful commit messages
-- ✅ Updated documentation
+#### Kod Kalitesi Standartları
+- ✅ Kapsamlı birim testleri
+- ✅ TypeScript strict mod uyumluluğu 
+- ✅ ESLint + Prettier formatı
+- ✅ Anlamlı commit mesajları
+- ✅ Güncellenmiş dokümantasyon
 
-#### 🐛 Bug Reports
+#### 🐛 Hata Raporları
 Issue açarken şunları ekleyin:
-- System information (OS, Python/Node versions)
-- Steps to reproduce
-- Expected vs actual behavior
-- Error logs and screenshots
+- Sistem bilgileri (OS, Python/Node versiyonları)
+- Tekrarlama adımları
+- Beklenen ve gerçek davranış
+- Hata logları ve ekran görüntüleri
 
-#### 💡 Feature Requests  
-- Clear problem description
-- Proposed solution approach
-- Use case examples
-- Implementation considerations
+#### 💡 Özellik İstekleri  
+- Net problem açıklaması
+- Önerilen çözüm yaklaşımı
+- Kullanım durumu örnekleri
+- Uygulama değerlendirmeleri
 
 ---
 
@@ -586,57 +602,14 @@ copies of the Software...
 
 ## 🆘 Destek ve İletişim
 
-### 📞 Support Channels
+### 📞 Destek Kanalları
 - **🐛 Issues:** [GitHub Issues](https://github.com/mehdiozdemir/EduAI/issues)
 - **💬 Discussions:** [GitHub Discussions](https://github.com/mehdiozdemir/EduAI/discussions)  
-- **📖 Wiki:** [Project Wiki](https://github.com/mehdiozdemir/EduAI/wiki)
-- **📧 Email:** eduai.support@example.com
+- **📖 Wiki:** [Proje Wiki](https://github.com/mehdiozdemir/EduAI/wiki)
+- **📧 Email:** mehdiozdemir11@gmail.com
 
-### 📚 Useful Resources
-- **📖 API Documentation:** [Swagger UI](http://localhost:8000/docs)
-- **🎥 Video Tutorials:** [YouTube Playlist](#)
-- **📝 Blog Posts:** [Development Blog](#)
-- **🔗 Related Projects:** [Awesome AI Education](#)
-
----
-
-## 🔮 Roadmap & Future Plans
-
-### 🎯 Near-term Goals (Q1 2025)
-- [ ] 🌐 **Multi-language Support** - İngilizce arayüz desteği
-- [ ] 📱 **Mobile Application** - React Native ile mobil app
-- [ ] 🔗 **API Integrations** - Khan Academy, Coursera entegrasyonu
-- [ ] 🎪 **Gamification** - Achievement system ve leaderboards
-
-### 🚀 Long-term Vision (2025-2026)
-- [ ] 🤖 **Advanced AI Models** - GPT-4, Claude entegrasyonu
-- [ ] 🎥 **Video Learning** - AI destekli video analizi
-- [ ] 👥 **Collaborative Learning** - Grup çalışması özellikleri
-- [ ] 🌍 **Global Scaling** - Multi-region deployment
-- [ ] 🔐 **Blockchain Certificates** - Sertifika doğrulama sistemi
-- [ ] 📊 **Advanced Analytics** - ML destekli tahmine dayalı analitik
-
-### 💡 Innovation Areas
-- **🧠 Neuro-feedback Learning** - EEG destekli öğrenme analizi
-- **🥽 VR/AR Integration** - Immersive learning experiences  
-- **🗣️ Voice Recognition** - Sesli soru-cevap sistemi
-- **📝 Handwriting Analysis** - El yazısı değerlendirme AI'ı
-
----
-
-## 📊 Project Statistics
-
-| Metric | Value |
-|--------|-------|
-| **📁 Total Files** | 200+ |
-| **💻 Lines of Code** | 15,000+ |
-| **🧪 Test Coverage** | 85%+ |
-| **📦 Dependencies** | 50+ |
-| **🌟 GitHub Stars** | Growing |
-| **👥 Contributors** | 5+ |
-| **📈 Performance Score** | 95+ |
-| **🔒 Security Grade** | A+ |
-
+### 📚 Faydalı Kaynaklar
+- **📖 API Dokümantasyonu:** [Swagger UI](http://localhost:8000/docs)
 ---
 
 <div align="center">
@@ -645,7 +618,7 @@ copies of the Software...
 
 EduAI projesine katkıda bulunan herkese teşekkür ederiz!
 
-**Built with ❤️ by EduAI Team**
+**Built with ❤️ by Mehdi Özdemir and Sevgi Başar**
 
 [![Made in Turkey](https://img.shields.io/badge/Made%20in-Turkey-red?style=for-the-badge)](https://turkey.gov.tr)
 
@@ -653,176 +626,3 @@ EduAI projesine katkıda bulunan herkese teşekkür ederiz!
 
 **⭐ Beğendiyseniz yıldız vermeyi unutmayın!**
 
-</div>
-
-#### 4. Uygulama erişimi
-
-- **Frontend:** http://localhost:5173
-- **Backend API:** http://localhost:8000
-- **API Docs:** http://localhost:8000/docs
-
-## 👨‍💼 Varsayılan Admin Hesabı
-
-Sistem ilk çalıştırıldığında otomatik admin hesabı oluşturulur:
-
-- **Kullanıcı Adı:** `admin`
-- **E-posta:** `admin@eduai.com` 
-- **Şifre:** `admin123`
-
-> ⚠️ **UYARI:** Production ortamında mutlaka admin şifresini değiştirin!
-
-## 🏗️ Sistem Mimarisi
-
-```
-EduAI/
-├── backend/                 # FastAPI Backend
-│   ├── app/
-│   │   ├── api/            # REST API endpoints
-│   │   ├── agents/         # AI agents (Gemini)
-│   │   ├── models/         # Database models
-│   │   ├── services/       # Business logic
-│   │   └── utils/          # Utilities & startup
-│   └── tests/              # Backend tests
-│
-├── frontend/               # React + TypeScript Frontend
-│   ├── src/
-│   │   ├── components/     # React components
-│   │   ├── pages/          # Page components
-│   │   ├── services/       # API services
-│   │   ├── contexts/       # React contexts
-│   │   └── utils/          # Frontend utilities
-│   └── public/             # Static assets
-│
-└── docker/                 # Docker configuration
-```
-
-## 🔧 API Kullanımı
-
-### Authentication
-```javascript
-// Login
-const response = await fetch('/api/v1/auth/login', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    username: 'admin',
-    password: 'admin123'
-  })
-});
-
-const { access_token } = await response.json();
-
-// Authenticated requests
-const authResponse = await fetch('/api/v1/users/me', {
-  headers: {
-    'Authorization': `Bearer ${access_token}`
-  }
-});
-```
-
-### AI Soru Üretimi
-```javascript
-const questions = await fetch('/api/v1/agents/generate-questions', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    subject: 'Matematik',
-    topic: 'Dört İşlem',
-    difficulty: 'medium',
-    count: 5
-  })
-});
-```
-
-## 🐳 Docker ile Çalıştırma
-
-```bash
-# Development ortamı
-docker-compose -f docker-compose.dev.yml up -d
-
-# Production ortamı
-docker-compose up -d
-```
-
-## 📊 Veritabanı
-
-Sistem SQLite kullanır ve şu veriler otomatik oluşturulur:
-
-- **Eğitim Seviyeleri:** İlkokul, Ortaokul, Lise, Üniversite
-- **Dersler:** Matematik, Türkçe, Fen Bilgisi, Sosyal Bilgiler, İngilizce
-- **Sınav Türleri:** LGS, YKS, Genel Deneme
-- **Admin Hesabı:** Sistem yönetimi için
-
-## 🔑 Environment Variables
-
-### Backend (.env)
-```bash
-# AI API Keys
-GEMINI_API_KEY=your_key_here
-GOOGLE_API_KEY=your_key_here
-YOUTUBE_API_KEY=your_key_here
-TAVILY_API_KEY=your_key_here
-
-# Admin Settings
-DEFAULT_ADMIN_PASSWORD=admin123
-
-# Security
-JWT_SECRET_KEY=your_secret_key
-```
-
-### Frontend (.env)
-```bash
-VITE_API_URL=http://localhost:8000
-VITE_APP_NAME=EduAI
-```
-
-## 🧪 Test Etme
-
-### Backend Tests
-```bash
-cd backend
-pytest tests/
-```
-
-### Frontend Tests  
-```bash
-cd frontend
-npm run test
-```
-
-## 📈 Monitoring & Performance
-
-- **Performance Monitoring:** Built-in performance metrics
-- **Error Tracking:** Comprehensive error boundaries
-- **API Monitoring:** Request/response logging
-- **User Analytics:** Usage tracking and insights
-
-## 🤝 Katkıda Bulunma
-
-1. Fork yapın
-2. Feature branch oluşturun (`git checkout -b feature/AmazingFeature`)
-3. Değişiklikleri commit edin (`git commit -m 'Add some AmazingFeature'`)
-4. Branch'i push edin (`git push origin feature/AmazingFeature`)
-5. Pull Request açın
-
-## 📝 Lisans
-
-Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakın.
-
-## 🆘 Destek
-
-- **Issues:** GitHub Issues kullanın
-- **Documentation:** `/docs` klasörüne bakın
-- **API Docs:** http://localhost:8000/docs
-
-## 🔮 Gelecek Planlar
-
-- [ ] Çoklu dil desteği
-- [ ] Mobil uygulama
-- [ ] Advanced analytics
-- [ ] Grup çalışması özellikleri
-- [ ] Video conferencing entegrasyonu
-- [ ] Blockchain sertifikasyonu
