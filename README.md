@@ -7,7 +7,7 @@
 **Yapay Zeka Destekli Kişiselleştirilmiş Öğrenme Platformu**
 
 [![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=flat&logo=python)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi)](ht- **- - **📊 performance_analyses** - Performans takibi ve analitik verileri*📝 user_answers** - Öğrenci soru yanıtları courses** - Eğitim seviyesine göre ders konuları (Matematik, Türkçe, vb.)ps://fastapi.tiangolo.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi)](ps://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-19.1.0-61DAFB?style=flat&logo=react)](https://reactjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8.3-3178C6?style=flat&logo=typescript)](https://typescriptlang.org)
 [![Vite](https://img.shields.io/badge/Vite-7.0.4-646CFF?style=flat&logo=vite)](https://vitejs.dev)
