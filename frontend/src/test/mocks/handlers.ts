@@ -297,24 +297,22 @@ export const handlers = [
   }),
 
   http.post('http://localhost:8000/api/v1/questions/evaluate', async ({ request }) => {
-    const evaluationRequest = await request.json();
-    
+    const body = await request.json().catch(() => null) as any;
+    const userAnswer = body?.user_answer ?? '';
+    const correctAnswer = body?.correct_answer ?? '';
+
     const evaluation: AnswerEvaluation = {
-      is_correct: evaluationRequest.user_answer === evaluationRequest.correct_answer,
-      score: evaluationRequest.user_answer === evaluationRequest.correct_answer ? 1 : 0,
-      feedback: evaluationRequest.user_answer === evaluationRequest.correct_answer 
-        ? 'Correct answer!' 
-        : 'Incorrect. Try again.',
+      is_correct: userAnswer === correctAnswer,
+      score: userAnswer === correctAnswer ? 1 : 0,
+      feedback: userAnswer === correctAnswer ? 'Correct answer!' : 'Incorrect. Try again.',
       explanation: 'This is a mock explanation for the answer.',
     };
-    
+
     return HttpResponse.json(evaluation);
   }),
 
   // Performance endpoints
-  http.post('http://localhost:8000/api/v1/performance/analyze', async ({ request }) => {
-    const analysisRequest = await request.json();
-    
+  http.post('http://localhost:8000/api/v1/performance/analyze', async () => {
     return HttpResponse.json(mockPerformanceAnalysis);
   }),
 

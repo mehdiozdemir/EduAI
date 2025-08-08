@@ -261,7 +261,7 @@ const DashboardContent: React.FC<{
           <p className="text-gray-600 mt-1">Hoşgeldin, {user?.username}!</p>
         </div>
         <Link
-          to="/performance"
+          to="/app/performance"
           className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center sm:py-2 touch-manipulation min-h-[48px] flex items-center justify-center"
         >
           Detaylı Analizleri Gör
@@ -659,11 +659,11 @@ const DashboardContent: React.FC<{
             </ResponsiveGrid>
             {weakness_areas.length > 6 && (
               <div className="mt-4 text-center">
-                <Link
-                  to="/performance"
+            <Link
+              to="/app/performance"
                   className="text-blue-600 hover:text-blue-800 text-sm font-medium touch-manipulation inline-block py-2"
                 >
-                  View all areas for improvement →
+                  Tüm Geliştirilmesi Gereken Alanları Gör →
                 </Link>
               </div>
             )}
@@ -703,10 +703,10 @@ const DashboardContent: React.FC<{
             </div>
             <div className="mt-4 text-center">
               <Link
-                to="/performance"
+                to="/app/performance"
                 className="text-blue-600 hover:text-blue-800 text-sm font-medium touch-manipulation inline-block py-2"
               >
-                View all performance history →
+                Tüm Performans Geçmişini Gör →
               </Link>
             </div>
           </Card>

@@ -227,12 +227,7 @@ export class EducationService extends BaseApiService {
     return await this.get<any>(`/api/v1/quiz-results/${resultId}`);
   }
 
-  /**
-   * Get performance statistics
-   */
-  async getPerformanceStats(): Promise<any> {
-    return await this.get<any>('/api/v1/performance-stats');
-  }
+  // Removed: getPerformanceStats (no backend endpoint). Re-introduce when BE exposes /api/v1/performance-stats
 }
 
 // Create and export singleton instance

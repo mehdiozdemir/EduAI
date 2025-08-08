@@ -9,6 +9,3 @@ export * from './useQuestionQueries';
 
 // Performance queries
 export * from './usePerformanceQueries';
-
-// Optimistic updates
-export * from './useOptimisticUpdates';

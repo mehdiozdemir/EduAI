@@ -37,9 +37,13 @@ const PerformanceAnalysisPage = React.lazy(() =>
 const Recommendations = React.lazy(
   () => import(/* webpackChunkName: "recommendations" */ '../pages/Recommendations')
 );
-const ResponsiveDemo = React.lazy(
-  () => import(/* webpackChunkName: "demo" */ '../pages/ResponsiveDemo')
-);
+// Dev-only demo page
+const ResponsiveDemo =
+  process.env.NODE_ENV === 'development'
+    ? React.lazy(
+        () => import(/* webpackChunkName: "demo" */ '../pages/ResponsiveDemo')
+      )
+    : null as unknown as React.LazyExoticComponent<React.ComponentType<any>>;
 const QuizSetupPage = React.lazy(() =>
   import(/* webpackChunkName: "quiz" */ '../pages/QuizSetupPage.tsx').then(module => ({ default: module.default }))
 );
@@ -204,14 +208,18 @@ export const router = createBrowserRouter([
           </LazyWrapper>
         ),
       },
-      {
-        path: 'responsive-demo',
-        element: (
-          <LazyWrapper>
-            <ResponsiveDemo />
-          </LazyWrapper>
-        ),
-      },
+      ...(process.env.NODE_ENV === 'development'
+        ? [
+            {
+              path: 'responsive-demo',
+              element: (
+                <LazyWrapper>
+                  <ResponsiveDemo />
+                </LazyWrapper>
+              ),
+            },
+          ]
+        : []),
       {
         path: 'quiz-setup',
         element: (
