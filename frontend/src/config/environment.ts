@@ -85,7 +85,8 @@ const stagingConfig: Partial<EnvironmentConfig> = {
 
 // Production configuration
 const productionConfig: Partial<EnvironmentConfig> = {
-  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'https://api.eduai.com',
+  // In containerized prod behind nginx, prefer same-origin root; use absolute paths in services (e.g., '/api/v1')
+  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || '/',
   NODE_ENV: 'production',
   DEBUG: false,
   ENABLE_ANALYTICS: true,
@@ -184,9 +185,15 @@ export const validateConfig = (): boolean => {
     }
   }
   
-  // Validate API_BASE_URL format
+  // Validate API_BASE_URL format (support relative URLs like '/api')
   try {
-    new URL(config.API_BASE_URL);
+    if (config.API_BASE_URL.startsWith('http://') || config.API_BASE_URL.startsWith('https://')) {
+      new URL(config.API_BASE_URL);
+    } else {
+      // Relative URL: validate against current origin if in browser, otherwise allow
+      const base = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : 'http://localhost';
+      new URL(config.API_BASE_URL, base);
+    }
   } catch {
     log.error('Invalid API_BASE_URL format');
     return false;

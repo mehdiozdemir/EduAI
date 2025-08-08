@@ -15,7 +15,13 @@ ACCESS_TOKEN_EXPIRE_MINUTES = settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
 
 security = HTTPBearer(
     scheme_name="Bearer",
-    description="Enter JWT token received from /auth/login endpoint"
+    description="Enter JWT token received from /auth/login endpoint",
+)
+# Optional bearer scheme (does not auto-error when header is missing)
+security_optional = HTTPBearer(
+    scheme_name="OptionalBearer",
+    description="Optional bearer for endpoints that allow anonymous access",
+    auto_error=False,
 )
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -70,23 +76,31 @@ def get_current_user(
     return user
 
 def get_current_user_optional(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    db: Session = Depends(get_db)
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_optional),
+    db: Session = Depends(get_db),
 ) -> Optional[User]:
-    """Get current user from JWT token, return None if no token"""
+    """Get current user from JWT token, return None if missing/invalid."""
     if not credentials:
         return None
-    
     try:
         payload = verify_token(credentials.credentials)
         if payload is None:
             return None
-        
-        user_id: int = payload.get("user_id")
+        user_id: Optional[int] = payload.get("user_id")
         if user_id is None:
             return None
-        
         user = db.query(User).filter(User.id == user_id).first()
         return user
-    except:
+    except Exception:
         return None
+
+def require_admin_access(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Ensure the current user has admin privileges"""
+    if not getattr(current_user, "is_admin", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin yetkisi gerekli",
+        )
+    return current_user

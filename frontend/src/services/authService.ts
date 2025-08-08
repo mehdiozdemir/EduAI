@@ -25,10 +25,11 @@ export class AuthService extends BaseApiService {
         access_token: string;
         token_type: string;
         user: User;
-      }>('/auth/login', loginData);
+      }>(' /api/v1/auth/login'.trim(), loginData);
 
       // Store tokens
       TokenManager.setToken(response.access_token);
+      // No refresh token support in backend; keep TokenManager usage consistent
       
       // Store user data
       this.currentUser = response.user;
@@ -61,7 +62,7 @@ export class AuthService extends BaseApiService {
         access_token: string;
         token_type: string;
         user: User;
-      }>('/auth/register', registerData);
+      }>(' /api/v1/auth/register'.trim(), registerData);
 
       // Store tokens
       TokenManager.setToken(response.access_token);
@@ -85,7 +86,7 @@ export class AuthService extends BaseApiService {
   async logout(): Promise<void> {
     try {
       // Call backend logout endpoint
-      await this.post('/auth/logout');
+      await this.post('/api/v1/auth/logout');
     } catch (error) {
       console.warn('Logout API call failed:', error);
       // Continue with logout even if API call fails
@@ -118,7 +119,8 @@ export class AuthService extends BaseApiService {
    */
   async getProfile(): Promise<User> {
     try {
-      const user = await this.get<User>('/auth/me');
+      // Prefer users/me endpoint for consistency
+      const user = await this.get<User>('/api/v1/users/me');
       this.currentUser = user;
       return user;
     } catch (error: any) {
@@ -134,7 +136,8 @@ export class AuthService extends BaseApiService {
    * Update user profile
    */
   async updateProfile(userData: Partial<User>): Promise<User> {
-    const updatedUser = await this.put<User>('/auth/me', userData);
+    // Backend user profile update is under /users/me
+    const updatedUser = await this.put<User>('/api/v1/users/me', userData);
     this.currentUser = updatedUser;
     return updatedUser;
   }
@@ -143,7 +146,8 @@ export class AuthService extends BaseApiService {
    * Change user password
    */
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    await this.post('/auth/change-password', {
+    // Backend change password endpoint: /users/me/change-password
+    await this.post('/api/v1/users/me/change-password', {
       current_password: currentPassword,
       new_password: newPassword,
     });
@@ -152,32 +156,33 @@ export class AuthService extends BaseApiService {
   /**
    * Request password reset
    */
-  async requestPasswordReset(email: string): Promise<void> {
-    await this.post('/auth/forgot-password', { email });
+  async requestPasswordReset(_email: string): Promise<void> {
+    // Not implemented on backend
+    throw new Error('Şifre sıfırlama uç noktası backendde tanımlı değil');
   }
 
   /**
    * Reset password with token
    */
-  async resetPassword(token: string, newPassword: string): Promise<void> {
-    await this.post('/auth/reset-password', {
-      token,
-      new_password: newPassword,
-    });
+  async resetPassword(_token: string, _newPassword: string): Promise<void> {
+    // Not implemented on backend
+    throw new Error('Şifre sıfırlama uç noktası backendde tanımlı değil');
   }
 
   /**
    * Verify email with token
    */
-  async verifyEmail(token: string): Promise<void> {
-    await this.post('/auth/verify-email', { token });
+  async verifyEmail(_token: string): Promise<void> {
+    // Not implemented on backend
+    throw new Error('E-posta doğrulama uç noktası backendde tanımlı değil');
   }
 
   /**
    * Resend email verification
    */
   async resendEmailVerification(): Promise<void> {
-    await this.post('/auth/resend-verification');
+    // Not implemented on backend
+    throw new Error('E-posta doğrulama yeniden gönderme uç noktası backendde tanımlı değil');
   }
 }
 

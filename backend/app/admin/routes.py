@@ -16,7 +16,7 @@ from app.schemas.admin import (
     CourseTopic, CourseTopicCreate, CourseTopicUpdate
 )
 from app.schemas.exam import ExamSectionCreate, ExamSectionUpdate
-from app.core.auth import get_current_user, require_admin_access
+from app.core.auth_deps import get_current_user, require_admin_access
 from app.agents.exam_agent import ExamAgent
 from datetime import datetime, timedelta
 from sqlalchemy import func, desc

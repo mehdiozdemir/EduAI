@@ -23,7 +23,7 @@ export class SubjectService extends BaseApiService {
       queryParams.append('sort_order', params.sort_order);
     }
 
-    const basePath = '/subjects/';
+    const basePath = '/api/v1/subjects/';
     const url = `${basePath}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     
     try {
@@ -46,28 +46,29 @@ export class SubjectService extends BaseApiService {
    * Get subject by ID
    */
   async getSubject(id: number): Promise<Subject> {
-    return await this.get<Subject>(`/subjects/${id}`);
+    return await this.get<Subject>(`/api/v1/subjects/${id}`);
   }
 
   /**
    * Create new subject (admin only)
    */
   async createSubject(subjectData: Omit<Subject, 'id' | 'created_at' | 'updated_at'>): Promise<Subject> {
-    return await this.post<Subject>('/subjects', subjectData);
+    // Admin-only endpoint is under /api/v1/admin/subjects per backend admin routes
+    return await this.post<Subject>('/api/v1/admin/subjects', subjectData);
   }
 
   /**
    * Update subject (admin only)
    */
   async updateSubject(id: number, subjectData: Partial<Subject>): Promise<Subject> {
-    return await this.put<Subject>(`/subjects/${id}`, subjectData);
+    return await this.put<Subject>(`/api/v1/admin/subjects/${id}`, subjectData);
   }
 
   /**
    * Delete subject (admin only)
    */
   async deleteSubject(id: number): Promise<void> {
-    await this.delete(`/subjects/${id}`);
+    await this.delete(`/api/v1/admin/subjects/${id}`);
   }
 
   /**
@@ -89,7 +90,7 @@ export class SubjectService extends BaseApiService {
       queryParams.append('sort_order', params.sort_order);
     }
 
-    const url = `/subjects/${subjectId}/topics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `/api/v1/subjects/${subjectId}/topics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     
     // Check if response is paginated or direct array
     const response = await this.get<Topic[] | PaginatedResponse<Topic>>(url);
@@ -121,7 +122,7 @@ export class SubjectService extends BaseApiService {
       queryParams.append('sort_order', params.sort_order);
     }
 
-    const url = `/topics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `/api/v1/topics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     
     // Check if response is paginated or direct array
     const response = await this.get<Topic[] | PaginatedResponse<Topic>>(url);
@@ -138,28 +139,28 @@ export class SubjectService extends BaseApiService {
    * Get topic by ID
    */
   async getTopic(id: number): Promise<Topic> {
-    return await this.get<Topic>(`/topics/${id}`);
+    return await this.get<Topic>(`/api/v1/topics/${id}`);
   }
 
   /**
    * Create new topic (admin only)
    */
   async createTopic(topicData: Omit<Topic, 'id' | 'created_at' | 'updated_at'>): Promise<Topic> {
-    return await this.post<Topic>('/topics', topicData);
+    return await this.post<Topic>('/api/v1/admin/topics', topicData);
   }
 
   /**
    * Update topic (admin only)
    */
   async updateTopic(id: number, topicData: Partial<Topic>): Promise<Topic> {
-    return await this.put<Topic>(`/topics/${id}`, topicData);
+    return await this.put<Topic>(`/api/v1/admin/topics/${id}`, topicData);
   }
 
   /**
    * Delete topic (admin only)
    */
   async deleteTopic(id: number): Promise<void> {
-    await this.delete(`/topics/${id}`);
+    await this.delete(`/api/v1/admin/topics/${id}`);
   }
 
   /**
@@ -176,7 +177,7 @@ export class SubjectService extends BaseApiService {
       queryParams.append('per_page', params.per_page.toString());
     }
 
-    const url = `/subjects/search?${queryParams.toString()}`;
+    const url = `/api/v1/subjects/search?${queryParams.toString()}`;
     
     // Check if response is paginated or direct array
     const response = await this.get<Subject[] | PaginatedResponse<Subject>>(url);
@@ -206,7 +207,8 @@ export class SubjectService extends BaseApiService {
       queryParams.append('per_page', params.per_page.toString());
     }
 
-    const url = `/topics/search?${queryParams.toString()}`;
+    // Backend does not expose /topics/search; use /api/v1/topics with search param
+    const url = `/api/v1/topics?${queryParams.toString()}`;
     
     // Check if response is paginated or direct array
     const response = await this.get<Topic[] | PaginatedResponse<Topic>>(url);

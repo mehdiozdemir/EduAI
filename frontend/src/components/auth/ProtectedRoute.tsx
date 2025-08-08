@@ -51,7 +51,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // If authentication is not required but user is authenticated (e.g., login page)
   if (!requireAuth && isAuthenticated) {
     // Redirect to dashboard or intended location
-    const from = location.state?.from?.pathname || '/app/dashboard';
+    const from = (location.state as any)?.from?.pathname || '/app/dashboard';
     return <Navigate to={from} replace />;
   }
 

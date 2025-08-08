@@ -511,7 +511,7 @@ const DashboardContent: React.FC<{
       )}
 
       {/* Charts Row */}
-      {progress_chart.length > 0 && (
+          {progress_chart.length > 0 && (
         <ErrorBoundarySection>
           <ResponsiveGrid
             cols={{ default: 1, lg: 2 }}
@@ -522,7 +522,10 @@ const DashboardContent: React.FC<{
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Performans</h3>
               <div className="overflow-x-auto">
                 <PerformanceChart
-                  data={progress_chart}
+                  data={progress_chart.map(p => ({
+                    ...p,
+                    subject: (p as any).subject || 'Genel'
+                  }))}
                   type="line"
                   height={isMobile ? 200 : 250}
                   showLegend={!isMobile}
@@ -535,7 +538,11 @@ const DashboardContent: React.FC<{
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Ders Performansı</h3>
               <div className="overflow-x-auto">
                 <PerformanceChart
-                  data={progress_chart}
+                  data={subject_breakdown.map(sb => ({
+                    date: sb.subject_name, // kategori etiketi olarak kullan
+                    subject: sb.subject_name,
+                    accuracy: sb.accuracy,
+                  }))}
                   type="doughnut"
                   height={isMobile ? 200 : 250}
                   showLegend={!isMobile}

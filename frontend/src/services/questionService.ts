@@ -14,7 +14,16 @@ export class QuestionService extends BaseApiService {
    * Generate questions based on parameters
    */
   async generateQuestions(params: QuestionParams): Promise<QuestionGenerationResponse> {
-    const response = await this.post<QuestionGenerationResponse>('/questions/generate', params);
+    // Backend expects query parameters for generation inputs
+    const queryParams = new URLSearchParams({
+      subject: params.subject,
+      topic: params.topic,
+      difficulty: params.difficulty,
+      count: String(params.count),
+      education_level: params.education_level ?? 'lise',
+    });
+    const url = `/api/v1/questions/generate?${queryParams.toString()}`;
+    const response = await this.post<QuestionGenerationResponse>(url);
     return response;
   }
 
@@ -22,7 +31,12 @@ export class QuestionService extends BaseApiService {
    * Evaluate user's answer to a question
    */
   async evaluateAnswer(request: EvaluateRequest): Promise<AnswerEvaluation> {
-    const response = await this.post<AnswerEvaluation>('/questions/evaluate', request);
+    // Backend expects { question, correct_answer, user_answer }
+    const response = await this.post<AnswerEvaluation>('/api/v1/questions/evaluate', {
+      question: (request as any).question ?? request.question_content ?? '',
+      correct_answer: request.correct_answer,
+      user_answer: request.user_answer,
+    });
     return response;
   }
 
@@ -56,15 +70,15 @@ export class QuestionService extends BaseApiService {
   /**
    * Get question by ID (if questions are stored)
    */
-  async getQuestion(id: string): Promise<GeneratedQuestion> {
-    return await this.get<GeneratedQuestion>(`/questions/${id}`);
+  async getQuestion(id: number): Promise<import('../types').StoredQuestion> {
+    return await this.get<import('../types').StoredQuestion>(`/api/v1/questions/${id}`);
   }
 
   /**
    * Save generated questions for later use
    */
   async saveQuestions(questions: GeneratedQuestion[], metadata: Record<string, unknown>): Promise<{ session_id: string }> {
-    const response = await this.post<{ session_id: string }>('/questions/save', {
+    const response = await this.post<{ session_id: string }>('/api/v1/questions/save', {
       questions,
       metadata
     });
@@ -75,7 +89,7 @@ export class QuestionService extends BaseApiService {
    * Get saved question session
    */
   async getQuestionSession(sessionId: string): Promise<QuestionGenerationResponse> {
-    return await this.get<QuestionGenerationResponse>(`/questions/session/${sessionId}`);
+    return await this.get<QuestionGenerationResponse>(`/api/v1/questions/session/${sessionId}`);
   }
 
   /**
@@ -91,7 +105,7 @@ export class QuestionService extends BaseApiService {
       queryParams.append('limit', limit.toString());
     }
 
-    const url = `/questions/history${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `/api/v1/questions/history${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     return await this.get<QuestionGenerationResponse[]>(url);
   }
 
@@ -104,7 +118,7 @@ export class QuestionService extends BaseApiService {
     customPrompt: string,
     count: number = 5
   ): Promise<QuestionGenerationResponse> {
-    const response = await this.post<QuestionGenerationResponse>('/questions/generate-custom', {
+    const response = await this.post<QuestionGenerationResponse>('/api/v1/questions/generate-custom', {
       subject,
       topic,
       custom_prompt: customPrompt,
@@ -130,7 +144,7 @@ export class QuestionService extends BaseApiService {
       queryParams.append('user_id', userId.toString());
     }
 
-    const url = `/questions/stats${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `/api/v1/questions/stats${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     return await this.get(url);
   }
 
@@ -138,7 +152,7 @@ export class QuestionService extends BaseApiService {
    * Report a question issue
    */
   async reportQuestion(questionId: string, issue: string, description?: string): Promise<void> {
-    await this.post('/questions/report', {
+    await this.post('/api/v1/questions/report', {
       question_id: questionId,
       issue_type: issue,
       description
@@ -149,7 +163,7 @@ export class QuestionService extends BaseApiService {
    * Rate a question
    */
   async rateQuestion(questionId: string, rating: number, feedback?: string): Promise<void> {
-    await this.post('/questions/rate', {
+    await this.post('/api/v1/questions/rate', {
       question_id: questionId,
       rating,
       feedback
@@ -167,7 +181,7 @@ export class QuestionService extends BaseApiService {
       queryParams.append('topic', topic);
     }
 
-    const url = `/questions/difficulties?${queryParams.toString()}`;
+    const url = `/api/v1/questions/difficulties?${queryParams.toString()}`;
     return await this.get<string[]>(url);
   }
 
@@ -182,7 +196,7 @@ export class QuestionService extends BaseApiService {
       queryParams.append('topic', topic);
     }
 
-    const url = `/questions/education-levels?${queryParams.toString()}`;
+    const url = `/api/v1/questions/education-levels?${queryParams.toString()}`;
     return await this.get<string[]>(url);
   }
 }

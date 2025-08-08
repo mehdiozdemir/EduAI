@@ -198,10 +198,10 @@ const mockCourseTopics = [
 
 export const handlers = [
   // Auth endpoints
-  http.post('http://localhost:8000/auth/login', async ({ request }) => {
+  http.post('http://localhost:8000/api/v1/auth/login', async ({ request }) => {
     const credentials = await request.json() as LoginCredentials;
-    
-    if (credentials.username === 'testuser' && credentials.password === 'password') {
+    // Backend expects email + password
+    if (credentials.email === 'test@example.com' && credentials.password === 'password') {
       return HttpResponse.json({
         access_token: 'mock-jwt-token',
         token_type: 'bearer',
@@ -215,7 +215,7 @@ export const handlers = [
     );
   }),
 
-  http.post('http://localhost:8000/auth/register', async ({ request }) => {
+  http.post('http://localhost:8000/api/v1/auth/register', async ({ request }) => {
     const userData = await request.json() as RegisterData;
     
     if (userData.username && userData.email && userData.password) {
@@ -236,11 +236,11 @@ export const handlers = [
     );
   }),
 
-  http.post('http://localhost:8000/auth/logout', () => {
+  http.post('http://localhost:8000/api/v1/auth/logout', () => {
     return HttpResponse.json({ message: 'Logged out successfully' });
   }),
 
-  http.get('http://localhost:8000/auth/me', ({ request }) => {
+  http.get('http://localhost:8000/api/v1/users/me', ({ request }) => {
     const authHeader = request.headers.get('Authorization');
     
     if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -254,11 +254,12 @@ export const handlers = [
   }),
 
   // Subject endpoints
-  http.get('http://localhost:8000/subjects', () => {
+  // Subjects (public)
+  http.get('http://localhost:8000/api/v1/subjects/', () => {
     return HttpResponse.json(mockSubjects);
   }),
 
-  http.get('http://localhost:8000/subjects/:id', ({ params }) => {
+  http.get('http://localhost:8000/api/v1/subjects/:id', ({ params }) => {
     const id = parseInt(params.id as string);
     const subject = mockSubjects.find(s => s.id === id);
     
@@ -272,7 +273,7 @@ export const handlers = [
     );
   }),
 
-  http.get('http://localhost:8000/subjects/:id/topics', ({ params }) => {
+  http.get('http://localhost:8000/api/v1/subjects/:id/topics', ({ params }) => {
     const subjectId = parseInt(params.id as string);
     const topics = mockTopics.filter(t => t.subject_id === subjectId);
     
@@ -280,11 +281,12 @@ export const handlers = [
   }),
 
   // Question endpoints
-  http.post('http://localhost:8000/questions/generate', async ({ request }) => {
-    const params = await request.json();
-    
-    // Simulate different responses based on parameters
-    if (params.count > 10) {
+  // Questions
+  http.post('http://localhost:8000/api/v1/questions/generate', async ({ request: req }) => {
+    // Simulate different responses based on parameters (query-based in backend)
+    const url = new URL(req.url);
+    const countParam = Number(url.searchParams.get('count') ?? 0);
+    if (countParam > 10) {
       return HttpResponse.json(
         { detail: 'Too many questions requested' },
         { status: 400 }
@@ -294,7 +296,7 @@ export const handlers = [
     return HttpResponse.json(mockQuestions);
   }),
 
-  http.post('http://localhost:8000/questions/evaluate', async ({ request }) => {
+  http.post('http://localhost:8000/api/v1/questions/evaluate', async ({ request }) => {
     const evaluationRequest = await request.json();
     
     const evaluation: AnswerEvaluation = {
@@ -310,13 +312,13 @@ export const handlers = [
   }),
 
   // Performance endpoints
-  http.post('http://localhost:8000/performance/analyze', async ({ request }) => {
+  http.post('http://localhost:8000/api/v1/performance/analyze', async ({ request }) => {
     const analysisRequest = await request.json();
     
     return HttpResponse.json(mockPerformanceAnalysis);
   }),
 
-  http.get('http://localhost:8000/performance/user/:userId', ({ params }) => {
+  http.get('http://localhost:8000/api/v1/performance/user/:userId', ({ params }) => {
     const userId = parseInt(params.userId as string);
     
     if (userId === mockUser.id) {
@@ -326,7 +328,7 @@ export const handlers = [
     return HttpResponse.json([]);
   }),
 
-  http.get('http://localhost:8000/performance/:analysisId/recommendations', ({ params }) => {
+  http.get('http://localhost:8000/api/v1/performance/:analysisId/recommendations', ({ params }) => {
     const analysisId = parseInt(params.analysisId as string);
     
     if (analysisId === mockPerformanceAnalysis.id) {
@@ -334,6 +336,34 @@ export const handlers = [
     }
     
     return HttpResponse.json([]);
+  }),
+
+  // Consolidated user recommendations
+  http.get('http://localhost:8000/api/v1/performance/user/all-recommendations', () => {
+    return HttpResponse.json({
+      status: 'success',
+      data: {
+        total_recommendations: mockRecommendations.length,
+        categories: {
+          video: mockRecommendations.filter(r => r.resource_type === 'youtube'),
+          books: mockRecommendations.filter(r => r.resource_type === 'book'),
+          ai_tips: [],
+        },
+      },
+    });
+  }),
+
+  // Recommendation stats
+  http.get('http://localhost:8000/api/v1/performance/recommendations/stats', () => {
+    return HttpResponse.json({
+      status: 'success',
+      data: {
+        by_status: { active: 2, completed: 0, deleted: 0, total: 2 },
+        by_category: { video: 1, books: 1 },
+        total_active: 2,
+        completion_rate: 0,
+      },
+    });
   }),
 
   // Error simulation endpoints for testing

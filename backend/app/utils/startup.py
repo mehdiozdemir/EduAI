@@ -40,7 +40,8 @@ def create_default_admin():
             db.refresh(admin_user)
             
             logger.info(f"Created default admin user: username=admin, email=admin@eduai.com")
-            logger.warning(f"Default admin password is '{default_password}' - Please change it in production!")
+            # Do not log actual password
+            logger.warning("Default admin password set - Please change it in production!")
             
         else:
             logger.info("Admin user already exists")

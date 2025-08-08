@@ -305,13 +305,7 @@ export const PerformanceAnalysisPage: React.FC = () => {
 
   const handleCompleteRecommendation = async (id: number) => {
     try {
-      await fetch(`http://localhost:8000/api/v1/performance/recommendation/${id}/status?status_param=completed`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('eduai_access_token')}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      await performanceService.updateRecommendationStatus(id, 'completed');
       
       // Remove from current view
       setRecommendations(prev => {
@@ -338,13 +332,7 @@ export const PerformanceAnalysisPage: React.FC = () => {
 
   const handleDeleteRecommendation = async (id: number) => {
     try {
-      await fetch(`http://localhost:8000/api/v1/performance/recommendation/${id}/status?status_param=deleted`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('eduai_access_token')}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      await performanceService.updateRecommendationStatus(id, 'deleted');
       
       // Remove from current view
       setRecommendations(prev => {

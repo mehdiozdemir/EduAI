@@ -13,8 +13,9 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Set timeout for long-running operations
-asyncio.get_event_loop().set_debug(True)
+# Set timeout for long-running operations (enable debug only in development)
+if settings.PROJECT_VERSION.endswith("-dev"):
+    asyncio.get_event_loop().set_debug(True)
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -144,11 +145,11 @@ def custom_openapi():
 app.openapi = custom_openapi
 
 # Include routers
-app.include_router(auth.router)
-app.include_router(users.router)
-app.include_router(subjects.router)
+app.include_router(auth.router, prefix="/api/v1", tags=["authentication"])
+app.include_router(users.router, prefix="/api/v1", tags=["users"])
+app.include_router(subjects.router, prefix="/api/v1", tags=["subjects"])
 app.include_router(performance.router, prefix="/api/v1", tags=["performance"])
-app.include_router(agents.router)
+app.include_router(agents.router, prefix="/api/v1", tags=["agents"])
 app.include_router(exam.router, prefix="/api/v1", tags=["exams"])
 app.include_router(education.router, prefix="/api/v1", tags=["education"])
 app.include_router(questions.router, prefix="/api/v1", tags=["questions"])

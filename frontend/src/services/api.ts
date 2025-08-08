@@ -3,9 +3,10 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import type { ApiError, ApiErrorResponse } from '../types';
+import { config } from '../config/environment';
 
-// Base API configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// Base API configuration (use environment config for consistency)
+const API_BASE_URL = config.API_BASE_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 // Removed timeout to prevent timeout errors on long-running operations
 // const API_TIMEOUT = 30000; // 30 seconds
 const MAX_RETRIES = 3;
@@ -76,20 +77,19 @@ apiClient.interceptors.response.use(
         // Try to refresh token (if refresh endpoint exists)
         const refreshToken = TokenManager.getRefreshToken();
         if (refreshToken) {
-          // Note: This assumes a refresh endpoint exists
-          // Adjust based on actual backend implementation
-          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            refresh_token: refreshToken,
-          });
+          // If backend does not implement refresh, fall back to hard logout
+          // const response = await axios.post(`${API_BASE_URL}/auth/refresh`, { refresh_token: refreshToken });
+          // const { access_token } = response.data;
+          // TokenManager.setToken(access_token);
+          // if (originalRequest.headers) {
+          //   originalRequest.headers.Authorization = `Bearer ${access_token}`;
+          // }
+          // return apiClient(originalRequest);
 
-          const { access_token } = response.data;
-          TokenManager.setToken(access_token);
-
-          // Retry original request with new token
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${access_token}`;
-          }
-          return apiClient(originalRequest);
+          // Hard logout fallback
+          TokenManager.removeToken();
+          window.location.href = '/login';
+          return Promise.reject(error);
         }
       } catch (refreshError) {
         // Refresh failed, redirect to login

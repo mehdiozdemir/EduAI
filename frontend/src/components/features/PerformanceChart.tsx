@@ -135,9 +135,28 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
       }
     });
 
-    // Group by subject for multiple datasets
+    // If no subject information provided, build a single dataset labelled generically
+    const hasAnySubject = data.some((item) => typeof item?.subject === 'string' && item.subject.trim().length > 0);
+    if (!hasAnySubject) {
+      const color = '#3b82f6';
+      return {
+        labels: [...new Set(labels)],
+        datasets: [
+          {
+            label: 'Doğruluk',
+            data: data.map((item) => item?.accuracy || 0),
+            borderColor: color,
+            backgroundColor: type === 'bar' ? color + '20' : color,
+            tension: type === 'line' ? 0.4 : undefined,
+            fill: type === 'line' ? false : undefined,
+          },
+        ],
+      };
+    }
+
+    // Group by subject for multiple datasets when subject info exists
     const subjectGroups = data.reduce((acc, item) => {
-      const subject = item?.subject || 'Bilinmiyor';
+      const subject = (item?.subject && item.subject.trim().length > 0) ? item.subject : 'Genel';
       if (!acc[subject]) {
         acc[subject] = [];
       }

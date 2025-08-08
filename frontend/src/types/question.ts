@@ -5,7 +5,7 @@ export interface QuestionParams {
   topic: string;
   difficulty: 'easy' | 'medium' | 'hard';
   count: number;
-  education_level: 'middle' | 'high' | 'university';
+  education_level?: string; // backend uses Turkish levels like 'lise'
 }
 
 export interface GeneratedQuestion {
@@ -27,10 +27,10 @@ export interface QuestionGenerationResponse {
 }
 
 export interface EvaluateRequest {
-  question_id: string;
+  question_id?: string | number;
   user_answer: string;
   correct_answer: string;
-  question_content: string;
+  question_content?: string;
 }
 
 export interface AnswerEvaluation {
@@ -38,6 +38,16 @@ export interface AnswerEvaluation {
   score: number;
   feedback: string;
   explanation?: string;
+}
+
+// Backend stored question shape
+export interface StoredQuestion {
+  id: number;
+  topic_id: number;
+  content: string;
+  difficulty: 'kolay' | 'orta' | 'zor';
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface QuizResults {

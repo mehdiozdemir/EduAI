@@ -679,6 +679,8 @@ def get_resource_recommendations(
 # ---------------------------------------------------------------
 
 from sqlalchemy import func
+from datetime import datetime, timedelta, timezone
+from collections import defaultdict
 
 
 @router.get("/dashboard/{user_id}")
@@ -711,14 +713,14 @@ def get_performance_dashboard(user_id: int, db: Session = Depends(get_db)):
         .all()
     )
 
-    # Subject breakdown
+    # Subject breakdown (include analyses without a subject_id by outer joining)
     subject_stats = (
         db.query(
             models.Subject.name.label("subject_name"),
             func.coalesce(func.sum(PerformanceAnalysis.correct_answers), 0).label("correct"),
             func.coalesce(func.sum(PerformanceAnalysis.total_questions), 0).label("total"),
         )
-        .join(models.Subject, models.Subject.id == PerformanceAnalysis.subject_id)
+        .outerjoin(models.Subject, models.Subject.id == PerformanceAnalysis.subject_id)
         .filter(PerformanceAnalysis.user_id == user_id)
         .group_by(models.Subject.name)
         .all()
@@ -726,7 +728,7 @@ def get_performance_dashboard(user_id: int, db: Session = Depends(get_db)):
 
     subject_breakdown = [
         {
-            "subject_name": s.subject_name,
+            "subject_name": s.subject_name if s.subject_name else "Genel",
             "accuracy": (s.correct / s.total) * 100 if s.total else 0.0,
             "question_count": s.total,
         }
@@ -758,20 +760,39 @@ def get_performance_dashboard(user_id: int, db: Session = Depends(get_db)):
         for w in weak_areas
     ]
 
-    # Progress chart (last 20 analyses)
-    progress = (
+    # Progress chart – build a continuous daily series for the last 7 days (including today)
+    raw_progress = (
         db.query(
             PerformanceAnalysis.created_at.label("date"),
             PerformanceAnalysis.accuracy.label("accuracy"),
         )
         .filter(PerformanceAnalysis.user_id == user_id)
         .order_by(PerformanceAnalysis.created_at.asc())
-        .limit(20)
+        .limit(200)
         .all()
     )
 
+    # Aggregate by date (average accuracy per day)
+    date_to_values: dict = defaultdict(list)
+    for p in raw_progress:
+        dt = p.date
+        try:
+            day = dt.date()
+        except Exception:
+            # Fallback if dt is str
+            day = datetime.fromisoformat(str(dt)).date()
+        if p.accuracy is not None:
+            date_to_values[day].append(float(p.accuracy))
+
+    date_to_avg = {d: (sum(vals) / len(vals)) for d, vals in date_to_values.items()}
+
+    # Generate last 7 days range inclusive of today
+    today = datetime.now(timezone.utc).date()
+    start_day = today - timedelta(days=6)
+    days = [start_day + timedelta(days=i) for i in range(7)]
+
     progress_chart = [
-        {"date": p.date.isoformat(), "accuracy": p.accuracy} for p in progress
+        {"date": d.isoformat(), "accuracy": float(date_to_avg.get(d, 0.0))} for d in days
     ]
 
     return {

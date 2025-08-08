@@ -85,23 +85,43 @@ export class PerformanceService extends BaseApiService {
     resource_type?: string;
     limit?: number;
   }): Promise<ResourceRecommendation[]> {
-    const queryParams = new URLSearchParams();
+    // Backend provides consolidated user recommendations under performance API
+    const raw = await this.get<{
+      status: string;
+      data: {
+        total_recommendations: number;
+        categories: {
+          [key: string]: Array<{
+            id: number;
+            resource_type: string;
+            title: string;
+            url: string;
+            description: string;
+            relevance_score: number;
+            category: string;
+            created_at: string | null;
+          }>;
+        };
+      };
+    }>(`${this.baseUrl}/performance/user/all-recommendations`);
 
-    if (params?.subject_id) {
-      queryParams.append('subject_id', params.subject_id.toString());
-    }
-    if (params?.topic_id) {
-      queryParams.append('topic_id', params.topic_id.toString());
-    }
-    if (params?.resource_type) {
-      queryParams.append('resource_type', params.resource_type);
-    }
-    if (params?.limit) {
-      queryParams.append('limit', params.limit.toString());
-    }
+    const all: ResourceRecommendation[] = Object.values(raw.data.categories || {})
+      .flat()
+      .map((rec) => ({
+        id: rec.id,
+        resource_type: rec.resource_type,
+        title: rec.title,
+        url: rec.url,
+        description: rec.description,
+        relevance_score: rec.relevance_score,
+      }));
 
-    const url = `${this.baseUrl}/recommendations${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    return await this.get<ResourceRecommendation[]>(url);
+    // Optional client-side filtering
+    const filtered = params?.resource_type
+      ? all.filter((r) => r.resource_type === params.resource_type)
+      : all;
+
+    return typeof params?.limit === 'number' ? filtered.slice(0, params.limit) : filtered;
   }
 
   /**
@@ -260,13 +280,9 @@ export class PerformanceService extends BaseApiService {
       queryParams.append('topic_id', params.topic_id.toString());
     }
 
-    const url = `${this.baseUrl}/performance/export?${queryParams.toString()}`;
-
-    const response = await this.client.get(url, {
-      responseType: 'blob',
-    });
-
-    return response.data;
+    // Not implemented on backend yet
+    console.warn('exportPerformanceData endpoint not implemented on backend');
+    return new Blob();
   }
 
   /**
@@ -284,17 +300,28 @@ export class PerformanceService extends BaseApiService {
     rating: number,
     feedback?: string
   ): Promise<void> {
-    await this.post(`${this.baseUrl}/recommendations/${recommendationId}/rate`, {
-      rating,
-      feedback,
-    });
+    console.warn('rateRecommendation endpoint not implemented on backend');
   }
 
   /**
    * Mark recommendation as used
    */
   async markRecommendationUsed(recommendationId: number): Promise<void> {
-    await this.post(`${this.baseUrl}/recommendations/${recommendationId}/used`);
+    console.warn('markRecommendationUsed endpoint not implemented on backend');
+  }
+
+  /**
+   * Update recommendation status (completed or deleted)
+   */
+  async updateRecommendationStatus(
+    recommendationId: number,
+    status: 'completed' | 'deleted'
+  ): Promise<void> {
+    await this.patch(
+      `${this.baseUrl}/performance/recommendation/${recommendationId}/status`,
+      undefined,
+      { params: { status_param: status } }
+    );
   }
 
   /**

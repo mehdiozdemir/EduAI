@@ -65,10 +65,17 @@ export const useAnswerEvaluation = (
 
 // Batch evaluate answers mutation
 export const useBatchEvaluateAnswers = () => {
+  // Backend does not implement batch evaluation; fall back to per-item calls
   return useMutation({
-    mutationFn: (requests: EvaluateRequest[]) =>
-      questionService.evaluateAnswers(requests),
-    gcTime: 0, // Don't cache batch evaluations
+    mutationFn: async (requests: EvaluateRequest[]) => {
+      const results = [] as Awaited<ReturnType<typeof questionService.evaluateAnswer>>[];
+      for (const req of requests) {
+        // eslint-disable-next-line no-await-in-loop
+        results.push(await questionService.evaluateAnswer(req));
+      }
+      return results;
+    },
+    gcTime: 0,
   });
 };
 
